@@ -1,0 +1,32 @@
+{
+  "name": "shakemap-amp-tools",
+  "organization": "U.S. Geological Survey",
+  "description": "Fetch and process strong motion waveform/peak amplitude data",
+  "status": "Beta",
+  "homepage": "https://github.com/usgs/shakemap-amp-tools",
+  "downloadURL": "https://github.com/usgs/shakemap-amp-tools/archive/master.zip",
+
+  "openSourceProject": 1,
+  "license": "https://github.com/usgs/shakemap-amp-tools/blob/master/LICENSE.md",
+  "vcs": "git",
+  "repository": "https://github.com/usgs/shakemap-amp-tools.git",
+
+  "tags": [
+    "earthquake",
+    "impact",
+    "strong motion",
+    "amplitudes",  
+    "ground motion"
+  ],
+  "languages": [
+    "python",
+  ],
+
+  "contact": {
+    "name": "Mike Hearne",
+    "email": "mhearne@usgs.gov"
+  },
+  "updated": {
+    "metadataLastUpdated": "2017-09-08"
+  }
+}
