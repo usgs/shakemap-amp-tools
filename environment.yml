@@ -1,0 +1,20 @@
+name: amptools
+channels:
+- conda-forge
+- defaults
+dependencies:
+- ipython
+- jupyter
+- lxml
+- matplotlib
+- numpy
+- pandas
+- pytest
+- pytest-cov
+- python=3.5
+- xlrd
+- xlwt
+- openpyxl
+- xlsxwriter
+
+

@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+# stdlib imports
+import sys
+import os.path
+import re
+import argparse
+
+# third party imports
+import pandas as pd
+import numpy as np
+
+# local imports
+from amptools.table import read_excel, dataframe_to_xml, EXCEL_DESC
+
+def main(args):
+    # gather arguments
+    excelfile = args.excelfile
+    eventid = args.eventid
+    dir = args.directory
+    df,reference = read_excel(excelfile)
+    outfile = dataframe_to_xml(df,eventid,dir,reference=reference)
+    print('Peak ground motions written to file %s.' % outfile)
+
+if __name__ == '__main__':
+    desc = '''Convert a peak ground motion Excel file into ShakeMap input.
+    
+    Input Excel file must have at least the following columns in the first row:
+     - "station" String containing UNIQUE identifying station information.
+     - "latitude" Latitude where peak ground motion observations were made.
+     - "longitude" Longitude where peak ground motion observations were made.
+     - "network" (usually) two letter code indicating the source network.
+
+    Optional columns include:
+     - "location" String describing area where peak ground motions were observed.
+     - "source" String describing source of peak ground motion data.
+     - "network" String describing network (us,ci,nc, etc.).
+     - "distance" Distance from epicenter to station location, in units of km.
+
+    And then at least one of the following columns:
+     - "intensity" MMI value (1-10).
+
+        AND/OR 
+      a grouped set of per-channel peak ground motion columns, like this:
+
+      -------------------------------------------------------------------------------
+      |         H1              |           H2            |             Z           |
+      -------------------------------------------------------------------------------
+      |pga|pgv|psa03|psa10|psa30|pga|pgv|psa03|psa10|psa30|pga|pgv|psa03|psa10|psa30|
+      -------------------------------------------------------------------------------
+
+      The peak ground motion columns can be any of the following:
+      - "pga" Peak ground acceleration in units of %g.
+      - "pgv" Peak ground velocity in units of cm/sec.
+      - "psa03" Peak spectral acceleration at 0.3 seconds, in units of %g.
+      - "psa10" Peak spectral acceleration at 1.0 seconds, in units of %g.
+      - "psa30" Peak spectral acceleration at 3.0 seconds, in units of %g.
+
+      Notes:
+       - Missing data in Excel file must be either the string "NaN" or an empty cell.
+    '''
+    parser = argparse.ArgumentParser(description=desc,
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('excelfile', help='Excel file containing peak ground motions.')
+    parser.add_argument('eventid', help='Earthquake event ID.')
+    parser.add_argument('directory', help='Output data directory.')
+    pargs = parser.parse_args()
+    main(pargs)
