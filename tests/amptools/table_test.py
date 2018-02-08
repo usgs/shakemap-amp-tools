@@ -1,24 +1,41 @@
 #!/usr/bin/env python
 
+import shutil
+import tempfile
 import os.path
 import numpy as np
-from amptools.table import read_excel
+from amptools.table import read_excel, dataframe_to_xml
+
+def test_write_xml():
+    homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
+    datadir = os.path.join(homedir,'..','data')
+    complete_file = os.path.join(datadir,'complete_pgm.xlsx')
+    tempdir = None
+    try:
+        tempdir = tempfile.mkdtemp()
+        df, reference = read_excel(complete_file)
+        outfile = dataframe_to_xml(df,'foo',tempdir,reference=reference)
+    except Exception as e:
+        pass
+    finally:
+        if tempdir is not None:
+            shutil.rmtree(tempdir)
 
 def test_read_tables():
     homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
     datadir = os.path.join(homedir,'..','data')
 
     complete_file = os.path.join(datadir,'complete_pgm.xlsx')
-    df_complete = read_excel(complete_file)
+    df_complete,reference = read_excel(complete_file)
     np.testing.assert_almost_equal(df_complete['h1']['pga'].sum(),569.17)
         
     pgamin_file = os.path.join(datadir,'minimum_pga.xlsx')
-    df_pgamin = read_excel(pgamin_file)
+    df_pgamin,reference = read_excel(pgamin_file)
     np.testing.assert_almost_equal(df_pgamin['unk']['pga'].sum(),569.17)
     
 
     mmimin_file = os.path.join(datadir,'minimum_mmi.xlsx')
-    df_mmimin = read_excel(mmimin_file)
+    df_mmimin,reference = read_excel(mmimin_file)
     np.testing.assert_almost_equal(df_mmimin['intensity'].sum(),45.199872273516036)
 
     try:
@@ -51,9 +68,11 @@ def test_read_tables():
 
 
     missing_data_file = os.path.join(datadir,'missing_rows.xlsx')
-    df = read_excel(missing_data_file)
+    df,reference = read_excel(missing_data_file)
     assert np.isnan(df['h1']['psa03']['CHPA'])
 
 
 if __name__ == '__main__':
+    test_write_xml()
     test_read_tables()
+    
