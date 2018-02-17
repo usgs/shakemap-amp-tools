@@ -17,9 +17,23 @@ it into the XML data format used by ShakeMap.  This repository includes the foll
  - `conda install pandas`
  - `conda install openpyxl` 
  - `conda install lxml`
- - `pip install git+https://gitlab.cr.usgs.gov/mhearne/shakemap-amp-tools.git`
+ - `pip install git+https://github.com/mhearne-usgs/shakemap-amp-tools.git`
 
 # Tools
+
+## sm2xml
+
+This tool converts a directory of strong motion time series data from one of the following networks:
+
+ - CWB: Taiwan Central Weather Bureau
+ - GeoNet: New Zealand GNS
+ - KNET: Japan K-NET data
+
+## ftpfetch
+
+This tool allows a user to fetch a file or directory of files from an FTP server.
+If a username and password are required (KNET, for example) they can be provided
+as command line options.
 
 ## amps2xml
 
@@ -30,19 +44,19 @@ must contain *generally* only tabular (rows/columns) data.
 A "complete" peak ground motion table would look like this:
 
 <table>
-  <tr><td>reference</td><td>Jones and Smith, 2007. Journal of Seismology.</td></tr>
+  <tr><th>reference</th><th>Jones and Smith, 2007. Journal of Seismology.</th></tr>
   <tr>
-    <td>station</td>
-    <td>latitude</td>
-    <td>longitude</td>
-    <td>network</td>
-    <td>location</td>
-    <td>source</td>
-    <td>distance</td>
-    <td>intensity</td>
-    <td colspan="5" align="center">hhe</td>
-    <td colspan="5" align="center">hhn</td>
-    <td colspan="5" align="center">hhz</td>
+    <th>station</th>
+    <th>lat</th>
+    <th>longitude</th>
+    <th>network</th>
+    <th>location</th>
+    <th>source</th>
+    <th>distance</th>
+    <th>intensity</th>
+    <th colspan="5" align="center">hhe</th>
+    <th colspan="5" align="center">hhn</th>
+    <th colspan="5" align="center">hhz</th>
   </tr>
   <tr>
     <td> </td>
@@ -109,8 +123,8 @@ the reference string.
 
 The required columns are:
  - station: Usually a short abbreviated code.
- - latitude: Latitude of the station where data was collected.
- - longitude: Latitude of the station where data was collected.
+ - lat: Latitude of the station where data was collected.
+ - lon: Longitude of the station where data was collected.
  - network: Usually a short code indicating the seismic network who collected the data.
 
 In addition to these required columns, there must be additionally at least:
@@ -140,8 +154,8 @@ A minimum intensity only peak ground motion table would look like this:
 <table>
   <tr>
     <td>station</td>
-    <td>latitude</td>
-    <td>longitude</td>
+    <td>lat</td>
+    <td>lon</td>
     <td>network</td>
     <td>intensity</td>
   </tr>
@@ -159,8 +173,8 @@ A minimum pga only peak ground motion table would look like this:
 <table>
   <tr>
     <td>station</td>
-    <td>latitude</td>
-    <td>longitude</td>
+    <td>lat</td>
+    <td>lon</td>
     <td>network</td>
     <td>unk</td>
   </tr>
@@ -180,9 +194,25 @@ A minimum pga only peak ground motion table would look like this:
   </tr>
 </table>
 
+# Developer notes
 
+The data file readers are modeled after obspy file readers, and have a standard interface.
 
+Data file readers are located in `amptools/io/[format]/core.py`.
 
+This core.py module should take the following form:
+
+<pre>
+def is_format(filename):
+    # code to examine candidate file and determine if it is of the type specified.
+    # return True if file is correct type, False otherwise.
+
+def read_format(filename,**kwargs):
+    # code to read file and return an obspy Stream object.
+</pre>
+
+The imports for this file should reside in the sm2xml program, and the package containing it
+should be added to the setup.py script.
 
 
 

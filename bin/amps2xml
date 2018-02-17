@@ -27,8 +27,8 @@ if __name__ == '__main__':
     
     Input Excel file must have at least the following columns in the first row:
      - "station" String containing UNIQUE identifying station information.
-     - "latitude" Latitude where peak ground motion observations were made.
-     - "longitude" Longitude where peak ground motion observations were made.
+     - "lat" Latitude where peak ground motion observations were made.
+     - "lon" Longitude where peak ground motion observations were made.
      - "network" (usually) two letter code indicating the source network.
 
     Optional columns include:

@@ -10,7 +10,7 @@ from lxml import etree
 from openpyxl import load_workbook
 
 
-required_columns = ['station','latitude','longitude','network']
+required_columns = ['station','lat','lon','network']
 channel_groups = [['[a-z]{2}e','[a-z]{2}n','[a-z]{2}z'],
                   ['h1','h2','z'],
                   ['unk']]
@@ -31,8 +31,8 @@ def read_excel(excelfile):
         str or None: Reference string or None.
         
      - "station" String containing UNIQUE identifying station information.
-     - "latitude" Latitude where peak ground motion observations were made.
-     - "longitude" Longitude where peak ground motion observations were made.
+     - "lat" Latitude where peak ground motion observations were made.
+     - "lon" Longitude where peak ground motion observations were made.
      - "network" (usually) two letter code indicating the source network.
 
     Optional columns include:
@@ -191,8 +191,8 @@ def dataframe_to_xml(df,eventid,dir,reference=None):
             stationcode = '%s.%s' % (netid,stationcode)
 
         station.attrib['code'] = stationcode
-        station.attrib['lat'] = '%.4f' % row['latitude'].iloc[0]
-        station.attrib['lon'] = '%.4f' % row['longitude'].iloc[0]
+        station.attrib['lat'] = '%.4f' % row['lat'].iloc[0]
+        station.attrib['lon'] = '%.4f' % row['lon'].iloc[0]
 
         # assign optional columns
         if 'location' in top_headers:
