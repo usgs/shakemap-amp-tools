@@ -12,6 +12,10 @@ DATE_FMT = '%Y/%m/%d-%H:%M:%S.%f'
 
 GMT_OFFSET = 8 * 3600 # CWB data is in local time, GMT +8
 
+HDR_ROWS = 22
+COLWIDTH = 10
+NCOLS = 4
+
 def is_cwb(filename):
     """Check to see if file is a Taiwan Central Weather Bureau strong motion file.
 
@@ -59,7 +63,9 @@ def read_cwb(filename, **kwargs):
             hdr['sampling_rate'] = int(line.split(':')[1].strip())
         if line.startswith('#Data'):
             break
-    data = np.loadtxt(f) #time, Z, NS, EW
+        
+    data = np.genfromtxt(filename,skip_header=HDR_ROWS,
+                         delimiter=[COLWIDTH]*NCOLS) #time, Z, NS, EW
     nrows,ncols = data.shape
     f.close()
 

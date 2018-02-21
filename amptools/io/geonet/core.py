@@ -21,31 +21,42 @@ FP_HDR_ROWS = 10
 
 MMPS_TO_CMPS = 1/10.0
 
+COLS_PER_ROW = 10
+
+# These formats are described in this document:
+# ftp://ftp.geonet.org.nz/strong/processed/Docs/GNS%20ACCELEROGRAM%20DATA%20FILE%20FORMAT%202012-03-15.docx
+
 def is_geonet(filename):
-    """Check to see if file is a New Zealand GNS strong motion file.
+    """Check to see if file is a New Zealand GNS V1 or V2 strong motion file.
 
     Args:
-        filename (str): Path to possible GNS V1 data file.
+        filename (str): Path to possible GNS V1/V2 data file.
     Returns:
-        bool: True if GNS V1, False otherwise.
+        bool: True if GNS V1/V2, False otherwise.
     """
     line = open(filename,'rt').readline()
     if line.find('GNS Science') >= 0:
-        return True
+        c1 = line.find('Corrected accelerogram') >= 0
+        c2 = line.find('Uncorrected accelerogram') >= 0
+        if c1 or c2:
+            return True
     return False
 
-def read_geonet(filename):
-    """Read New Zealand GNS V1 strong motion file.
+def read_geonet(filename, **kwargs):
+    """Read New Zealand GNS V1/V2 strong motion file.
 
+    There is one extra key in the Stats object for each Trace - "process_level".
+    This will be set to either "V1" or "V2".
+    
     Args:
-        filename (str): Path to possible GNS V1 data file.
+        filename (str): Path to possible GNS V1/V2 data file.
         kwargs (ref): Other arguments will be ignored.
     Returns:
         Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).  
     """
-    trace1,offset1 = _read_channel(filename,0)
-    trace2,offset2 = _read_channel(filename,offset1)
-    trace3,offset3 = _read_channel(filename,offset2)
+    trace1,offset1,velocity1 = _read_channel(filename,0)
+    trace2,offset2,velocity2 = _read_channel(filename,offset1)
+    trace3,offset3,velocity3 = _read_channel(filename,offset2)
 
     # occasionally, geonet horizontal components are
     # identical.  To handle this, we'll set the second
@@ -70,8 +81,45 @@ def read_geonet(filename):
     
     traces = [trace1,trace2,trace3]
     stream = Stream(traces)
+
+        
     return stream
     
+def _read_velocity(filename):
+    trace1,offset1,velocity1 = _read_channel(filename,0)
+    trace2,offset2,velocity2 = _read_channel(filename,offset1)
+    trace3,offset3,velocity3 = _read_channel(filename,offset2)
+
+    # occasionally, geonet horizontal components are
+    # identical.  To handle this, we'll set the second
+    # channel to whatever isn't the first one.
+    channel1 = trace1.stats['channel']
+    channel2 = trace2.stats['channel']
+    channel3 = trace3.stats['channel']
+    if channel1 == channel2:
+        if channel1 == 'HHE':
+            trace2.stats['channel'] = 'HHN'
+        elif channel1 == 'HHN':
+            trace2.stats['channel'] = 'HHE'
+        else:
+            raise Exception('Could not resolve duplicate channels in %s' % trace1.stats['station'])
+    if channel2 == channel3:
+        if channel2 == 'HHE':
+            trace3.stats['channel'] = 'HHN'
+        elif channel2 == 'HHN':
+            trace3.stats['channel'] = 'HHE'
+        else:
+            raise Exception('Could not resolve duplicate channels in %s' % trace1.stats['station'])
+
+    trace1.data = velocity1
+    trace1.stats['units'] = 'vel'
+    trace2.data = velocity2
+    trace2.stats['units'] = 'vel'
+    trace3.data = velocity3
+    trace3.stats['units'] = 'vel'
+    stream = Stream([trace1,trace2,trace3])
+    return stream
+                        
 
 def _read_channel(filename,line_offset):
     """Read channel data from GNS V1 text file.
@@ -87,6 +135,11 @@ def _read_channel(filename,line_offset):
         for _ in range(line_offset):
             next(f)
         lines = [next(f) for x in range(TEXT_HDR_ROWS)]
+
+    # this code supports V1 and V2 format files.  Which one is this?
+    data_format = 'V2'
+    if lines[0].lower().find('uncorrected') >= 0:
+        data_format = 'V1'
         
     # parse out the station name, location, and component string
     # from text header
@@ -100,18 +153,23 @@ def _read_channel(filename,line_offset):
                              max_rows=FP_HDR_ROWS)
 
     # parse header dictionary from float header array
-    hdr = _read_header(hdr_data,station,location,component)
+    hdr = _read_header(hdr_data,station,location,component,data_format)
 
-    # read in the data
-    if hdr['npts'] % 10 != 0:
-        nrows = int(np.floor(hdr['npts']/10))
+    # inform the user that they have a V1 or V2 file
+    hdr['process_level'] = data_format
+    
+    # read in the data, handling cases where last row has less than 10 columns
+    if hdr['npts'] % COLS_PER_ROW != 0:
+        nrows = int(np.floor(hdr['npts']/COLS_PER_ROW))
         nrows2 = 1
     else:
-        nrows = int(np.ceil(hdr['npts']/10))
+        nrows = int(np.ceil(hdr['npts']/COLS_PER_ROW))
         nrows2 = 0
     skip_header2 = line_offset + TEXT_HDR_ROWS + FP_HDR_ROWS
+    widths = [8]*COLS_PER_ROW
     data = np.genfromtxt(filename,skip_header=skip_header2,
-                         max_rows=nrows, filling_values=np.nan)
+                         max_rows=nrows, filling_values=np.nan,
+                         delimiter=widths)
     data = data.flatten()
     if nrows2:
         skip_header3 = skip_header2 + nrows
@@ -120,14 +178,45 @@ def _read_channel(filename,line_offset):
         data = np.hstack((data,data2))
         nrows += nrows2
 
+    # for debugging, read in the velocity data
+    nvel = hdr_data[3,4]
+    if nvel:
+        if nvel % COLS_PER_ROW != 0:
+            nvel_rows = int(np.floor(nvel/COLS_PER_ROW))
+            nvel_rows2 = 1
+        else:
+            nvel_rows = int(np.ceil(nvel/COLS_PER_ROW))
+            nvel_rows2 = 0
+        skip_header_vel = line_offset + TEXT_HDR_ROWS + FP_HDR_ROWS + nrows
+        widths = [8]*COLS_PER_ROW
+        velocity = np.genfromtxt(filename,skip_header=skip_header_vel,
+                                 max_rows=nvel_rows, filling_values=np.nan,
+                                 delimiter=widths)
+        velocity = velocity.flatten()
+        if nrows2:
+            skip_header_vel = skip_header_vel + nvel_rows
+            vel2 = np.genfromtxt(filename,skip_header=skip_header_vel,
+                                  max_rows=nvel_rows2, filling_values=np.nan)
+            velocity = np.hstack((velocity,vel2))
+        velocity *= MMPS_TO_CMPS
+    else:
+        velocity = np.array([])
+
+    
+    # for V2 files, there are extra blocks of data we need to skip containing
+    # velocity and displacement data
+    if data_format == 'V2':
+        velrows = int(np.ceil(hdr_data[3,4]/COLS_PER_ROW))
+        disrows = int(np.ceil(hdr_data[3,5]/COLS_PER_ROW))
+        nrows = nrows + velrows + disrows
     
     data *= MMPS_TO_CMPS # convert to cm/s**2
     trace = Trace(data,Stats(hdr))
     offset = skip_header2 + nrows
     
-    return (trace,offset)
+    return (trace,offset,velocity)
     
-def _read_header(hdr_data,station,location,component):
+def _read_header(hdr_data,station,location,component,data_format):
     """Construct stats dictionary from header lines.
 
     Args:
@@ -155,10 +244,17 @@ def _read_header(hdr_data,station,location,component):
     hdr = {}
     hdr['station'] = station
     hdr['location'] = location
-    hdr['sampling_rate'] = hdr_data[4,0]
-    hdr['delta'] = 1/hdr['sampling_rate']
+    if data_format == 'V1':
+        hdr['sampling_rate'] = hdr_data[4,0]
+        hdr['delta'] = 1/hdr['sampling_rate']
+    else:
+        hdr['delta'] = hdr_data[6,5]
+        hdr['sampling_rate'] = 1/hdr['delta']
     hdr['calib'] = 1.0
-    hdr['npts'] = int(hdr_data[3,0])
+    if data_format == 'V1':
+        hdr['npts'] = int(hdr_data[3,0])
+    else:
+        hdr['npts'] = int(hdr_data[3,3])
     hdr['network'] = 'GNS'
     hdr['units'] = 'acc'
     hdr['source'] = 'New Zealand Institute of Geological and Nuclear Science'
