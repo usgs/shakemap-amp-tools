@@ -11,13 +11,26 @@ it into the XML data format used by ShakeMap.  This repository includes the foll
 
  * `amps2xml` Convert peak ground motions in Excel format to ShakeMap XML data structure.
 
-# Installation
+# Installing
+
+If you already have a miniconda or anaconda Python 3.X environment:
 
  - `conda install numpy`
  - `conda install pandas`
  - `conda install openpyxl` 
  - `conda install lxml`
  - `pip install git+https://github.com/mhearne-usgs/shakemap-amp-tools.git`
+
+If you do not have anaconda or miniconda, but have Python 3.X installed with pip:
+ - `pip install numpy`
+ - `pip install pandas`
+ - `pip install openpyxl` 
+ - `pip install lxml`
+ - `pip install git+https://github.com/mhearne-usgs/shakemap-amp-tools.git`
+
+## Updating
+
+ - `pip install --upgrade git+https://github.com/mhearne-usgs/shakemap-amp-tools.git`
 
 # Tools
 
