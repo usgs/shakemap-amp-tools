@@ -6,10 +6,14 @@ import os.path
 import re
 import argparse
 import glob
+import string
 
 # third party imports
 import pandas as pd
 import numpy as np
+import openpyxl
+from openpyxl.styles import Alignment
+from openpyxl.styles.borders import Border, Side
 
 # local imports
 from amptools.table import dataframe_to_xml
@@ -19,6 +23,69 @@ from amptools.io.geonet.core import read_geonet, is_geonet
 from amptools.io.knet.core import read_knet, is_knet
 
 FORMATS = ['cwb','geonet','knet']
+
+def _clean_sheet(outfile_excel,dataframe):
+    # We want put a default reference at the top of the sheet because
+    # 1) it helps users know where to put it
+    # 2) it ensures consistency of sheet layout
+    # The problem - you can't insert or delete rows/columns in openpyxl.
+    # So we'll copy the data from the sheet, paste it into a new sheet, and
+    # delete the old sheet. While we're at it, we'll remove the index column.
+    # Maintain the merged cells for the channels
+    # Set the borders on the header cells (incl sub-headers and merged cells) TODO
+    # center merged cells
+    wb = openpyxl.load_workbook(outfile_excel)
+    sheet1 = wb.active
+
+    # copy the data values from the sheet
+    rows = []
+    topleft = 'B1'
+    bottomright = 'V%i' % (len(dataframe)+3)
+    cellrange = '%s:%s' % (topleft,bottomright)
+    channel_columns = []
+    for row in sheet1[cellrange]:
+        row_data = []
+        for cell in row:
+            cvalue = cell.value
+            if cvalue in ['HHZ','HHE','HHN','H1','H2','HZ']:
+                channel_columns.append(cell.col_idx-2) #0-based column index in new sheet
+            row_data.append(cell.value)
+        rows.append(row_data)
+
+    # create a new sheet and paste data into it
+    sheet2 = wb.create_sheet(title='PeakGroundMotions')
+    # put reference in
+    refcol = 'network'
+    if 'source' in dataframe.columns:
+        refcol = 'source'
+    sheet2.append(['Reference',dataframe[refcol].iloc[0]])
+    for row in rows:
+        sheet2.append(row)
+
+    # merge the channel header cells and center them
+    for channel_column in channel_columns:
+        letters = string.ascii_uppercase
+        colidx = letters[channel_column]
+        right_colidx = letters[channel_column+4]
+        left_cell_idx = '%s2' % (colidx)
+        right_cell_idx = '%s2' % (right_colidx)
+        sheet2.merge_cells('%s:%s' % (left_cell_idx,right_cell_idx))
+        left_cell = sheet2[left_cell_idx]
+        right_cell = sheet2[right_cell_idx]
+        left_cell.alignment = Alignment(horizontal='center')
+        left_border = Border(left=Side(style='thin'),
+                             right=Side(style=None),
+                             top=Side(style=None),
+                             bottom=Side(style=None))
+        left_cell.border = left_border
+        right_border = Border(left=Side(style=None),
+                             right=Side(style='thin'),
+                             top=Side(style=None),
+                             bottom=Side(style=None))
+        right_cell.border = right_border
+        
+    wb.remove(sheet1)
+    wb.save(outfile_excel)
 
 def main(args):
     # gather arguments
@@ -81,10 +148,15 @@ def main(args):
             stream_file = os.path.join(outdir,'%s_spectral.png' % station)
             stream.plot(outfile=stream_file)
 
-    # If the user wants to see the peak info in spreadsheet form, save that for them
+    # Save peak info in spreadsheet form
+    # we're forced here to have the index column, as much as we might not want it
     outfile_excel = os.path.join(outdir,'%s_dat.xlsx' % eventid)
     dataframe.to_excel(outfile_excel)
-    print('Wrote debug Excel file %s' % outfile_excel)
+
+    # modify the spreadsheet to add a reference at the top and remove index column
+    _clean_sheet(outfile_excel,dataframe)
+        
+    print('Wrote Excel file %s' % outfile_excel)
 
     # Write out the ShakeMap XML data format
     outfile = dataframe_to_xml(dataframe,eventid,outdir)

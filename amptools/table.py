@@ -2,12 +2,13 @@
 import re
 import os.path
 import time
+import string
 
 # third party imports
 import pandas as pd
 import numpy as np
 from lxml import etree
-from openpyxl import load_workbook
+from openpyxl import load_workbook, utils
 
 
 required_columns = ['station','lat','lon','network']
@@ -20,6 +21,20 @@ optional = ['location','distance','reference','intensity','source']
 EXCEL_DESC = '''
 
 '''
+
+def _move(cellstr,nrows,ncols):
+    # WARNING! This will only work up to column Z!
+    #colidx is a string, rowidx is a number
+    col_str_idx,rowidx = utils.coordinate_from_string(cellstr)
+    letters = string.ascii_uppercase
+    try:
+        colidx = letters.index(col_str_idx)
+        newcolidx = colidx + ncols
+        newrowidx = rowidx + nrows
+        newcellstr = '%s%i' % (letters[newcolidx],newrowidx)
+        return newcellstr
+    except ValueError as ve:
+        raise ValueError('Could not add %i columns to column %s.' % (ncols,col_str_idx))
 
 def read_excel(excelfile):
     """Read strong motion Excel spreadsheet, return a DataFrame.
@@ -73,21 +88,28 @@ def read_excel(excelfile):
     wb = load_workbook(excelfile)
     ws = wb.active
 
+    # figure out where the top left of the data begins
+    topleft = 'A1'
+    first_cell = 'A2'
+    second_cell = 'A3'
+        
     # figure out if there is a little reference section in this...
     reference = None
-    first_cell = 'A2'
     skip_rows = None
     header = [0,1]
-    if ws['A1'].value.lower() == 'reference':
-        reference = ws['B1'].value
-        first_cell = 'A3'
-        skip_rows = [0]
-        header = [1,2]
+    if ws[topleft].value.lower() != 'reference':
+        raise KeyError('Reference cells are required in A1 and B1!')
+    refcell = _move(topleft,0,1)
+    reference = ws[refcell].value
+    first_cell = _move(topleft,1,0)
+    second_cell = _move(first_cell,1,0)
+    skip_rows = [0]
+    header = [1,2]
     
     is_multi = True
     # if the first column of the second row is not empty,
     # then we do not have a multi-index.
-    if ws[first_cell].value is not None:
+    if ws[second_cell].value is not None:
         is_multi = False
     
     # read in dataframe, assuming that ground motions are grouped by channel

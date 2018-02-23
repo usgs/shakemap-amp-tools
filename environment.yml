@@ -15,6 +15,7 @@ dependencies:
 - xlrd
 - xlwt
 - openpyxl
+- obspy
 - xlsxwriter
 
 

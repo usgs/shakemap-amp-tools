@@ -117,7 +117,7 @@ A "complete" peak ground motion table would look like this:
   </tr>
 </table>
 
-The reference section in the first row is optional, but if present should consist of a cell
+The reference section in the first row is mandatory, and should consist of a cell
 in the first column with "reference" in it, and the cell in the second column containing
 the reference string.
 
@@ -152,6 +152,7 @@ horizontal channels must be included.
 A minimum intensity only peak ground motion table would look like this:
 
 <table>
+  <tr><th>reference</th><th>Jones and Smith, 2007. Journal of Seismology.</th></tr>
   <tr>
     <td>station</td>
     <td>lat</td>
@@ -171,6 +172,7 @@ A minimum intensity only peak ground motion table would look like this:
 A minimum pga only peak ground motion table would look like this:
 
 <table>
+  <tr><th>reference</th><th>Jones and Smith, 2007. Journal of Seismology.</th></tr>
   <tr>
     <td>station</td>
     <td>lat</td>

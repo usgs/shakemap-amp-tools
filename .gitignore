@@ -8,3 +8,4 @@ build
 .coverage.xml
 htmlcov
 amptools.egg-info/
+.pytest_cache

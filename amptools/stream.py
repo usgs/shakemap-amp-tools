@@ -1,3 +1,7 @@
+#stdlib imports
+import warnings
+
+# third party imports
 import pandas as pd
 import numpy as np
 from obspy.signal.invsim import simulate_seismometer, corn_freq_2_paz
@@ -35,10 +39,12 @@ def get_spectral(trace, samp_rate):
         paz_sa = corn_freq_2_paz(freq, damp=D)
         paz_sa['sensitivity'] = omega
         paz_sa['zeros'] = []
-        dd = simulate_seismometer(trace.data, samp_rate, paz_remove=None,
-                                  paz_simulate=paz_sa,taper=True,
-                                  simulate_sensitivity=True,
-                                  taper_fraction=0.05)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            dd = simulate_seismometer(trace.data, samp_rate, paz_remove=None,
+                                      paz_simulate=paz_sa,taper=True,
+                                      simulate_sensitivity=True,
+                                      taper_fraction=0.05)
 
         stats_out = trace.stats.copy()
         stats_out['period'] = pdict[T]
@@ -149,12 +155,14 @@ def streams_to_dataframe(streams):
             if trace.stats['units'] == 'acc':
                 # do some basic data processing - if this has already been done,
                 # it shouldn't hurt to repeat it.
-                trace.detrend('linear')
-                trace.detrend('demean')
-                trace.taper(max_percentage=0.05, type='cosine')
-                trace.filter('highpass',freq=FILTER_FREQ,zerophase=True,corners=CORNERS)
-                trace.detrend('linear')
-                trace.detrend('demean')
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    trace.detrend('linear')
+                    trace.detrend('demean')
+                    trace.taper(max_percentage=0.05, type='cosine')
+                    trace.filter('highpass',freq=FILTER_FREQ,zerophase=True,corners=CORNERS)
+                    trace.detrend('linear')
+                    trace.detrend('demean')
 
                 # get the peak acceleration
                 pga = np.abs(trace.max()) * GAL_TO_PCTG
