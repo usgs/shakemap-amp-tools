@@ -194,8 +194,11 @@ def dataframe_to_xml(df,eventid,dir,reference=None):
     Returns:
         str: Path to output XML file.
     """
-    top_headers = df.columns.levels[0]
-    channels = (set(top_headers) - set(required_columns)) - set(optional)
+    if hasattr(df.columns,'levels'):
+        top_headers = df.columns.levels[0]
+        channels = (set(top_headers) - set(required_columns)) - set(optional)
+    else:
+        channels = []
     root = etree.Element('shakemap-data',code_version="3.5",map_version="3")
 
     create_time = int(time.time())
@@ -206,27 +209,31 @@ def dataframe_to_xml(df,eventid,dir,reference=None):
     for idx,row in df.iterrows():
         station = etree.SubElement(stationlist,'station')
 
+        tmprow = row.copy()
+        if isinstance(tmprow.index,pd.core.indexes.multi.MultiIndex):
+            tmprow.index = tmprow.index.droplevel(1)
+        
         # assign required columns
-        stationcode = row['station'].iloc[0].strip()
-        netid = row['network'].iloc[0].strip()
+        stationcode = tmprow['station'].strip()
+        netid = tmprow['network'].strip()
         if not stationcode.startswith(netid):
             stationcode = '%s.%s' % (netid,stationcode)
 
         station.attrib['code'] = stationcode
-        station.attrib['lat'] = '%.4f' % row['lat'].iloc[0]
-        station.attrib['lon'] = '%.4f' % row['lon'].iloc[0]
+        station.attrib['lat'] = '%.4f' % tmprow['lat']
+        station.attrib['lon'] = '%.4f' % tmprow['lon']
 
         # assign optional columns
-        if 'location' in top_headers:
-            station.attrib['name'] = row['location'].iloc[0].strip()
-        if 'network' in top_headers:
-            station.attrib['netid'] = row['network'].iloc[0].strip()
-        if 'distance' in top_headers:
-            station.attrib['dist'] = '%.1f' % row['distance']
-        if 'intensity' in top_headers:
-            station.attrib['intensity'] = '%.1f' % row['intensity']
-        if 'source' in top_headers:
-            station.attrib['source'] = row['source'].iloc[0].strip()
+        if 'location' in tmprow:
+            station.attrib['name'] = tmprow['location'].strip()
+        if 'network' in tmprow:
+            station.attrib['netid'] = tmprow['network'].strip()
+        if 'distance' in tmprow:
+            station.attrib['dist'] = '%.1f' % tmprow['distance']
+        if 'intensity' in tmprow:
+            station.attrib['intensity'] = '%.1f' % tmprow['intensity']
+        if 'source' in tmprow:
+            station.attrib['source'] = tmprow['source'].strip()
 
         # sort channels by N,E,Z or H1,H2,Z
         channels = sorted(list(channels))

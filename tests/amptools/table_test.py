@@ -10,11 +10,17 @@ def test_write_xml():
     homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
     datadir = os.path.join(homedir,'..','data')
     complete_file = os.path.join(datadir,'complete_pgm.xlsx')
+    mmimin_file = os.path.join(datadir,'minimum_mmi.xlsx')
     tempdir = None
     try:
         tempdir = tempfile.mkdtemp()
         df, reference = read_excel(complete_file)
         outfile = dataframe_to_xml(df,'foo',tempdir,reference=reference)
+
+        
+        df_mmimin,reference = read_excel(mmimin_file)
+        outfile = dataframe_to_xml(df_mmimin,'bar',tempdir,reference=reference)
+        
     except Exception as e:
         pass
     finally:
