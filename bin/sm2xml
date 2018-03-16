@@ -9,8 +9,6 @@ import glob
 import string
 
 # third party imports
-import pandas as pd
-import numpy as np
 import openpyxl
 from openpyxl.styles import Alignment
 from openpyxl.styles.borders import Border, Side
@@ -25,15 +23,23 @@ from amptools.io.knet.core import read_knet, is_knet
 FORMATS = ['cwb','geonet','knet']
 
 def _clean_sheet(outfile_excel,dataframe):
+    """Put reference at top of spreadsheet, remove index column.
+    
+    Args:
+        outfile_excel (str): Path to Excel spreadsheet.
+        dataframe (DataFrame): Pandas DataFrame containing the data in the Excel file.
+        
+    """
     # We want put a default reference at the top of the sheet because
     # 1) it helps users know where to put it
     # 2) it ensures consistency of sheet layout
     # The problem - you can't insert or delete rows/columns in openpyxl.
     # So we'll copy the data from the sheet, paste it into a new sheet, and
-    # delete the old sheet. While we're at it, we'll remove the index column.
+    # delete the old sheet. 
     # Maintain the merged cells for the channels
     # Set the borders on the header cells (incl sub-headers and merged cells) TODO
     # center merged cells
+
     wb = openpyxl.load_workbook(outfile_excel)
     sheet1 = wb.active
 

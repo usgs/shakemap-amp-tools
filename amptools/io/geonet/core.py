@@ -85,42 +85,6 @@ def read_geonet(filename, **kwargs):
         
     return stream
     
-def _read_velocity(filename):
-    trace1,offset1,velocity1 = _read_channel(filename,0)
-    trace2,offset2,velocity2 = _read_channel(filename,offset1)
-    trace3,offset3,velocity3 = _read_channel(filename,offset2)
-
-    # occasionally, geonet horizontal components are
-    # identical.  To handle this, we'll set the second
-    # channel to whatever isn't the first one.
-    channel1 = trace1.stats['channel']
-    channel2 = trace2.stats['channel']
-    channel3 = trace3.stats['channel']
-    if channel1 == channel2:
-        if channel1 == 'HHE':
-            trace2.stats['channel'] = 'HHN'
-        elif channel1 == 'HHN':
-            trace2.stats['channel'] = 'HHE'
-        else:
-            raise Exception('Could not resolve duplicate channels in %s' % trace1.stats['station'])
-    if channel2 == channel3:
-        if channel2 == 'HHE':
-            trace3.stats['channel'] = 'HHN'
-        elif channel2 == 'HHN':
-            trace3.stats['channel'] = 'HHE'
-        else:
-            raise Exception('Could not resolve duplicate channels in %s' % trace1.stats['station'])
-
-    trace1.data = velocity1
-    trace1.stats['units'] = 'vel'
-    trace2.data = velocity2
-    trace2.stats['units'] = 'vel'
-    trace3.data = velocity3
-    trace3.stats['units'] = 'vel'
-    stream = Stream([trace1,trace2,trace3])
-    return stream
-                        
-
 def _read_channel(filename,line_offset):
     """Read channel data from GNS V1 text file.
     

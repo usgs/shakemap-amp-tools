@@ -1,16 +1,14 @@
 #!/usr/bin/env python
 
 #stdlib imports
-from datetime import datetime,timedelta
-import sys
-import os.path
+from datetime import datetime
 import re
+import os.path
 
 #third party
 from obspy.core.trace import Trace
 from obspy.core.stream import Stream
 from obspy.core.trace import Stats
-from obspy.core.utcdatetime import UTCDateTime
 import numpy as np
 
 TEXT_HDR_ROWS = 17

@@ -11,18 +11,25 @@ from lxml import etree
 from openpyxl import load_workbook, utils
 
 
-required_columns = ['station','lat','lon','network']
-channel_groups = [['[a-z]{2}e','[a-z]{2}n','[a-z]{2}z'],
+REQUIRED_COLUMNS = ['station','lat','lon','network']
+CHANNEL_GROUPS = [['[a-z]{2}e','[a-z]{2}n','[a-z]{2}z'],
                   ['h1','h2','z'],
                   ['unk']]
-pgm_cols = ['pga','pgv','psa03','psa10','psa30']
-optional = ['location','distance','reference','intensity','source']
-
-EXCEL_DESC = '''
-
-'''
+PGM_COLS = ['pga','pgv','psa03','psa10','psa30']
+OPTIONAL = ['location','distance','reference','intensity','source']
 
 def _move(cellstr,nrows,ncols):
+    """Internal method for getting new cell coordinate by adding rows/columns to cell coordinate.
+    
+    'A1' moved by 1 row, 1 column => 'B2'
+    
+    Args:
+        cellstr (str): Cell coordinate (A1,B2)
+        nrows (int): Number of rows to move (usually down)
+        ncols (int): Number of columns to move (usually right)
+    Returns:
+        str: New cell coordinate.
+    """
     # WARNING! This will only work up to column Z!
     #colidx is a string, rowidx is a number
     col_str_idx,rowidx = utils.coordinate_from_string(cellstr)
@@ -131,17 +138,17 @@ def read_excel(excelfile):
     if 'station' not in top_headers:
         df['station'] = df.index
         top_headers = df.columns.levels[0]
-    if not set(required_columns).issubset(set(top_headers)):
+    if not set(REQUIRED_COLUMNS).issubset(set(top_headers)):
         fmt = 'Input Excel file must specify the following columns: %s.'
-        tpl = (str(required_columns))
+        tpl = (str(REQUIRED_COLUMNS))
         raise KeyError(fmt % tpl)
     
 
     # check if channel headers are valid
-    channels = (set(top_headers) - set(required_columns)) - set(optional)
+    channels = (set(top_headers) - set(REQUIRED_COLUMNS)) - set(OPTIONAL)
     valid = False
     if len(channels):
-        for channel_group in channel_groups:
+        for channel_group in CHANNEL_GROUPS:
             num_channels = 0
             for channel_pat in channel_group:
                 cp = re.compile(channel_pat)
@@ -170,7 +177,7 @@ def read_excel(excelfile):
     empty_cell = re.compile('\s+')
     for channel in channels:
         channel_df = df[channel].copy()
-        for column in pgm_cols:
+        for column in PGM_COLS:
             if column in channel_df:
                 found = True
                 channel_df[column] = channel_df[column].replace(empty_cell,np.nan)
@@ -179,7 +186,7 @@ def read_excel(excelfile):
     
     if not found:
         fmt = 'File must contain at least one of the following data columns: %s'
-        tpl = (str(pgm_cols+['intensity']))
+        tpl = (str(PGM_COLS+['intensity']))
         raise KeyError(fmt % tpl)
 
     return (df,reference)
@@ -196,7 +203,7 @@ def dataframe_to_xml(df,eventid,dir,reference=None):
     """
     if hasattr(df.columns,'levels'):
         top_headers = df.columns.levels[0]
-        channels = (set(top_headers) - set(required_columns)) - set(optional)
+        channels = (set(top_headers) - set(REQUIRED_COLUMNS)) - set(OPTIONAL)
     else:
         channels = []
     root = etree.Element('shakemap-data',code_version="3.5",map_version="3")

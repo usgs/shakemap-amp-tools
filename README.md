@@ -10,6 +10,8 @@ project, mostly those having to do with finding and parsing strong ground motion
 it into the XML data format used by ShakeMap.  This repository includes the following tools:
 
  * `amps2xml` Convert peak ground motions in Excel format to ShakeMap XML data structure.
+ * `ftpfetch` Retrieve directories or files containing data from FTP url.
+ * `sm2xml` Convert a directory of strong motion data files into ShakeMap xml.
 
 # Installing
 
