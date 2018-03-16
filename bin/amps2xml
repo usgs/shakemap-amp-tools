@@ -6,14 +6,16 @@ import argparse
 # local imports
 from amptools.table import read_excel, dataframe_to_xml, EXCEL_DESC
 
+
 def main(args):
     # gather arguments
     excelfile = args.excelfile
     eventid = args.eventid
     dir = args.directory
-    df,reference = read_excel(excelfile)
-    outfile = dataframe_to_xml(df,eventid,dir,reference=reference)
+    df, reference = read_excel(excelfile)
+    outfile = dataframe_to_xml(df, eventid, dir, reference=reference)
     print('Peak ground motions written to file %s.' % outfile)
+
 
 if __name__ == '__main__':
     desc = '''Convert a peak ground motion Excel file into ShakeMap input.
@@ -54,7 +56,8 @@ if __name__ == '__main__':
     '''
     parser = argparse.ArgumentParser(description=desc,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('excelfile', help='Excel file containing peak ground motions.')
+    parser.add_argument(
+        'excelfile', help='Excel file containing peak ground motions.')
     parser.add_argument('eventid', help='Earthquake event ID.')
     parser.add_argument('directory', help='Output data directory.')
     pargs = parser.parse_args()

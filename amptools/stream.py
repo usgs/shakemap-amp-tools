@@ -1,4 +1,4 @@
-#stdlib imports
+# stdlib imports
 import warnings
 
 # third party imports
@@ -8,10 +8,11 @@ from obspy.signal.invsim import simulate_seismometer, corn_freq_2_paz
 from obspy.core.trace import Trace
 from obspy.core.stream import Stream
 
-GAL_TO_PCTG = 1/(9.8)
+GAL_TO_PCTG = 1 / (9.8)
 
 FILTER_FREQ = 0.02
 CORNERS = 4
+
 
 def get_spectral(trace, samp_rate):
     """Compute ShakeMap pseudo-spectral parameters
@@ -24,12 +25,12 @@ def get_spectral(trace, samp_rate):
     Returns:
         list: Three traces at 0.3, 1.0, and 3.0 seconds.
     """
-    D = 0.05	# 5% damping
+    D = 0.05  # 5% damping
 
-    pdict = {0.3:'psa03',
-             1.0:'psa10',
-             3.0:'psa30'}
-    
+    pdict = {0.3: 'psa03',
+             1.0: 'psa10',
+             3.0: 'psa30'}
+
     traces = []
     periods = [0.3, 1.0, 3.0]
     for T in periods:
@@ -42,17 +43,19 @@ def get_spectral(trace, samp_rate):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             dd = simulate_seismometer(trace.data, samp_rate, paz_remove=None,
-                                      paz_simulate=paz_sa,taper=True,
+                                      paz_simulate=paz_sa, taper=True,
                                       simulate_sensitivity=True,
                                       taper_fraction=0.05)
 
         stats_out = trace.stats.copy()
         stats_out['period'] = pdict[T]
-        stats_out['channel'] = '%s_%s' % (stats_out['channel'],stats_out['period'])
-        trace_out = Trace(dd,stats_out)
+        stats_out['channel'] = '%s_%s' % (
+            stats_out['channel'], stats_out['period'])
+        trace_out = Trace(dd, stats_out)
         traces.append(trace_out)
-   
+
     return traces
+
 
 def streams_to_dataframe(streams):
     """Extract peak ground motions from list of Stream objects.
@@ -88,7 +91,7 @@ def streams_to_dataframe(streams):
 
     """
     # top level columns
-    columns = ['station','location','source','network','lat','lon']
+    columns = ['station', 'location', 'source', 'network', 'lat', 'lon']
 
     # Determine which channels should be created
     channels = []
@@ -99,19 +102,18 @@ def streams_to_dataframe(streams):
                 channels.append(trace.stats['channel'])
             if not len(subchannels):
                 if trace.stats['units'] == 'acc':
-                    subchannels = ['pga','pgv','psa03','psa10','psa30']
+                    subchannels = ['pga', 'pgv', 'psa03', 'psa10', 'psa30']
                 elif trace.stats['units'] == 'vel':
                     subchannels = ['pgv']
                 else:
                     raise ValueError('Unknown units %s' % trace['units'])
-        
-            
+
     # Create dictionary to hold columns of basic data
     meta_dict = {}
     for column in columns:
         meta_dict[column] = []
-    
-    subcolumns = ['']*len(columns)
+
+    subcolumns = [''] * len(columns)
     nchannels = len(channels)
     subcolumns += subchannels * len(channels)
 
@@ -121,17 +123,17 @@ def streams_to_dataframe(streams):
     for channel in channels:
         newchannels += [channel] * len(subchannels)
     columns += newchannels
-    
-    dfcolumns = pd.MultiIndex.from_arrays([columns,subcolumns])
+
+    dfcolumns = pd.MultiIndex.from_arrays([columns, subcolumns])
     dataframe = pd.DataFrame(columns=dfcolumns)
 
     # make sure we set the data types of all of the columns
-    dtypes = {'station':str,
-              'location':str,
-              'source':str,
-              'network':str,
-              'lat':np.float64,
-              'lon':np.float64}
+    dtypes = {'station': str,
+              'location': str,
+              'source': str,
+              'network': str,
+              'lat': np.float64,
+              'lon': np.float64}
 
     dataframe = dataframe.astype(dtypes)
 
@@ -160,7 +162,8 @@ def streams_to_dataframe(streams):
                     trace.detrend('linear')
                     trace.detrend('demean')
                     trace.taper(max_percentage=0.05, type='cosine')
-                    trace.filter('highpass',freq=FILTER_FREQ,zerophase=True,corners=CORNERS)
+                    trace.filter('highpass', freq=FILTER_FREQ,
+                                 zerophase=True, corners=CORNERS)
                     trace.detrend('linear')
                     trace.detrend('demean')
 
@@ -174,9 +177,9 @@ def streams_to_dataframe(streams):
 
                 # get the three spectral reponses
                 samp_rate = trace.stats['sampling_rate']
-                trace_03,trace_10,trace_30 = get_spectral(trace,samp_rate)
-                spectral_traces += [trace_03,trace_10,trace_30]
-                
+                trace_03, trace_10, trace_30 = get_spectral(trace, samp_rate)
+                spectral_traces += [trace_03, trace_10, trace_30]
+
                 # get the peak values from each spectral waveform,
                 # convert to %g
                 psa03 = np.abs(trace_03.max()) * GAL_TO_PCTG
@@ -197,14 +200,14 @@ def streams_to_dataframe(streams):
         spectral_streams.append(outstream)
 
     # assign the non-channel specific stuff to dataframe
-    for key,value in meta_dict.items():
+    for key, value in meta_dict.items():
         dataframe[key] = value
 
     # for each channel, assign peak values to dataframe
-    for channel,channel_dict in channel_dicts.items():
+    for channel, channel_dict in channel_dicts.items():
         subdf = dataframe[channel].copy()
-        for key,value in channel_dict.items():
+        for key, value in channel_dict.items():
             subdf[key] = value
         dataframe[channel] = subdf
 
-    return (dataframe,spectral_streams)
+    return (dataframe, spectral_streams)

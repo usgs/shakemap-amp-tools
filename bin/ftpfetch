@@ -5,6 +5,7 @@ import ftplib
 from urllib.parse import urlparse
 import os.path
 
+
 def main(args):
     url = args.url
     outdir = args.outdir
@@ -18,7 +19,8 @@ def main(args):
     # parse the url
     parts = urlparse(url)
 
-    ftp = ftplib.FTP(host=parts.netloc,user=user,passwd=password)     # connect to host, default port
+    # connect to host, default port
+    ftp = ftplib.FTP(host=parts.netloc, user=user, passwd=password)
     try:
         ftp.login()
     except Exception as e:
@@ -28,30 +30,31 @@ def main(args):
             print('Could not login to FTP server: Error "%s"' % (str(e)))
 
     try:
-        ftp.cwd(parts.path) #this will fail if the path is a file
-        #get the list of files
+        ftp.cwd(parts.path)  # this will fail if the path is a file
+        # get the list of files
         filenames = ftp.nlst()
         for fname in filenames:
             print('Fetching %s...' % fname)
-            localfile = os.path.join(outdir,fname)
-            f = open(localfile,'wb')
-            ftp.retrbinary('RETR %s' % fname,f.write)
+            localfile = os.path.join(outdir, fname)
+            f = open(localfile, 'wb')
+            ftp.retrbinary('RETR %s' % fname, f.write)
         ftp.close()
     except Exception as e:
-        path,fname = os.path.split(parts.path)
+        path, fname = os.path.split(parts.path)
         filenames = [fname]
         try:
             ftp.cwd(path)
-            localfile = os.path.join(outdir,fname)
-            f = open(localfile,'wb')
+            localfile = os.path.join(outdir, fname)
+            f = open(localfile, 'wb')
             print('Fetching %s...' % fname)
-            ftp.retrbinary('RETR %s' % fname,f.write)
+            ftp.retrbinary('RETR %s' % fname, f.write)
         except Exception as e:
             ftp.close()
             print('Could not resolve path or file name. Exiting.')
             sys.exit(1)
-    
-    print('Downloaded %i files to %s' % (len(filenames),outdir))
+
+    print('Downloaded %i files to %s' % (len(filenames), outdir))
+
 
 if __name__ == '__main__':
     desc = '''Fetch a file or directory of files from strong motion FTP site.
@@ -72,8 +75,8 @@ Getting all data files from an event on the GeoNet FTP site:
     parser.add_argument('url', help='FTP url.')
     parser.add_argument('outdir', help='Output data directory.')
 
-    parser.add_argument('-u','--user', help='FTP user name.')
-    parser.add_argument('-p','--password', help='FTP password.')
-    
+    parser.add_argument('-u', '--user', help='FTP user name.')
+    parser.add_argument('-p', '--password', help='FTP password.')
+
     pargs = parser.parse_args()
     main(pargs)
