@@ -8,6 +8,7 @@ dependencies:
 - lxml
 - matplotlib
 - numpy
+- obspy
 - pandas
 - pytest
 - pytest-cov
