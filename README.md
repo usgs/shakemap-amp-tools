@@ -1,5 +1,7 @@
 [![Build Status](https://travis-ci.org/usgs/shakemap-amp-tools.svg?branch=master)](https://travis-ci.org/usgs/shakemap-amp-tools)
 
+[![codecov](https://codecov.io/gh/mhearne-usgs/shakemap-amp-tools/branch/master/graph/badge.svg)](https://codecov.io/gh/mhearne-usgs/shakemap-amp-tools)
+
 
 shakemap-amp-tools
 =====
