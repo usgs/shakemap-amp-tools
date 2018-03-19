@@ -41,7 +41,7 @@ def _move(cellstr, nrows, ncols):
         newrowidx = rowidx + nrows
         newcellstr = '%s%i' % (letters[newcolidx], newrowidx)
         return newcellstr
-    except ValueError as ve:
+    except ValueError:
         raise ValueError('Could not add %i columns to column %s.' %
                          (ncols, col_str_idx))
 
@@ -69,7 +69,7 @@ def read_excel(excelfile):
     And then at least one of the following columns:
      - "intensity" MMI value (1-10).
 
-        AND/OR 
+        AND/OR
       a grouped set of per-channel peak ground motion columns, like this:
 
       -------------------------------------------------------------------------------
@@ -126,7 +126,7 @@ def read_excel(excelfile):
     if is_multi:
         try:
             df = pd.read_excel(excelfile, header=header)
-        except pd.errors.ParserError as pe:
+        except pd.errors.ParserError:
             raise IndexError('Input file has invalid empty first data row.')
 
         headers = df.columns.get_level_values(0).str.lower()
@@ -219,7 +219,7 @@ def dataframe_to_xml(df, eventid, dir, reference=None):
     if reference is not None:
         stationlist.attrib['reference'] = reference
 
-    for idx, row in df.iterrows():
+    for _, row in df.iterrows():
         station = etree.SubElement(stationlist, 'station')
 
         tmprow = row.copy()

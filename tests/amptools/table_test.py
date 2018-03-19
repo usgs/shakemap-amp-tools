@@ -22,7 +22,7 @@ def test_write_xml():
         outfile = dataframe_to_xml(df_mmimin,'bar',tempdir,reference=reference)
         
     except Exception as e:
-        pass
+        raise AssertionError('Could not write XML file.')
     finally:
         if tempdir is not None:
             shutil.rmtree(tempdir)
@@ -36,7 +36,7 @@ def test_read_tables():
     ##########################################
     
     complete_file = os.path.join(datadir,'complete_pgm.xlsx')
-    df_complete,reference = read_excel(complete_file)
+    df_complete,_ = read_excel(complete_file)
     np.testing.assert_almost_equal(df_complete['h1']['pga'].sum(),569.17)
         
     pgamin_file = os.path.join(datadir,'minimum_pga.xlsx')

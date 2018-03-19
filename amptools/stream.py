@@ -114,7 +114,6 @@ def streams_to_dataframe(streams):
         meta_dict[column] = []
 
     subcolumns = [''] * len(columns)
-    nchannels = len(channels)
     subcolumns += subchannels * len(channels)
 
     # It's complicated to create a dataframe with a multiindex.

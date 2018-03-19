@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import shutil
-import tempfile
 import os.path
 import numpy as np
 from amptools.io.knet.core import is_knet, read_knet
