@@ -40,7 +40,7 @@ def read_cwb(filename, **kwargs):
         filename (str): Path to possible CWB data file.
         kwargs (ref): Other arguments will be ignored.
     Returns:
-        Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).  
+        Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).
     """
     if not is_cwb(filename):
         raise ValueError('%s is not a valid CWB strong motion data file.')
@@ -68,7 +68,7 @@ def read_cwb(filename, **kwargs):
 
     data = np.genfromtxt(filename, skip_header=HDR_ROWS,
                          delimiter=[COLWIDTH] * NCOLS)  # time, Z, NS, EW
-    nrows, ncols = data.shape
+    nrows, _ = data.shape
     f.close()
 
     # correct start time to GMT

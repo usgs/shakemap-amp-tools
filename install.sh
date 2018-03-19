@@ -25,7 +25,7 @@ if [ ! "$conda" ] ; then
 fi
 
 # Choose an environment file based on platform
-unamestr=`uname`
+unamestr=$(uname)
 if [ "$unamestr" == 'Linux' ]; then
     env_file=environment_linux.yml
 elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
