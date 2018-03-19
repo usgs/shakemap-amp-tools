@@ -28,7 +28,7 @@ def test():
     for datafile in datafiles:
         stream = read_cwb(datafile)
         streams.append(stream)
-    df,sp = streams_to_dataframe(streams)
+    df,_ = streams_to_dataframe(streams)
     pgasum = df['HHE']['pga'].sum()
     np.testing.assert_almost_equal(pgasum,1.7209452756509136)
     

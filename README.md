@@ -4,7 +4,7 @@ Status
 
 [![codecov](https://codecov.io/gh/usgs/shakemap-amp-tools/branch/master/graph/badge.svg)](https://codecov.io/gh/usgs/shakemap-amp-tools)
 
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/88ea73ab8fb94f80a458e1c7f550cfbd)](https://www.codacy.com/app/usgs/shakemap-amp-tools?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=usgs/shakemap-amp-tools&amp;utm_campaign=Badge_Grade)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/88ea73ab8fb94f80a458e1c7f550cfbd)](https://www.codacy.com/app/mhearne-usgs/shakemap-amp-tools?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mhearne-usgs/shakemap-amp-tools&amp;utm_campaign=Badge_Grade)
 
 
 shakemap-amp-tools

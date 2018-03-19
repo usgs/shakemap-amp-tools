@@ -44,7 +44,7 @@ def test_read_tables():
     
 
     mmimin_file = os.path.join(datadir,'minimum_mmi.xlsx')
-    df_mmimin,reference = read_excel(mmimin_file)
+    df_mmimin, _ = read_excel(mmimin_file)
     np.testing.assert_almost_equal(df_mmimin['intensity'].sum(),45.199872273516036)
 
     missing_data_file = os.path.join(datadir,'missing_rows.xlsx')
@@ -69,14 +69,14 @@ def test_read_tables():
         wrong_file = os.path.join(datadir,'wrong_channels.xlsx')
         read_excel(wrong_file)
         assert 1==2
-    except KeyError as ke:
+    except KeyError:
         assert 1==1
 
     try:
         nodata_file = os.path.join(datadir,'no_data.xlsx')
         read_excel(nodata_file)
         assert 1==2
-    except KeyError as ke:
+    except KeyError:
         assert 1==1
 
     try:
@@ -90,7 +90,7 @@ def test_read_tables():
         noref_file = os.path.join(datadir,'no_reference.xlsx')
         read_excel(noref_file)
         assert 1==2
-    except KeyError as ke:
+    except KeyError:
         assert 1==1
 
 
