@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import shutil
 import os.path
 import numpy as np
 from amptools.io.knet.core import is_knet, read_knet
@@ -12,15 +11,14 @@ def test():
     assert is_knet(knet_file)
     try:
         assert is_knet(os.path.abspath(__file__))
-    except AssertionError as ae:
+    except AssertionError:
         assert 1==1
 
     # test a knet file with npoints % 10 == 0
     stream = read_knet(knet_file)
     np.testing.assert_almost_equal(stream[0].max(),29.070,decimal=2)
     np.testing.assert_almost_equal(stream[1].max(),28.821,decimal=2)
-    np.testing.assert_almost_equal(stream[2].max(),11.817,decimal=2)
-    
+    np.testing.assert_almost_equal(stream[2].max(),11.817,decimal=2)    
 
     # test a file that has a number of points divisible by 8
     knet_file2 = os.path.join(datadir,'AOM0011801241951.EW')

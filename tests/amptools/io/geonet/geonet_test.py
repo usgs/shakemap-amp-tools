@@ -55,7 +55,6 @@ def test():
         assert traces[0].max()/comp[1] >= 0.95
         assert traces[1].max()/comp[2] >= 0.95
         assert traces[2].max()/comp[3] >= 0.95
-
-    
+        
 if __name__ == '__main__':
     test()

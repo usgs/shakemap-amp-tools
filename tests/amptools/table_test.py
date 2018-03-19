@@ -15,13 +15,12 @@ def test_write_xml():
     try:
         tempdir = tempfile.mkdtemp()
         df, reference = read_excel(complete_file)
-        outfile = dataframe_to_xml(df,'foo',tempdir,reference=reference)
-
+        _ = dataframe_to_xml(df,'foo',tempdir,reference=reference)
         
         df_mmimin,reference = read_excel(mmimin_file)
-        outfile = dataframe_to_xml(df_mmimin,'bar',tempdir,reference=reference)
+        _ = dataframe_to_xml(df_mmimin,'bar',tempdir,reference=reference)
         
-    except Exception as e:
+    except Exception:
         raise AssertionError('Could not write XML file.')
     finally:
         if tempdir is not None:
@@ -40,7 +39,7 @@ def test_read_tables():
     np.testing.assert_almost_equal(df_complete['h1']['pga'].sum(),569.17)
         
     pgamin_file = os.path.join(datadir,'minimum_pga.xlsx')
-    df_pgamin,reference = read_excel(pgamin_file)
+    df_pgamin,_ = read_excel(pgamin_file)
     np.testing.assert_almost_equal(df_pgamin['unk']['pga'].sum(),569.17)
     
 
@@ -63,7 +62,7 @@ def test_read_tables():
         missing_file = os.path.join(datadir,'missing_columns.xlsx')
         read_excel(missing_file)
         assert 1==2
-    except KeyError as ke:
+    except KeyError:
         assert 1==1
 
     try:
@@ -84,7 +83,7 @@ def test_read_tables():
         emptyrow_file = os.path.join(datadir,'empty_row.xlsx')
         read_excel(emptyrow_file)
         assert 1==2
-    except IndexError as ie:
+    except IndexError:
         assert 1==1
 
     try:

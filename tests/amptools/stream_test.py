@@ -1,20 +1,17 @@
 #!/usr/bin/env python
 
-import tempfile
 import glob
 import os.path
 import numpy as np
 from amptools.io.cwb.core import read_cwb
 from amptools.io.geonet.core import read_geonet
-from amptools.stream import streams_to_dataframe, GAL_TO_PCTG
+from amptools.stream import streams_to_dataframe
 
 def test_spectral():
     homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
-    datafile_v1 = os.path.join(homedir,'..','data','geonet','20161113_110259_WTMC_20.V1A')
     datafile_v2 = os.path.join(homedir,'..','data','geonet','20161113_110259_WTMC_20.V2A')
-    stream_v1 = read_geonet(datafile_v1)
     stream_v2 = read_geonet(datafile_v2)
-    df2,sp = streams_to_dataframe([stream_v2])
+    df2,_ = streams_to_dataframe([stream_v2])
 
     assert df2['HHN']['psa03'].iloc[0]/323.8532 >= 0.95
     assert df2['HHN']['psa10'].iloc[0]/136.6972 >= 0.95

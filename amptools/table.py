@@ -196,13 +196,13 @@ def read_excel(excelfile):
     return (df, reference)
 
 
-def dataframe_to_xml(df, eventid, dir, reference=None):
+def dataframe_to_xml(df, eventid, outdir, reference=None):
     """Write a dataframe to ShakeMap XML format.
 
     Args:
         df (DataFrame): Pandas dataframe, as described in read_excel.
         eventid (str): Event ID string.
-        dir (str): Path to directory where XML file should be written.
+        outdir (str): Path to directory where XML file should be written.
     Returns:
         str: Path to output XML file.
     """
@@ -264,7 +264,7 @@ def dataframe_to_xml(df, eventid, dir, reference=None):
                     pgm_el.attrib['flag'] = '0'
                     pgm_el.attrib['value'] = '%.4f' % row[channel][pgm]
 
-    outfile = os.path.join(dir, '%s_dat.xml' % eventid)
+    outfile = os.path.join(outdir, '%s_dat.xml' % eventid)
     tree = etree.ElementTree(root)
     tree.write(outfile, pretty_print=True)
 

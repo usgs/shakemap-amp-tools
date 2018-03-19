@@ -55,7 +55,7 @@ def read_geonet(filename, **kwargs):
     """
     trace1, offset1, _ = _read_channel(filename, 0)
     trace2, offset2, _ = _read_channel(filename, offset1)
-    trace3, _, velocity3 = _read_channel(filename, offset2)
+    trace3, _, _ = _read_channel(filename, offset2)
 
     # occasionally, geonet horizontal components are
     # identical.  To handle this, we'll set the second

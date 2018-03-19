@@ -54,7 +54,7 @@ def read_knet(filename):
     # with .EW, .NS, .UD extensions.  We'll read in all three files here,
     # and raise an Exception if there aren't three files together.
 
-    filename, ext = os.path.splitext(filename)
+    filename, _ = os.path.splitext(filename)
     if not is_knet(filename):
         raise Exception('%s is not a valid KNET file grouping.' % filename)
     knet_files = [filename + '.EW', filename + '.NS', filename + '.UD']

@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import tempfile
 import os.path
 import numpy as np
 from amptools.io.cwb.core import is_cwb, read_cwb
@@ -20,4 +19,3 @@ def test():
 
 if __name__ == '__main__':
     test()
-    
