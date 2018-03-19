@@ -1,16 +1,13 @@
 #!/usr/bin/env python
 
 # stdlib imports
-from datetime import datetime, timedelta
-import sys
-import os.path
+from datetime import datetime
 import re
 
 # third party
 from obspy.core.trace import Trace
 from obspy.core.stream import Stream
 from obspy.core.trace import Stats
-from obspy.core.utcdatetime import UTCDateTime
 import numpy as np
 
 TIMEFMT = '%Y-%m-%dT%H:%M:%S'
@@ -54,11 +51,11 @@ def read_geonet(filename, **kwargs):
         filename (str): Path to possible GNS V1/V2 data file.
         kwargs (ref): Other arguments will be ignored.
     Returns:
-        Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).  
+        Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).
     """
-    trace1, offset1, velocity1 = _read_channel(filename, 0)
-    trace2, offset2, velocity2 = _read_channel(filename, offset1)
-    trace3, offset3, velocity3 = _read_channel(filename, offset2)
+    trace1, offset1, _ = _read_channel(filename, 0)
+    trace2, offset2, _ = _read_channel(filename, offset1)
+    trace3, _, velocity3 = _read_channel(filename, offset2)
 
     # occasionally, geonet horizontal components are
     # identical.  To handle this, we'll set the second
@@ -261,7 +258,6 @@ def _get_channel(component):
     Returns:
         str: Channel (HHE,HHN,HHZ)
     """
-    compass_dict = {'N': 0, 'S': 180}
     start_direction = component[0]
     end_direction = component[-1]
     angle = int(re.search("\\d+", component).group())

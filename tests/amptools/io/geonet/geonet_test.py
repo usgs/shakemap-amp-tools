@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-import shutil
-import tempfile
 import os.path
 import numpy as np
 from amptools.io.geonet.core import is_geonet, read_geonet
@@ -16,7 +14,7 @@ def test():
     # first test a non-geonet file
     try:
         assert is_geonet(os.path.abspath(__file__))
-    except AssertionError as ae:
+    except AssertionError:
         assert 1==1
 
     # loop over some events that test different properties

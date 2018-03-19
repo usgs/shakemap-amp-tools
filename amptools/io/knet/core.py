@@ -24,7 +24,7 @@ def is_knet(filename):
     Returns:
         bool: True if GNS V1, False otherwise.
     """
-    filename, ext = os.path.splitext(filename)
+    filename, _ = os.path.splitext(filename)
     knet_files = [filename + '.EW', filename + '.NS', filename + '.UD']
     results = []
     for fname in knet_files:
@@ -48,7 +48,7 @@ def read_knet(filename):
         filename (str): Path to possible KNET data file (extension will be ignored.)
         kwargs (ref): Other arguments will be ignored.
     Returns:
-        Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).  
+        Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).
     """
     # Each KNET file contains one channel, so these files should be grouped together,
     # with .EW, .NS, .UD extensions.  We'll read in all three files here,
