@@ -18,7 +18,7 @@ def test():
     stream = read_knet(knet_file)
     np.testing.assert_almost_equal(stream[0].max(),29.070,decimal=2)
     np.testing.assert_almost_equal(stream[1].max(),28.821,decimal=2)
-    np.testing.assert_almost_equal(stream[2].max(),11.817,decimal=2)    
+    np.testing.assert_almost_equal(stream[2].max(),11.817,decimal=2)
 
     # test a file that has a number of points divisible by 8
     knet_file2 = os.path.join(datadir,'AOM0011801241951.EW')
@@ -26,11 +26,6 @@ def test():
     np.testing.assert_almost_equal(stream2[0].max(),4.078,decimal=2)
     np.testing.assert_almost_equal(stream2[1].max(),-4.954,decimal=2)
     np.testing.assert_almost_equal(stream2[2].max(),-2.240,decimal=2)
-
-    # knet_file3 = os.path.join(datadir,'20161122_002021_NAAS_20.V1A')
-    # stream3 = read_knet(knet_file3)
-    
-    # # test the values of these files
     
 if __name__ == '__main__':
     test()
