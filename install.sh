@@ -3,7 +3,9 @@
 VENV=amptools
 
 # Is the reset flag set?
-reset=0
+# Setting this now by default, see if we get in trouble by
+# not having specific environment files.
+reset=1
 while getopts r FLAG; do
   case $FLAG in
     r)
