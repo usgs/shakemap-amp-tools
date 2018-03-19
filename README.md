@@ -1,3 +1,6 @@
+[![Build Status](https://travis-ci.org/usgs/shakemap-amp-tools.svg?branch=master)](https://travis-ci.org/usgs/shakemap-amp-tools)
+
+
 shakemap-amp-tools
 =====
 
