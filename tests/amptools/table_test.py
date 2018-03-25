@@ -4,7 +4,9 @@ import shutil
 import tempfile
 import os.path
 import numpy as np
+from xml.dom import minidom
 from amptools.table import read_excel, dataframe_to_xml
+import pandas as pd
 
 def test_write_xml():
     homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
@@ -94,10 +96,29 @@ def test_read_tables():
         assert 1==1
 
 
-    
-
-
+def test_dataframe_to_xml():
+    homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
+    datadir = os.path.join(homedir,'..','data')
+    amps_output = os.path.join(datadir,'amps.csv')
+    df = pd.read_csv(amps_output)
+    outdir = os.path.expanduser('~')
+    try:
+        xmlfile = dataframe_to_xml(df,'foo',outdir)
+        # HNN,psa10,0.0107
+        root = minidom.parse(xmlfile)
+        comps = root.getElementsByTagName('comp')
+        for comp in comps:
+            if comp.getAttribute('name') == 'HNN':
+                psa10 = comp.getElementsByTagName('psa10')[0]
+                value = float(psa10.getAttribute('value'))
+                assert value == 0.0107
+    except:
+        assert 1==2
+    finally:
+        if os.path.isfile(xmlfile):
+            os.remove(xmlfile)
 if __name__ == '__main__':
     test_write_xml()
     test_read_tables()
+    test_dataframe_to_xml()
     

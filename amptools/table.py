@@ -199,6 +199,18 @@ def read_excel(excelfile):
 def dataframe_to_xml(df, eventid, outdir, reference=None):
     """Write a dataframe to ShakeMap XML format.
 
+    This method accepts either a dataframe from read_excel, or
+    one with this structure:
+     - station: Station code
+     - channel: Channel (HHE,HHN, etc.)
+     - imt: Intensity measure type (pga,pgv, etc.)
+     - value: IMT value.
+     - lat: Station latitude.
+     - lon: Station longitude.
+     - network: Station contributing network.
+     - location: String describing station location.
+     - distance: Distance (km) from station to origin.
+
     Args:
         df (DataFrame): Pandas dataframe, as described in read_excel.
         eventid (str): Event ID string.
@@ -219,18 +231,29 @@ def dataframe_to_xml(df, eventid, outdir, reference=None):
     if reference is not None:
         stationlist.attrib['reference'] = reference
 
+    processed_stations = []
+        
     for _, row in df.iterrows():
-        station = etree.SubElement(stationlist, 'station')
-
         tmprow = row.copy()
         if isinstance(tmprow.index, pd.core.indexes.multi.MultiIndex):
             tmprow.index = tmprow.index.droplevel(1)
 
         # assign required columns
-        stationcode = tmprow['station'].strip()
+        stationcode = str(tmprow['station']).strip()
+        
         netid = tmprow['network'].strip()
         if not stationcode.startswith(netid):
             stationcode = '%s.%s' % (netid, stationcode)
+
+        # if this is a dataframe created by shakemap,
+        # there will be multiple rows per station.
+        # below we process all those rows at once,
+        # so we need this bookkeeping to know that
+        # we've already dealt with this station
+        if stationcode in processed_stations:
+            continue
+
+        station = etree.SubElement(stationlist, 'station')
 
         station.attrib['code'] = stationcode
         station.attrib['lat'] = '%.4f' % tmprow['lat']
@@ -247,22 +270,47 @@ def dataframe_to_xml(df, eventid, outdir, reference=None):
             station.attrib['intensity'] = '%.1f' % tmprow['intensity']
         if 'source' in tmprow:
             station.attrib['source'] = tmprow['source'].strip()
+        
+        if 'imt' not in tmprow.index:
+            
+            
+            # sort channels by N,E,Z or H1,H2,Z
+            channels = sorted(list(channels))
 
-        # sort channels by N,E,Z or H1,H2,Z
-        channels = sorted(list(channels))
+            for channel in channels:
+                component = etree.SubElement(station, 'comp')
+                component.attrib['name'] = channel.upper()
 
-        for channel in channels:
-            component = etree.SubElement(station, 'comp')
-            component.attrib['name'] = channel.upper()
+                # create sub elements out of any of the PGMs
+                for pgm in ['pga', 'pgv', 'psa03', 'psa10', 'psa30']:
+                    if pgm not in row[channel] or np.isnan(row[channel][pgm]):
+                        continue
+                    if pgm in row[channel]:
+                        pgm_el = etree.SubElement(component, pgm)
+                        pgm_el.attrib['flag'] = '0'
+                        pgm_el.attrib['value'] = '%.4f' % row[channel][pgm]
+            processed_stations.append(stationcode)
+        else:
+            # this file was created by a process that has imt/value columns
+            # search the dataframe for all rows with this same station code
+            scode = tmprow['station']
+            station_rows = df[df['station'] == scode]
 
-            # create sub elements out of any of the PGMs
-            for pgm in ['pga', 'pgv', 'psa03', 'psa10', 'psa30']:
-                if pgm not in row[channel] or np.isnan(row[channel][pgm]):
-                    continue
-                if pgm in row[channel]:
+            # now we need to find all of the channels
+            channels = station_rows['channel'].unique()
+            for channel in channels:
+                channel_rows = station_rows[station_rows['channel'] == channel]
+                component = etree.SubElement(station, 'comp')
+                component.attrib['name'] = channel.upper()
+                for _,channel_row in channel_rows.iterrows():
+                    pgm = channel_row['imt']
+                    value = channel_row['value']
                     pgm_el = etree.SubElement(component, pgm)
                     pgm_el.attrib['flag'] = '0'
-                    pgm_el.attrib['value'] = '%.4f' % row[channel][pgm]
+                    pgm_el.attrib['value'] = '%.4f' % value
+                    
+                
+            processed_stations.append(stationcode)
 
     outfile = os.path.join(outdir, '%s_dat.xml' % eventid)
     tree = etree.ElementTree(root)
