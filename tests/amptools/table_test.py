@@ -112,7 +112,7 @@ def test_dataframe_to_xml():
                 psa10 = comp.getElementsByTagName('psa10')[0]
                 value = float(psa10.getAttribute('value'))
                 assert value == 0.0107
-    except:
+    except Exception:
         assert 1==2
     finally:
         if os.path.isfile(xmlfile):
