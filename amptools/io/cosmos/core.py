@@ -48,13 +48,15 @@ def read_cosmos(filename, **kwargs):
     Args:
         filename (str): Path to possible COSMOS V0/V1 data file.
         kwargs (ref):
-            station_types (list): List of valid stations.
+            valid_station_types (list): List of valid station types. See table
+                6  in the COSMOS strong motion data format documentation for
+                station type codes.
             Other arguments will be ignored.
     Returns:
         Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).
     """
     # get list of valid stations
-    station_types = kwargs.get('station_types', None)
+    valid_station_types = kwargs.get('valid_station_types', None)
 
     # count the number of lines in the file
     with open(filename) as f:
@@ -65,14 +67,15 @@ def read_cosmos(filename, **kwargs):
     stream = Stream([])
     while line_offset < line_count:
         trace, line_offset = _read_channel(filename, line_offset)
-        # store the trace if the station type is in the station_types list
-        # or store the trace if there is no station_types list
-        if station_types is not None:
-            if trace.stats['station_type'] in station_types:
+        # store the trace if the station type is in the valid_station_types list
+        # or store the trace if there is no valid_station_types list
+        if valid_station_types is not None:
+            print(trace.stats['station_type'])
+            if trace.stats['station_type'] in valid_station_types:
                 stream.append(trace)
         else:
             stream.append(trace)
-            
+
     return stream
 
 
@@ -119,6 +122,7 @@ def _read_channel(filename, line_offset):
     skiprows += cmt_lines + 1
 
     # set statistics
+    hdr['processing_comments'] = cmt_data
     hdr['units'] = UNITS[int_data[1]]
     hdr['station_type'] = int_data[18]
     hdr['lat'] = flt_data[0]

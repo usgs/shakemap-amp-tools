@@ -2,11 +2,10 @@
 
 import shutil
 import os.path
-import re
 import numpy as np
 from amptools.io.cosmos.core import is_cosmos, read_cosmos
 
-def cosmos_test():
+def test_cosmos():
     homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
     datadir = os.path.join(homedir,'..','..','..','data','cosmos')
     one_channel = os.path.join(datadir,'Cosmos12TimeSeriesTest.v1')
@@ -34,9 +33,20 @@ def cosmos_test():
     # test a two channel cosmos file
     stream2 = read_cosmos(two_channels)
 
+    # test that reading a file that is a valid station type returns a
+    # stream with traces
+    building_code = 10
+    stream3 = read_cosmos(two_channels, valid_station_types=[building_code])
+    assert stream3.count() == 2
+
+    # test that reading a file that is not a valid station type returns an
+    # empty stream
+    stream4 = read_cosmos(two_channels, valid_station_types=[1, 2, 3, 4])
+    assert stream4.count() == 0
+
     # test that two channels are created
     assert len(stream2) == 2
 
 
 if __name__ == '__main__':
-    cosmos_test()
+    test_cosmos()
