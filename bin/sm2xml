@@ -105,7 +105,6 @@ def main(args):
 
     # get appropriate file reader/checker for format
     data_files = []
-    split_files = False  # are three channels split into multiple files?
     if format == 'cwb':
         reader = read_cwb
         checker = is_cwb
@@ -115,7 +114,6 @@ def main(args):
     elif format == 'knet':
         reader = read_knet
         checker = is_knet
-        split_files = True
     else:
         raise Exception('Unsupported format %s' % format)
 
@@ -125,12 +123,7 @@ def main(args):
     # check each file - if it isn't specified format, skip it
     for afile in allfiles:
         if checker(afile):
-            if split_files:
-                dfile, ext = os.path.splitext(afile)
-                if dfile not in data_files:
-                    data_files.append(dfile)
-            else:
-                data_files.append(afile)
+            data_files.append(afile)
 
     # Bail if we didn't find any appropriate files
     if not len(data_files):

@@ -44,24 +44,31 @@ def _group_channels(streams):
         network = trace1.stats['network']
         station = trace1.stats['station']
         starttime = trace1.stats['starttime']
+        endtime = trace1.stats['endtime']
         channel = trace1.stats['channel']
         data = np.asarray(trace1.data)
         for idx2, trace2 in enumerate(trace_list):
             if idx1 != idx2 and idx1 not in duplicate_list:
                 event_match = False
                 duplicate = False
+                try:
+                    same_data = ((data == np.asarray(trace2.data)).all())
+                except AttributeError:
+                    same_data = (data == np.asarray(trace2.data))
                 if (
                         network == trace2.stats['network'] and
                         station == trace2.stats['station'] and
                         starttime == trace2.stats['starttime'] and
+                        endtime == trace2.stats['endtime'] and
                         channel == trace2.stats['channel'] and
-                        (data == np.asarray(trace2.data)).all()
+                        same_data
                     ):
                     duplicate = True
                 elif (
                         network == trace2.stats['network'] and
                         station == trace2.stats['station'] and
-                        starttime == trace2.stats['starttime']
+                        starttime == trace2.stats['starttime'] and
+                        endtime == trace2.stats['endtime']
                     ):
                     event_match = True
                 if duplicate:
