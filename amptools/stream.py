@@ -14,6 +14,88 @@ FILTER_FREQ = 0.02
 CORNERS = 4
 
 
+def _group_channels(streams):
+    """Consolidate streams for the same event.
+
+    Checks to see if there channels for one event in different streams, and
+    groups them into one stream. Then streams are checked for duplicate
+    channels (traces).
+
+    Args:
+        streams (list): List of Stream objects.
+    Returns:
+        list: List of Stream objects.
+    """
+    # Return the original stream if there is only one
+    if len(streams) <=1:
+        return streams
+
+    # Get the all traces
+    trace_list = []
+    for stream in streams:
+        for trace in stream:
+            trace_list += [trace]
+
+    # Create a list of duplicate traces and event matches
+    duplicate_list = []
+    match_list = []
+    for idx1, trace1 in enumerate(trace_list):
+        matches = []
+        network = trace1.stats['network']
+        station = trace1.stats['station']
+        starttime = trace1.stats['starttime']
+        channel = trace1.stats['channel']
+        data = np.asarray(trace1.data)
+        for idx2, trace2 in enumerate(trace_list):
+            if idx1 != idx2 and idx1 not in duplicate_list:
+                event_match = False
+                duplicate = False
+                if (
+                        network == trace2.stats['network'] and
+                        station == trace2.stats['station'] and
+                        starttime == trace2.stats['starttime'] and
+                        channel == trace2.stats['channel'] and
+                        (data == np.asarray(trace2.data)).all()
+                    ):
+                    duplicate = True
+                elif (
+                        network == trace2.stats['network'] and
+                        station == trace2.stats['station'] and
+                        starttime == trace2.stats['starttime']
+                    ):
+                    event_match = True
+                if duplicate:
+                    duplicate_list += [idx2]
+                if event_match:
+                    matches += [idx2]
+        match_list += [matches]
+
+    # Create an updated list of streams
+    streams = []
+    for idx, matches in enumerate(match_list):
+        stream = Stream()
+        grouped = False
+        for match_idx in matches:
+            if match_idx not in duplicate_list:
+                if idx not in duplicate_list:
+                    stream.append(trace_list[match_idx])
+                    duplicate_list += [match_idx]
+                    grouped = True
+        if grouped == True:
+            stream.append(trace_list[idx])
+            duplicate_list += [idx]
+            streams += [stream]
+
+    # Check for ungrouped traces
+    for idx, trace in enumerate(trace_list):
+        if idx not in duplicate_list:
+            stream = Stream()
+            streams += [stream.append(trace)]
+            warnings.warn('One channel stream:\n%s' %(stream), Warning)
+
+    return streams
+
+
 def get_spectral(trace, samp_rate):
     """Compute ShakeMap pseudo-spectral parameters
 
@@ -92,6 +174,9 @@ def streams_to_dataframe(streams):
     """
     # top level columns
     columns = ['station', 'location', 'source', 'network', 'lat', 'lon']
+
+    # Check for common events and group channels
+    streams = _group_channels(streams)
 
     # Determine which channels should be created
     channels = []
