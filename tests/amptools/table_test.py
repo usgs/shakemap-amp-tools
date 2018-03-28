@@ -18,11 +18,11 @@ def test_write_xml():
         tempdir = tempfile.mkdtemp()
         df, reference = read_excel(complete_file)
         xmlfile = os.path.join(tempdir,'foo.xml')
-        _ = dataframe_to_xml(df,xmlfile,reference=reference)
+        dataframe_to_xml(df,xmlfile,reference=reference)
 
         xmlfile = os.path.join(tempdir,'bar.xml')
         df_mmimin,reference = read_excel(mmimin_file)
-        _ = dataframe_to_xml(df_mmimin,xmlfile,reference=reference)
+        dataframe_to_xml(df_mmimin,xmlfile,reference=reference)
         
     except Exception:
         raise AssertionError('Could not write XML file.')

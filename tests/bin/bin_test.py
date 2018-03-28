@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import subprocess
-import pandas as pd
 from xml.dom import minidom
 import os.path
 import shutil
