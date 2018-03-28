@@ -2,19 +2,22 @@
 
 # stdlib imports
 import argparse
+import os.path
 
 # local imports
-from amptools.table import read_excel, dataframe_to_xml, EXCEL_DESC
+from amptools.table import read_excel, dataframe_to_xml
 
 
 def main(args):
     # gather arguments
     excelfile = args.excelfile
-    eventid = args.eventid
     dir = args.directory
     df, reference = read_excel(excelfile)
-    outfile = dataframe_to_xml(df, eventid, dir, reference=reference)
-    print('Peak ground motions written to file %s.' % outfile)
+    ppath,fname = os.path.split(excelfile)
+    fbase,ext = os.path.splitext(fname)
+    xmlfile = os.path.join(dir,'%s_dat.xml' % fbase)
+    dataframe_to_xml(df, xmlfile, reference=reference)
+    print('Peak ground motions written to file %s.' % xmlfile)
 
 
 if __name__ == '__main__':
@@ -58,7 +61,6 @@ if __name__ == '__main__':
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
         'excelfile', help='Excel file containing peak ground motions.')
-    parser.add_argument('eventid', help='Earthquake event ID.')
     parser.add_argument('directory', help='Output data directory.')
     pargs = parser.parse_args()
     main(pargs)

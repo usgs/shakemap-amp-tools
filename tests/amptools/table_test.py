@@ -17,10 +17,12 @@ def test_write_xml():
     try:
         tempdir = tempfile.mkdtemp()
         df, reference = read_excel(complete_file)
-        _ = dataframe_to_xml(df,'foo',tempdir,reference=reference)
-        
+        xmlfile = os.path.join(tempdir,'foo.xml')
+        _ = dataframe_to_xml(df,xmlfile,reference=reference)
+
+        xmlfile = os.path.join(tempdir,'bar.xml')
         df_mmimin,reference = read_excel(mmimin_file)
-        _ = dataframe_to_xml(df_mmimin,'bar',tempdir,reference=reference)
+        _ = dataframe_to_xml(df_mmimin,xmlfile,reference=reference)
         
     except Exception:
         raise AssertionError('Could not write XML file.')
@@ -101,9 +103,10 @@ def test_dataframe_to_xml():
     datadir = os.path.join(homedir,'..','data')
     amps_output = os.path.join(datadir,'amps.csv')
     df = pd.read_csv(amps_output)
-    outdir = os.path.expanduser('~')
+    outdir = tempfile.mkdtemp()
     try:
-        xmlfile = dataframe_to_xml(df,'foo',outdir)
+        xmlfile = os.path.join(outdir,'foo_dat.xml')
+        dataframe_to_xml(df,xmlfile)
         # HNN,psa10,0.0107
         root = minidom.parse(xmlfile)
         comps = root.getElementsByTagName('comp')
@@ -115,8 +118,7 @@ def test_dataframe_to_xml():
     except Exception:
         assert 1==2
     finally:
-        if os.path.isfile(xmlfile):
-            os.remove(xmlfile)
+        shutil.rmtree(outdir)
 if __name__ == '__main__':
     test_write_xml()
     test_read_tables()
