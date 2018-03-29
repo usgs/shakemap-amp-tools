@@ -196,7 +196,7 @@ def read_excel(excelfile):
     return (df, reference)
 
 
-def dataframe_to_xml(df, eventid, outdir, reference=None):
+def dataframe_to_xml(df, xmlfile, reference=None):
     """Write a dataframe to ShakeMap XML format.
 
     This method accepts either a dataframe from read_excel, or
@@ -213,10 +213,7 @@ def dataframe_to_xml(df, eventid, outdir, reference=None):
 
     Args:
         df (DataFrame): Pandas dataframe, as described in read_excel.
-        eventid (str): Event ID string.
-        outdir (str): Path to directory where XML file should be written.
-    Returns:
-        str: Path to output XML file.
+        xmlfile (str): Path to file where XML file should be written.
     """
     if hasattr(df.columns, 'levels'):
         top_headers = df.columns.levels[0]
@@ -312,8 +309,5 @@ def dataframe_to_xml(df, eventid, outdir, reference=None):
                 
             processed_stations.append(stationcode)
 
-    outfile = os.path.join(outdir, '%s_dat.xml' % eventid)
     tree = etree.ElementTree(root)
-    tree.write(outfile, pretty_print=True)
-
-    return outfile
+    tree.write(xmlfile, pretty_print=True)
