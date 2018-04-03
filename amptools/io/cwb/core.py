@@ -46,12 +46,17 @@ def read_cwb(filename, **kwargs):
         raise ValueError('%s is not a valid CWB strong motion data file.')
     f = open(filename, 'rt')
     hdr = OrderedDict()
+    
+    # according to the powers that defined the Network.Station.Channel.Location
+    # "standard", Location is a two character field.  Most data providers,
+    # including CWB here, don't provide this.  We'll flag it as "--".
+    hdr['location'] = '--' 
     while True:
         line = f.readline()
         if line.startswith('#StationCode'):
             hdr['station'] = line.split(':')[1].strip()
         if line.startswith('#StationName'):
-            hdr['location'] = line.split(':')[1].strip()
+            hdr['name'] = line.split(':')[1].strip()
         if line.startswith('#StationLongitude'):
             hdr['lon'] = float(line.split(':')[1].strip())
         if line.startswith('#StationLatitude'):

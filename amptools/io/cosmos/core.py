@@ -101,7 +101,7 @@ def _read_channel(filename, line_offset):
     hdr['network'] =  station_info[0]
     hdr['station'] = station_info[1][0:station_info[1].find(' ')]
     locparts = lines[4].split(':')[2].split()[1:]
-    hdr['location'] = '_'.join(locparts)
+    hdr['name'] = '_'.join(locparts)
     if lines[0].lower().find('uncorrected') >= 0:
         hdr['process_level'] = 'V0'
     if lines[0].lower().find('corrected') >= 0:
@@ -121,6 +121,11 @@ def _read_channel(filename, line_offset):
     cmt_lines, cmt_data = _read_lines(skiprows, filename)
     skiprows += cmt_lines + 1
 
+    # according to the powers that defined the Network.Station.Channel.Location
+    # "standard", Location is a two character field.  Most data providers,
+    # including KNET here, don't provide this.  We'll flag it as "--".
+    hdr['location'] = '--'
+    
     # set statistics
     hdr['processing_comments'] = cmt_data
     hdr['units'] = UNITS[int_data[1]]

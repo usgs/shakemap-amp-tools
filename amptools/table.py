@@ -11,12 +11,12 @@ from lxml import etree
 from openpyxl import load_workbook, utils
 
 
-REQUIRED_COLUMNS = ['station', 'lat', 'lon', 'network']
+REQUIRED_COLUMNS = ['station', 'lat', 'lon', 'netid']
 CHANNEL_GROUPS = [['[a-z]{2}e', '[a-z]{2}n', '[a-z]{2}z'],
                   ['h1', 'h2', 'z'],
                   ['unk']]
 PGM_COLS = ['pga', 'pgv', 'psa03', 'psa10', 'psa30']
-OPTIONAL = ['location', 'distance', 'reference', 'intensity', 'source']
+OPTIONAL = ['name', 'distance', 'reference', 'intensity', 'source','loc','insttype']
 
 
 def _move(cellstr, nrows, ncols):
@@ -58,13 +58,14 @@ def read_excel(excelfile):
      - "station" String containing UNIQUE identifying station information.
      - "lat" Latitude where peak ground motion observations were made.
      - "lon" Longitude where peak ground motion observations were made.
-     - "network" (usually) two letter code indicating the source network.
+     - "netid" (usually) two letter code indicating the source network.
 
     Optional columns include:
-     - "location" String describing area where peak ground motions were observed.
+     - "name" String describing area where peak ground motions were observed.
      - "source" String describing (usu. long form) source of peak ground motion data.
-     - "network" String describing network (us,ci,nc, etc.).
      - "distance" Distance from epicenter to station location, in units of km.
+     - "loc" Two character location code.
+     - "insttype" Instrument type, str.
 
     And then at least one of the following columns:
      - "intensity" MMI value (1-10).
@@ -201,15 +202,19 @@ def dataframe_to_xml(df, xmlfile, reference=None):
 
     This method accepts either a dataframe from read_excel, or
     one with this structure:
-     - station: Station code
-     - channel: Channel (HHE,HHN, etc.)
-     - imt: Intensity measure type (pga,pgv, etc.)
-     - value: IMT value.
-     - lat: Station latitude.
-     - lon: Station longitude.
-     - network: Station contributing network.
-     - location: String describing station location.
-     - distance: Distance (km) from station to origin.
+     - station: Station code (REQUIRED)
+     - channel: Channel (HHE,HHN, etc.) (REQUIRED)
+     - imt: Intensity measure type (pga,pgv, etc.) (REQUIRED)
+     - value: IMT value. (REQUIRED)
+     - lat: Station latitude. (REQUIRED)
+     - lon: Station longitude. (REQUIRED)
+     - netid: Station contributing network. (REQUIRED)
+     - flag: Integer quality flag, meaningful to contributing networks, 
+             but ShakeMap ignores any station with a non-zero value. (REQUIRED)
+     - name: String describing station. (OPTIONAL)
+     - distance: Distance (km) from station to origin. (OPTIONAL)
+     - loc: Description of location (i.e., "5 km south of Wellington") (OPTIONAL)
+     - insttype: Instrument type (FBA, etc.) (OPTIONAL)
 
     Args:
         df (DataFrame): Pandas dataframe, as described in read_excel.
@@ -238,7 +243,7 @@ def dataframe_to_xml(df, xmlfile, reference=None):
         # assign required columns
         stationcode = str(tmprow['station']).strip()
         
-        netid = tmprow['network'].strip()
+        netid = tmprow['netid'].strip()
         if not stationcode.startswith(netid):
             stationcode = '%s.%s' % (netid, stationcode)
 
@@ -257,20 +262,22 @@ def dataframe_to_xml(df, xmlfile, reference=None):
         station.attrib['lon'] = '%.4f' % tmprow['lon']
 
         # assign optional columns
-        if 'location' in tmprow:
-            station.attrib['name'] = tmprow['location'].strip()
-        if 'network' in tmprow:
-            station.attrib['netid'] = tmprow['network'].strip()
+        if 'name' in tmprow:
+            station.attrib['name'] = tmprow['name'].strip()
+        if 'netid' in tmprow:
+            station.attrib['netid'] = tmprow['netid'].strip()
         if 'distance' in tmprow:
             station.attrib['dist'] = '%.1f' % tmprow['distance']
         if 'intensity' in tmprow:
             station.attrib['intensity'] = '%.1f' % tmprow['intensity']
         if 'source' in tmprow:
             station.attrib['source'] = tmprow['source'].strip()
-        
+        if 'loc' in tmprow:
+            station.attrib['loc'] = tmprow['loc'].strip()
+        if 'insttype' in tmprow:
+            station.attrib['insttype'] = tmprow['insttype'].strip()
+                
         if 'imt' not in tmprow.index:
-            
-            
             # sort channels by N,E,Z or H1,H2,Z
             channels = sorted(list(channels))
 
@@ -302,9 +309,10 @@ def dataframe_to_xml(df, xmlfile, reference=None):
                 for _,channel_row in channel_rows.iterrows():
                     pgm = channel_row['imt']
                     value = channel_row['value']
+                    
                     pgm_el = etree.SubElement(component, pgm)
-                    pgm_el.attrib['flag'] = '0'
                     pgm_el.attrib['value'] = '%.4f' % value
+                    pgm_el.attrib['flag'] = '%i' % channel_row['flag']
                     
                 
             processed_stations.append(stationcode)

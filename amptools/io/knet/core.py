@@ -51,7 +51,13 @@ def read_knet(filename):
 
     hdr = {}
     hdr['station'] = lines[5].split()[2]
-    hdr['location'] = 'unknown'
+    hdr['name'] = 'unknown'
+
+    # according to the powers that defined the Network.Station.Channel.Location
+    # "standard", Location is a two character field.  Most data providers,
+    # including KNET here, don't provide this.  We'll flag it as "--".
+    hdr['location'] = '--' 
+    
     hdr['lat'] = float(lines[6].split()[2])
     hdr['lon'] = float(lines[7].split()[2])
     hdr['sampling_rate'] = float(
