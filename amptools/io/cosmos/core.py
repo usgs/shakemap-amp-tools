@@ -11,9 +11,6 @@ from obspy.core.trace import Stats
 import numpy as np
 
 TEXT_HDR_ROWS = 14
-INT_HDR_ROWS = 10
-FLT_HDR_ROWS = 20
-COMMENT_ROWS = 4
 
 VALID_MARKERS = ['CORRECTED ACCELERATION',
     'UNCORRECTED ACCELERATION'
