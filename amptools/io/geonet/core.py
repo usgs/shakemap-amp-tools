@@ -106,10 +106,10 @@ def _read_channel(filename, line_offset):
     if lines[0].lower().find('uncorrected') >= 0:
         data_format = 'V1'
 
-    # parse out the station name, location, and component string
+    # parse out the station code, name, and component string
     # from text header
     station = lines[1].split()[1]
-    location = lines[2].replace(' ', '_').strip()
+    name = lines[2].replace(' ', '_').strip()
     component = lines[12].split()[1]
 
     # read floating point header array
@@ -118,8 +118,13 @@ def _read_channel(filename, line_offset):
                              max_rows=FP_HDR_ROWS)
 
     # parse header dictionary from float header array
-    hdr = _read_header(hdr_data, station, location, component, data_format)
+    hdr = _read_header(hdr_data, station, name, component, data_format)
 
+    # according to the powers that defined the Network.Station.Channel.Location
+    # "standard", Location is a two character field.  Most data providers,
+    # including GeoNet here, don't provide this.  We'll flag it as "--".
+    hdr['location'] = '--' 
+    
     # inform the user that they have a V1 or V2 file
     hdr['process_level'] = data_format
 
@@ -181,7 +186,7 @@ def _read_channel(filename, line_offset):
     return (trace, offset, velocity)
 
 
-def _read_header(hdr_data, station, location, component, data_format):
+def _read_header(hdr_data, station, name, component, data_format):
     """Construct stats dictionary from header lines.
 
     Args:
@@ -192,7 +197,7 @@ def _read_header(hdr_data, station, location, component, data_format):
     Returns:
         Dictionary containing fields:
             - station
-            - location
+            - name
             - sampling_rate Samples per second.
             - delta Interval between samples (seconds)
             - calib Calibration factor (always 1.0)
@@ -208,7 +213,7 @@ def _read_header(hdr_data, station, location, component, data_format):
     """
     hdr = {}
     hdr['station'] = station
-    hdr['location'] = location
+    hdr['name'] = name
     if data_format == 'V1':
         hdr['sampling_rate'] = hdr_data[4, 0]
         hdr['delta'] = 1 / hdr['sampling_rate']

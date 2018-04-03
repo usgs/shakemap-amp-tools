@@ -154,7 +154,8 @@ def streams_to_dataframe(streams):
     Returns:
         DataFrame: Pandas dataframe containing columns:
             - station Station code.
-            - location Location string.
+            - name Text description of station.
+            - location Two character location code.
             - source Long form string containing source network.
             - network Short network code.
             - lat Station latitude
@@ -180,7 +181,7 @@ def streams_to_dataframe(streams):
 
     """
     # top level columns
-    columns = ['station', 'location', 'source', 'network', 'lat', 'lon']
+    columns = ['station', 'name', 'source', 'netid', 'lat', 'lon']
 
     # Check for common events and group channels
     streams = _group_channels(streams)
@@ -220,9 +221,9 @@ def streams_to_dataframe(streams):
 
     # make sure we set the data types of all of the columns
     dtypes = {'station': str,
-              'location': str,
+              'name': str,
               'source': str,
-              'network': str,
+              'netid': str,
               'lat': np.float64,
               'lon': np.float64}
 
@@ -241,7 +242,11 @@ def streams_to_dataframe(streams):
     spectral_streams = []
     for stream in streams:
         for key in meta_dict.keys():
-            meta_dict[key].append(stream[0].stats[key])
+            if key == 'netid':
+                statskey = 'network'
+            else:
+                statskey = key
+            meta_dict[key].append(stream[0].stats[statskey])
         spectral_traces = []
         for trace in stream:
             channel = trace.stats['channel']
