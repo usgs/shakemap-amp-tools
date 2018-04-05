@@ -16,7 +16,7 @@ CHANNEL_GROUPS = [['[a-z]{2}e', '[a-z]{2}n', '[a-z]{2}z'],
                   ['h1', 'h2', 'z'],
                   ['unk']]
 PGM_COLS = ['pga', 'pgv', 'psa03', 'psa10', 'psa30']
-OPTIONAL = ['name', 'distance', 'reference', 'intensity', 'source','loc','insttype']
+OPTIONAL = ['name', 'distance', 'reference', 'intensity', 'source','loc','insttype','elev']
 
 
 def _move(cellstr, nrows, ncols):
@@ -66,6 +66,7 @@ def read_excel(excelfile):
      - "distance" Distance from epicenter to station location, in units of km.
      - "loc" Two character location code.
      - "insttype" Instrument type, str.
+     - "elev" Station elevation, in meters.
 
     And then at least one of the following columns:
      - "intensity" MMI value (1-10).
@@ -209,8 +210,9 @@ def dataframe_to_xml(df, xmlfile, reference=None):
      - lat: Station latitude. (REQUIRED)
      - lon: Station longitude. (REQUIRED)
      - netid: Station contributing network. (REQUIRED)
-     - flag: Integer quality flag, meaningful to contributing networks, 
+     - flag: String quality flag, meaningful to contributing networks, 
              but ShakeMap ignores any station with a non-zero value. (REQUIRED)
+     - elev: Elevation of station (m). (OPTIONAL)
      - name: String describing station. (OPTIONAL)
      - distance: Distance (km) from station to origin. (OPTIONAL)
      - loc: Description of location (i.e., "5 km south of Wellington") (OPTIONAL)
@@ -276,6 +278,8 @@ def dataframe_to_xml(df, xmlfile, reference=None):
             station.attrib['loc'] = tmprow['loc'].strip()
         if 'insttype' in tmprow:
             station.attrib['insttype'] = tmprow['insttype'].strip()
+        if 'elev' in tmprow:
+            station.attrib['elev'] = '%.1f' % tmprow['elev']
                 
         if 'imt' not in tmprow.index:
             # sort channels by N,E,Z or H1,H2,Z
@@ -312,7 +316,7 @@ def dataframe_to_xml(df, xmlfile, reference=None):
                     
                     pgm_el = etree.SubElement(component, pgm)
                     pgm_el.attrib['value'] = '%.4f' % value
-                    pgm_el.attrib['flag'] = '%i' % channel_row['flag']
+                    pgm_el.attrib['flag'] = str(channel_row['flag'])
                     
                 
             processed_stations.append(stationcode)

@@ -34,30 +34,46 @@ def test_read_tables():
     homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
     datadir = os.path.join(homedir,'..','data')
 
+    
     ##########################################
     # these files should all read successfully
     ##########################################
-    
-    complete_file = os.path.join(datadir,'complete_pgm.xlsx')
-    df_complete,_ = read_excel(complete_file)
-    np.testing.assert_almost_equal(df_complete['h1']['pga'].sum(),569.17)
-        
-    pgamin_file = os.path.join(datadir,'minimum_pga.xlsx')
-    df_pgamin,_ = read_excel(pgamin_file)
-    np.testing.assert_almost_equal(df_pgamin['unk']['pga'].sum(),569.17)
-    
+    tmpdir = tempfile.mkdtemp()
+    try:
+        complete_file = os.path.join(datadir,'complete_pgm.xlsx')
+        df_complete,_ = read_excel(complete_file)
+        np.testing.assert_almost_equal(df_complete['h1']['pga'].sum(),569.17)
+        xmlfile = os.path.join(tmpdir,'complete_pgm.xml')
+        dataframe_to_xml(df_complete,xmlfile)
 
-    mmimin_file = os.path.join(datadir,'minimum_mmi.xlsx')
-    df_mmimin, _ = read_excel(mmimin_file)
-    np.testing.assert_almost_equal(df_mmimin['intensity'].sum(),45.199872273516036)
+        pgamin_file = os.path.join(datadir,'minimum_pga.xlsx')
+        df_pgamin,_ = read_excel(pgamin_file)
+        np.testing.assert_almost_equal(df_pgamin['unk']['pga'].sum(),569.17)
+        xmlfile = os.path.join(tmpdir,'minimum_pga.xml')
+        dataframe_to_xml(df_pgamin,xmlfile)
 
-    missing_data_file = os.path.join(datadir,'missing_rows.xlsx')
-    df,reference = read_excel(missing_data_file)
-    assert np.isnan(df['h1']['psa03']['CHPA'])
+        mmimin_file = os.path.join(datadir,'minimum_mmi.xlsx')
+        df_mmimin, _ = read_excel(mmimin_file)
+        np.testing.assert_almost_equal(df_mmimin['intensity'].sum(),45.199872273516036)
+        xmlfile = os.path.join(tmpdir,'minimum_mmi.xml')
+        dataframe_to_xml(df_mmimin,xmlfile)
 
-    sm2xml_example = os.path.join(datadir,'sm2xml_output.xlsx')
-    df,reference = read_excel(sm2xml_example)
-    np.testing.assert_almost_equal(df['hhz']['pga'].sum(),150.82342541678645)
+        missing_data_file = os.path.join(datadir,'missing_rows.xlsx')
+        df,reference = read_excel(missing_data_file)
+        assert np.isnan(df['h1']['psa03']['CHPA'])
+        xmlfile = os.path.join(tmpdir,'missing_rows.xml')
+        dataframe_to_xml(df,xmlfile)
+
+        sm2xml_example = os.path.join(datadir,'sm2xml_output.xlsx')
+        df,reference = read_excel(sm2xml_example)
+        np.testing.assert_almost_equal(df['hhz']['pga'].sum(),150.82342541678645)
+        xmlfile = os.path.join(tmpdir,'sm2xml_output.xml')
+        dataframe_to_xml(df,xmlfile)
+
+    except Exception as e:
+        assert 1==2
+    finally:
+        shutil.rmtree(tmpdir)
     
     ##########################################
     # these files should all fail

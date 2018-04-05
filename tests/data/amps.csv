@@ -1,6 +1,6 @@
 ,station,channel,imt,value,lat,lon,netid,name,distance,flag
 0,1810,HNE,pga,0.1023,37.737,-122.413,NP,CA:San Francisco;Paul Revere School,53.90099811614758,0
-1,1810,HNE,pgv,0.0013,37.737,-122.413,NP,CA:San Francisco;Paul Revere School,53.90099811614758,0
+1,1810,HNE,pgv,0.0013,37.737,-122.413,NP,CA:San Francisco;Paul Revere School,53.90099811614758,S
 2,1810,HNE,pgd,0.001,37.737,-122.413,NP,CA:San Francisco;Paul Revere School,53.90099811614758,0
 3,1810,HNE,psa03,0.0105,37.737,-122.413,NP,CA:San Francisco;Paul Revere School,53.90099811614758,0
 4,1810,HNE,psa10,0.0112,37.737,-122.413,NP,CA:San Francisco;Paul Revere School,53.90099811614758,0
