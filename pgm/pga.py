@@ -15,7 +15,7 @@ class PGA(PGM):
     def __init__(self):
         self.units = '%%g'
 
-    def getPGM(self, stream):
+    def getPGM(self, stream, **kwargs):
         """Return PGA value for given input Stream.
 
         The max acceleration from all horizontal Trace
@@ -29,6 +29,7 @@ class PGA(PGM):
         Args:
             stream (Obspy Stream): Stream containing one or Traces of
                 acceleration data in gals.
+            kwargs (**args): Not used in this class.
         Returns:
             float: PGA in %g units.
         """
