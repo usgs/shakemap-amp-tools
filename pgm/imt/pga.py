@@ -1,8 +1,13 @@
+# stdlib imports
+import argparse
+import inspect
+
 # third party imports
 import numpy as np
 
 # local imports
-from .base import PGM
+from pgm.base import PGM
+
 
 GAL_TO_PCTG = 1 / (9.8)
 
@@ -13,7 +18,7 @@ class PGA(PGM):
     """
 
     def __init__(self):
-        self.units = '%%g'
+        self._units = '%%g'
 
     def getPGM(self, stream, **kwargs):
         """Return PGA value for given input Stream.

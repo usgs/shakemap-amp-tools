@@ -8,6 +8,10 @@ from obspy.signal.invsim import simulate_seismometer, corn_freq_2_paz
 from obspy.core.trace import Trace
 from obspy.core.stream import Stream
 
+# local imports
+from amptools.process import filter_detrend
+
+
 GAL_TO_PCTG = 1 / (9.8)
 
 FILTER_FREQ = 0.02
@@ -255,13 +259,10 @@ def streams_to_dataframe(streams):
                 # it shouldn't hurt to repeat it.
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    trace.detrend('linear')
-                    trace.detrend('demean')
-                    trace.taper(max_percentage=0.05, type='cosine')
-                    trace.filter('highpass', freq=FILTER_FREQ,
-                                 zerophase=True, corners=CORNERS)
-                    trace.detrend('linear')
-                    trace.detrend('demean')
+                    trace = filter_detrend(trace, taper_type='cosine',
+                            taper_percentage=0.05, filter_type='highpass',
+                            filter_frequency=FILTER_FREQ,
+                            filter_zerophase=True, filter_corners=CORNERS)
 
                 # get the peak acceleration
                 pga = np.abs(trace.max()) * GAL_TO_PCTG
