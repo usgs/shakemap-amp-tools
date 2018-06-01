@@ -5,13 +5,13 @@ import numpy as np
 from pgm.base import PGM
 
 
-class GREATER_OF_TWO_HORIZONTALS(PGM):
+class VERTICAL(PGM):
     """
-    greater_of_two_horizontals -- imt from two horizontal components.
+    vertical -- imt from the vertical component.
     """
 
     def getPGM(self, stream, **kwargs):
-        """Return GREATER_OF_TWO_HORIZONTALS value for given input Stream.
+        """Return VERTICAL value for given input Stream.
 
         NB: The input Stream should have already been "processed",
         i.e., filtered, detrended, tapered, etc.)
@@ -21,15 +21,15 @@ class GREATER_OF_TWO_HORIZONTALS(PGM):
                 acceleration data in gals.
             kwargs (**args): Ignored by this class.
         Returns:
-            tuple: (GREATER_OF_TWO_HORIZONTALS (float), timeseries with greater
-                peak value (obspy.core.trace.Trace))
+            tuple: (VERTICAL (float), timeseries of vertical
+                    component (obspy.core.trace.Trace))
         """
         horizontal_vals = []
         channel_idx = []
         for idx, trace in enumerate(stream):
-            # Group all of the max values from traces without
+            # Group all of the max values from traces with
             # Z in the channel name
-            if 'Z' not in trace.stats['channel'].upper():
+            if 'Z' in trace.stats['channel'].upper():
                 horizontal_vals += [np.abs(trace.max())]
                 channel_idx += [idx]
         greater_idx = np.argmax(np.asarray(horizontal_vals))

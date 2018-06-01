@@ -9,9 +9,10 @@ import numpy as np
 # local imports
 from amptools.io.geonet.core import read_geonet
 from pgm.imt.pga import PGA
+from pgm.imc.vertical import VERTICAL
 
 
-def test_pga():
+def test_vertical():
     homedir = os.path.dirname(os.path.abspath(
         __file__))  # where is this script?
     datafile_v2 = os.path.join(homedir, '..', 'data', 'geonet',
@@ -19,10 +20,10 @@ def test_pga():
     stream_v2 = read_geonet(datafile_v2)
     pga_obj = PGA()
     pga_dict, pga_stream = pga_obj.getPGM(stream_v2)
-    np.testing.assert_almost_equal(pga_dict['HHE'], 81.28979591836733)
-    np.testing.assert_almost_equal(pga_dict['HHN'], 99.3173469387755)
-    np.testing.assert_almost_equal(pga_dict['HHZ'], 183.89693877551022)
+    vertical_obj = VERTICAL()
+    vertical_value, vertical_stream = vertical_obj.getPGM(pga_stream)
+    np.testing.assert_almost_equal(vertical_value, 183.89693877551022)
 
 
 if __name__ == '__main__':
-    test_pga()
+    test_vertical()

@@ -204,11 +204,18 @@ def output_flatfile(output_directory, pgm_dictionary):
             dataframe_dict['Channel'] += [metadata['channel']]
             # Set PGM values
             for pgm in channel['PGM']:
-                if counter == 1:
-                    dataframe_dict[pgm] = []
-                    dataframe_dict['Processing Comments'] = []
-                dataframe_dict[pgm] += [channel['PGM'][pgm]['value']]
+                if pgm == 'SA':
+                    for period in channel['PGM'][pgm]:
+                        if counter == 1:
+                            dataframe_dict[period] = []
+                        dataframe_dict[period] += [channel['PGM'][pgm][period]['value']]
+                else:
+                    if counter == 1:
+                        dataframe_dict[pgm] = []
+                    dataframe_dict[pgm] += [channel['PGM'][pgm]['value']]
             # Set processing comments
+            if counter == 1:
+                dataframe_dict['Processing Comments'] = []
             dataframe_dict['Processing Comments'] += [metadata['processing']]
     # Create pandas dataframe
     dataframe = pd.DataFrame(data=dataframe_dict)
@@ -236,27 +243,30 @@ def output_tables(output_directory, pgm_dictionary, pgm_list):
         The table is exported as a csv with the following filename convention:
             <station>.csv
     """
-    # Initialize dictionary
-    dataframe_dict = OrderedDict()
-    dataframe_dict[''] = []
-    for imt in set(pgm_list):
-        dataframe_dict[''] += [imt]
-    # Get channel columns
+
     for station_key in pgm_dictionary:
+        # Initialize dictionary
+        dataframe_dict = OrderedDict()
+        dataframe_dict[''] = []
+        for imt in pgm_dictionary[station_key]['timeseries']:
+            dataframe_dict[''] += [imt]
+        # Get channel columns
         station = pgm_dictionary[station_key]['channels']
         for channel_key in station:
             channel = station[channel_key]
             dataframe_dict[channel_key] = []
-            for imt in set(pgm_list):
-                dataframe_dict[channel_key] = channel['PGM'][imt]['value']
-    # Get calculated IMC columns
-    for station_key in pgm_dictionary:
+            for imt in dataframe_dict['']:
+                if imt.startswith('T'):
+                    dataframe_dict[channel_key] += [channel['PGM']['SA'][imt]['value']]
+                else:
+                    dataframe_dict[channel_key] += [channel['PGM'][imt]['value']]
+        # Get calculated IMC columns
         station = pgm_dictionary[station_key]['components']
         for component_key in station:
             component = station[component_key]
             dataframe_dict[component_key] = []
-            for imt in set(pgm_list):
-                dataframe_dict[component_key] += [component[imt]]
+            for imt in dataframe_dict['']:
+                    dataframe_dict[component_key] += [component[imt]['value']]
         # Create pandas dataframe
         dataframe = pd.DataFrame(data=dataframe_dict)
         # Create file path
@@ -406,23 +416,26 @@ def _get_requested_imcs(args, _imc_classes_, pgm_dict, pgm_list, streams):
         dictionary: Dictionary of pgm values. Populated
             with IMT and IMC values.
     """
-    for imt in set(pgm_list):
-        for component in args.components:
-            component = component.upper()
-            # Check that the class exists and select from import dictionary
-            if component not in _imc_classes_:
-                raise KeyError('"%s" not a valid imc type.' % component)
-            pgm_class = _imc_classes_[component]
-            pgm_obj = pgm_class()
-            for stream in streams:
+    for component in args.components:
+        component = component.upper()
+        # Check that the class exists and select from import dictionary
+        if component not in _imc_classes_:
+            raise KeyError('"%s" not a valid imc type.' % component)
+        pgm_class = _imc_classes_[component]
+        pgm_obj = pgm_class()
+        for station in pgm_dict:
+            for imt in pgm_dict[station]['timeseries']:
+                stream = pgm_dict[station]['timeseries'][imt]
                 station, metadata = _get_metadata(stream)
-                pgm_dict[station]['components'] = {}
-                for channel in metadata:
-                    units = pgm_dict[station]['channels'][channel]['PGM'][imt]['units']
-                pgm_value, imc_timeseries = pgm_obj.getPGM(stream, units=units)
-                pgm_dict[station]['components'][component] = {}
-                pgm_dict[station]['components'][component]['timeseries'] = imc_timeseries
-                pgm_dict[station]['components'][component][imt] = pgm_value
+                if 'components' not in pgm_dict[station]:
+                    pgm_dict[station]['components'] = OrderedDict()
+                if component not in pgm_dict[station]['components']:
+                    pgm_dict[station]['components'][component] = OrderedDict()
+                imc_value, imc_timeseries = pgm_obj.getPGM(stream)
+                imc_dict = OrderedDict()
+                imc_dict['value'] = imc_value
+                imc_dict['timeseries'] = imc_timeseries
+                pgm_dict[station]['components'][component][imt] = imc_dict
     return pgm_dict
 
 
@@ -443,6 +456,7 @@ def _get_requested_imts(args, arglist, _imt_classes_, streams):
     oldpgm = ''
     pgm_dict = OrderedDict()
     pgm_list = OrderedDict()
+    pgm_list['SA'] = OrderedDict()
     while(len(arglist) > 0):
         pgm = arglist.pop(0).upper()
         # Check that the class exists and select from import dictionary
@@ -456,19 +470,33 @@ def _get_requested_imts(args, arglist, _imt_classes_, streams):
         arglist = pgm_obj.parseArgs(arglist)
         for stream in streams:
             station, metadata = _get_metadata(stream)
-            pgm_values = pgm_obj.getPGM(stream)
-            pgm_dict[station] = OrderedDict()
-            pgm_dict[station]['channels'] = {}
+            pgm_values, pgm_timeseries = pgm_obj.getPGM(stream)
+            if station not in pgm_dict:
+                pgm_dict[station] = OrderedDict()
+                pgm_dict[station]['channels'] = OrderedDict()
+                pgm_dict[station]['timeseries'] = OrderedDict()
             for channel in metadata:
-                channel_dict = {}
-                channel_dict['metadata'] = metadata[channel]
-                channel_dict['PGM'] = {}
-                channel_dict['PGM'][pgm.upper()] = {}
-                channel_dict['PGM'][pgm.upper()]['units'] = pgm_obj.getUnits()
-                channel_dict['PGM'][pgm.upper()]['value'] = pgm_values[channel]
-                pgm_dict[station]['channels'][channel] = channel_dict
+                if channel not in pgm_dict[station]['channels']:
+                    pgm_dict[station]['channels'][channel] = OrderedDict()
+                    pgm_dict[station]['channels'][channel]['metadata'] = metadata[channel]
+                    pgm_dict[station]['channels'][channel]['PGM'] = OrderedDict()
+                if pgm.upper() not in pgm_dict[station]['channels'][channel]['PGM']:
+                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()] = OrderedDict()
+                if pgm.upper() == 'SA':
+                    period_dict = OrderedDict()
+                    period = pgm_obj.period_str
+                    period_dict['units'] = pgm_obj.getUnits()
+                    period_dict['value'] = pgm_values[channel]
+                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()][period] = period_dict
+                    pgm_list['SA'][period] = pgm_obj
+                    pgm_dict[station]['timeseries'][period] = pgm_timeseries
+                else:
+                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()]['units'] = pgm_obj.getUnits()
+                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()]['value'] = pgm_values[channel]
+                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()]['timeseries'] = pgm_timeseries
+                    pgm_list[pgm] = pgm_obj
+                    pgm_dict[station]['timeseries'][pgm.upper()] = pgm_timeseries
         oldpgm = pgm
-        pgm_list[pgm] = pgm_obj
         if args.input_source.lower() == 'help':
             arglist = ['-h']
     return pgm_list, pgm_dict

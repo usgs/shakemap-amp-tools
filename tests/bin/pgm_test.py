@@ -35,7 +35,7 @@ def test_imc_imt():
     input_directory = os.path.join(homedir, '..', 'data', 'knet')
     getpgm = os.path.join(homedir,'..','..','bin','getpgm')
     input_format = 'knet'
-    imt = '-m pga'
+    imt = '-m pga sa 2 sa 3'
     imc = '-c greater_of_two_horizontals'
     tmpdir = tempfile.mkdtemp()
     try:
@@ -66,8 +66,6 @@ def test_exceptions():
             assert 'PGMException'.encode('utf-8') in stderr
     except Exception as e:
         raise(e)
-    finally:
-        shutil.rmtree(tmpdir)
 
     invalid_imt = '-m -d'
     try:
@@ -78,8 +76,16 @@ def test_exceptions():
             assert 'KeyError'.encode('utf-8') in stderr
     except Exception as e:
         raise(e)
-    finally:
-        shutil.rmtree(tmpdir)
+
+    invalid_imt = '-m sa'
+    try:
+        cmd = '%s %s %s %s %s %s' % (getpgm, input_directory,
+                tmpdir, input_format, imc, invalid_imt)
+        res, stdout, stderr = get_command_output(cmd)
+        if not res:
+            assert 'period'.encode('utf-8') in stderr
+    except Exception as e:
+        raise(e)
 
     invalid_imt = '-m invalid'
     try:
@@ -90,8 +96,6 @@ def test_exceptions():
             assert 'KeyError'.encode('utf-8') in stderr
     except Exception as e:
         raise(e)
-    finally:
-        shutil.rmtree(tmpdir)
 
     invalid_format = 'invalid'
     imt = '-m pga'
@@ -103,8 +107,6 @@ def test_exceptions():
             assert 'AmptoolsException'.encode('utf-8') in stderr
     except Exception as e:
         raise(e)
-    finally:
-        shutil.rmtree(tmpdir)
 
     invalid_imc = '-c invalid'
     try:
@@ -115,8 +117,8 @@ def test_exceptions():
             assert 'KeyError'.encode('utf-8') in stderr
     except Exception as e:
         raise(e)
-    finally:
-        shutil.rmtree(tmpdir)
+
+    shutil.rmtree(tmpdir)
 
 
 if __name__ == '__main__':
