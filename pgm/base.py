@@ -1,3 +1,5 @@
+# stdlib imports
+import argparse
 import inspect
 
 
@@ -44,9 +46,9 @@ class PGM(object):
         Returns:
             list: Arguments not parsed.
         """
-        cmd_name = __name__  # this should be the name of the module
+        pgm_name = __name__  # this should be the name of the module
         doc_str = inspect.getdoc(self.__class__)
-        parser = argparse.ArgumentParser(prog=cmd_name,
+        parser = argparse.ArgumentParser(prog=pgm_name,
                                          description=doc_str)
         #
         # This line should be in any modules that overrides this

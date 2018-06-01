@@ -8,7 +8,7 @@ import numpy as np
 
 # local imports
 from amptools.io.geonet.core import read_geonet
-from pgm.pga import PGA
+from pgm.imt.pga import PGA
 
 
 def test_pga():
