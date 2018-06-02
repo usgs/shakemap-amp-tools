@@ -1,9 +1,6 @@
-# stdlib imports
-import argparse
-import inspect
-
 # third party imports
 import numpy as np
+from obspy.core.stream import Stream
 
 # local imports
 from pgm.base import PGM
@@ -23,7 +20,7 @@ class PGA(PGM):
     def getPGM(self, stream, **kwargs):
         """Return PGA value for given input Stream.
 
-        The max acceleration from all horizontal Trace
+        The max acceleration from all Trace
         objects will be returned.  In the case of a Stream
         containing data that has been converted to (say) Rotd50,
         then that will presumably be a single Trace.
@@ -36,11 +33,16 @@ class PGA(PGM):
                 acceleration data in gals.
             kwargs (**args): Not used in this class.
         Returns:
-            float: PGA in %g units.
+            tuple: (PGA in %g units (float), timeseries with %g
+                    units (obspy.core.trace.Trace))
         """
-        pgm_dict = {}
+        pga_dict = {}
+        pga_stream = Stream()
         for trace in stream:
             pga = np.abs(trace.max()) * GAL_TO_PCTG
-            pgm_dict[trace.stats['channel']] = pga
-
-        return pgm_dict
+            pga_trace = trace.copy()
+            pga_trace.data = trace.data * GAL_TO_PCTG
+            trace.stats['units'] = self._units
+            pga_dict[trace.stats['channel']] = pga
+            pga_stream.append(pga_trace)
+        return pga_dict, pga_stream
