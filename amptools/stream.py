@@ -10,6 +10,9 @@ from obspy.core.stream import Stream
 
 # local imports
 from amptools.process import filter_detrend
+from pgm.imt.pga import PGA
+from pgm.imt.pgv import PGV
+from pgm.imt.sa import SA
 
 
 GAL_TO_PCTG = 1 / (9.8)
@@ -105,49 +108,6 @@ def _group_channels(streams):
             warnings.warn('One channel stream:\n%s' %(stream), Warning)
 
     return streams
-
-
-def get_spectral(trace, samp_rate):
-    """Compute ShakeMap pseudo-spectral parameters
-
-    Compute 5% damped PSA at 0.3, 1.0, and 3.0 seconds.
-
-    Args:
-        trace (Obspy Trace): Input trace containing acceleration (cm/s**2).
-        samp_rate (int or float): Sampling rate (Hz).
-    Returns:
-        list: Three traces at 0.3, 1.0, and 3.0 seconds.
-    """
-    D = 0.05  # 5% damping
-
-    pdict = {0.3: 'psa03',
-             1.0: 'psa10',
-             3.0: 'psa30'}
-
-    traces = []
-    periods = [0.3, 1.0, 3.0]
-    for T in periods:
-        freq = 1.0 / T
-        omega = (2 * 3.14159 * freq) ** 2
-
-        paz_sa = corn_freq_2_paz(freq, damp=D)
-        paz_sa['sensitivity'] = omega
-        paz_sa['zeros'] = []
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            dd = simulate_seismometer(trace.data, samp_rate, paz_remove=None,
-                                      paz_simulate=paz_sa, taper=True,
-                                      simulate_sensitivity=True,
-                                      taper_fraction=0.05)
-
-        stats_out = trace.stats.copy()
-        stats_out['period'] = pdict[T]
-        stats_out['channel'] = '%s_%s' % (
-            stats_out['channel'], stats_out['period'])
-        trace_out = Trace(dd, stats_out)
-        traces.append(trace_out)
-
-    return traces
 
 
 def streams_to_dataframe(streams):
@@ -265,30 +225,27 @@ def streams_to_dataframe(streams):
                             filter_zerophase=True, filter_corners=CORNERS)
 
                 # get the peak acceleration
-                pga = np.abs(trace.max()) * GAL_TO_PCTG
+                pga_obj = PGA()
+                pga, pga_stream = pga_obj.getPGM([trace])
 
                 # get the peak velocity
-                vtrace = trace.copy()
-                vtrace.integrate()
-                pgv = np.abs(vtrace.max())
+                pgv_obj = PGV()
+                pgv, pgv_stream = pgv_obj.getPGM([trace])
 
                 # get the three spectral reponses
-                samp_rate = trace.stats['sampling_rate']
-                trace_03, trace_10, trace_30 = get_spectral(trace, samp_rate)
-                spectral_traces += [trace_03, trace_10, trace_30]
-
-                # get the peak values from each spectral waveform,
-                # convert to %g
-                psa03 = np.abs(trace_03.max()) * GAL_TO_PCTG
-                psa10 = np.abs(trace_10.max()) * GAL_TO_PCTG
-                psa30 = np.abs(trace_30.max()) * GAL_TO_PCTG
+                sa_obj = SA()
+                psa03, psa03_stream = sa_obj.getPGM([trace], period=0.3)
+                psa10, psa10_stream = sa_obj.getPGM([trace], period=1.0)
+                psa30, psa30_stream = sa_obj.getPGM([trace], period=3.0)
+                spectral_traces += [psa03_stream[0], psa10_stream[0],
+                        psa30_stream[0]]
 
                 # assign values into dictionary
-                channel_dicts[channel]['pga'].append(pga)
-                channel_dicts[channel]['pgv'].append(pgv)
-                channel_dicts[channel]['psa03'].append(psa03)
-                channel_dicts[channel]['psa10'].append(psa10)
-                channel_dicts[channel]['psa30'].append(psa30)
+                channel_dicts[channel]['pga'].append(pga[channel])
+                channel_dicts[channel]['pgv'].append(pgv[channel])
+                channel_dicts[channel]['psa03'].append(psa03[channel])
+                channel_dicts[channel]['psa10'].append(psa10[channel])
+                channel_dicts[channel]['psa30'].append(psa30[channel])
             else:
                 # we only have a velocity channel
                 pgv = np.abs(vtrace.max())
