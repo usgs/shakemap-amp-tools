@@ -7,7 +7,7 @@ install:
     # Install shakemap and requirements
     - bash install.sh
     - . $HOME/miniconda/etc/profile.d/conda.sh
-    - source activate amptools
+    - conda activate amptools
 before_script:
     # This is to take care of Invalid DISPLAY variable
     - "export DISPLAY=:99.0"
