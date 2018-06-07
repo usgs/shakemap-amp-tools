@@ -8,7 +8,7 @@ import numpy as np
 
 # local imports
 from amptools.io.geonet.core import read_geonet
-from pgm.imt.pgv import PGV
+from pgm.station_summary import StationSummary
 
 
 def test_pgv():
@@ -22,11 +22,15 @@ def test_pgv():
         vtrace = trace.copy()
         vtrace.integrate()
         pgv_target[vtrace.stats['channel']] = np.abs(vtrace.max())
-    pgv_obj = PGV()
-    pgv_dict, pgv_stream = pgv_obj.getPGM(stream_v2)
-    np.testing.assert_almost_equal(pgv_dict['HHE'], pgv_target['HHE'])
-    np.testing.assert_almost_equal(pgv_dict['HHN'], pgv_target['HHN'])
-    np.testing.assert_almost_equal(pgv_dict['HHZ'], pgv_target['HHZ'])
+    station_summary = StationSummary(stream_v2,
+            ['vertical', 'greater_of_two_horizontals', 'gmrotd50'],
+            ['pgv', 'sa1.0', 'saincorrect'])
+    station_dict = station_summary.pgms['PGV']
+    greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
+    vertical = station_dict['VERTICAL']
+    np.testing.assert_almost_equal(station_dict['HHE'], pgv_target['HHE'])
+    np.testing.assert_almost_equal(station_dict['HHN'], pgv_target['HHN'])
+    np.testing.assert_almost_equal(station_dict['HHZ'], pgv_target['HHZ'])
 
 
 if __name__ == '__main__':

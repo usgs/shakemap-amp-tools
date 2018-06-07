@@ -10,9 +10,7 @@ from obspy.core.stream import Stream
 
 # local imports
 from amptools.process import filter_detrend
-from pgm.imt.pga import PGA
-from pgm.imt.pgv import PGV
-from pgm.imt.sa import SA
+from pgm.station_summary import StationSummary
 
 
 GAL_TO_PCTG = 1 / (9.8)
@@ -212,44 +210,40 @@ def streams_to_dataframe(streams):
                 statskey = key
             meta_dict[key].append(stream[0].stats[statskey])
         spectral_traces = []
-        for trace in stream:
+        for idx, trace in enumerate(stream):
             channel = trace.stats['channel']
             if trace.stats['units'] == 'acc':
                 # do some basic data processing - if this has already been done,
                 # it shouldn't hurt to repeat it.
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    trace = filter_detrend(trace, taper_type='cosine',
+                    stream[idx] = filter_detrend(trace, taper_type='cosine',
                             taper_percentage=0.05, filter_type='highpass',
                             filter_frequency=FILTER_FREQ,
                             filter_zerophase=True, filter_corners=CORNERS)
-
-                # get the peak acceleration
-                pga_obj = PGA()
-                pga, pga_stream = pga_obj.getPGM([trace])
-
-                # get the peak velocity
-                pgv_obj = PGV()
-                pgv, pgv_stream = pgv_obj.getPGM([trace])
-
-                # get the three spectral reponses
-                sa_obj = SA()
-                psa03, psa03_stream = sa_obj.getPGM([trace], period=0.3)
-                psa10, psa10_stream = sa_obj.getPGM([trace], period=1.0)
-                psa30, psa30_stream = sa_obj.getPGM([trace], period=3.0)
-                spectral_traces += [psa03_stream[0], psa10_stream[0],
-                        psa30_stream[0]]
-
-                # assign values into dictionary
-                channel_dicts[channel]['pga'].append(pga[channel])
-                channel_dicts[channel]['pgv'].append(pgv[channel])
-                channel_dicts[channel]['psa03'].append(psa03[channel])
-                channel_dicts[channel]['psa10'].append(psa10[channel])
-                channel_dicts[channel]['psa30'].append(psa30[channel])
             else:
                 # we only have a velocity channel
                 pgv = np.abs(vtrace.max())
                 channel_dicts[channel]['pgv'].append(pgv)
+        station = StationSummary(stream, ['vertical'], ['pga', 'pgv', 'sa0.3',
+                'sa1.0', 'sa3.0'])
+        for channel in channels:
+            pga = station.pgms['PGA'][channel]
+            pgv = station.pgms['PGA'][channel]
+            psa03 = station.pgms['SA0.3'][channel]
+            psa10 = station.pgms['SA1.0'][channel]
+            psa30 = station.pgms['SA3.0'][channel]
+
+            spectral_traces += [station.oscillators['SA0.3'],
+                    station.oscillators['SA1.0'],
+                    station.oscillators['SA3.0']]
+
+            # assign values into dictionary
+            channel_dicts[channel]['pga'].append(pga)
+            channel_dicts[channel]['pgv'].append(pgv)
+            channel_dicts[channel]['psa03'].append(psa03)
+            channel_dicts[channel]['psa10'].append(psa10)
+            channel_dicts[channel]['psa30'].append(psa30)
         outstream = Stream(spectral_traces)
         spectral_streams.append(outstream)
 

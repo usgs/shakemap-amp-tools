@@ -1,48 +1,48 @@
+# stdlib imports
+import warnings
+
 # third party imports
 import numpy as np
 from obspy.core.stream import Stream
 
 # local imports
-from pgm.base import PGM
+from pgm.exception import PGMException
+from pgm.gather import get_pgm_classes, group_imcs
 
 
-GAL_TO_PCTG = 1 / (9.8)
-
-
-class PGA(PGM):
+def calculate_pga(stream, imcs):
     """
-    pga -- Extract Peak Ground Acceleration in %g from input Stream.
+    Calculate the peak ground acceleration.
+
+    Args:
+        stream (obspy.core.stream.Stream): streams of strong ground motion.
+            Traces in stream must be in units of %%g.
+        imcs (list): list of imcs.
+
+    Returns:
+        dictionary: Dictionary of pga for different components.
     """
-
-    def __init__(self):
-        self._units = '%%g'
-
-    def getPGM(self, stream, **kwargs):
-        """Return PGA value for given input Stream.
-
-        The max acceleration from all Trace
-        objects will be returned.  In the case of a Stream
-        containing data that has been converted to (say) Rotd50,
-        then that will presumably be a single Trace.
-
-        NB: The input Stream should have already been "processed",
-        i.e., filtered, detrended, tapered, etc.)
-
-        Args:
-            stream (Obspy Stream): Stream containing one or Traces of
-                acceleration data in gals.
-            kwargs (**args): Not used in this class.
-        Returns:
-            tuple: (PGA in %g units (float), timeseries with %g
-                    units (obspy.core.trace.Trace))
-        """
-        pga_dict = {}
-        pga_stream = Stream()
-        for trace in stream:
-            pga = np.abs(trace.max()) * GAL_TO_PCTG
-            pga_trace = trace.copy()
-            pga_trace.data = trace.data * GAL_TO_PCTG
-            trace.stats['units'] = self._units
-            pga_dict[trace.stats['channel']] = pga
-            pga_stream.append(pga_trace)
-        return pga_dict, pga_stream
+    pga_dict = {}
+    # check units and add channel pga
+    for trace in stream:
+        if trace.stats['units'] != '%%g':
+            raise PGMException('Invalid units for PGA: %r. '
+            'Units must be %%g' % trace.stats['units'])
+        pga_dict[trace.stats['channel']] = np.abs(trace.max())
+    # sort imcs
+    grouped_imcs = group_imcs(imcs)
+    # gather imc classes
+    pgm_classes = get_pgm_classes('imc')
+    # store pga for imcs
+    for imc in grouped_imcs:
+        if 'calculate_' + imc in pgm_classes:
+            pga_func = pgm_classes['calculate_' + imc]
+            pga = pga_func(stream, percentiles=grouped_imcs[imc])
+            if imc.find('rot') >= 0:
+                for percentile in pga:
+                    pga_dict[imc.upper() + str(percentile)] = pga[percentile]
+            else:
+                pga_dict[imc.upper()] = pga
+        else:
+            warnings.warn('Not a valid IMC: %r. Skipping...' % imc)
+    return pga_dict

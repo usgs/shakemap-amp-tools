@@ -17,6 +17,8 @@ from amptools.exception import AmptoolsException
 from amptools.process import filter_detrend
 from amptools.stream import _group_channels
 from pgm.exception import PGMException
+from pgm.gather import get_pgm_classes
+from pgm.station_summary import StationSummary
 
 # third party imports
 import pandas as pd
@@ -63,68 +65,53 @@ def main(args):
 
     Args:
         ArgumentParser: argparse argument object.
-
-    Notes:
-        Results in a dictionary of PGM values in the following format:
-        {
-            <station code>: {
-                <channel code>: {
-                    metadata: {
-                        * key/value dictionary from trace.stats
-                    },
-                    PGM: {
-                        <requested IMT>: file_format,
-                        ...
-                    }
-                },
-                components: {
-                    <requested IMC>: {
-                        timeseries: obspy.core.trace.Trace,
-                        <requested IMT>: float,
-                        ...
-                    },
-                    ...
-                }
-            },
-            ...
-        }
     """
     # Check import arguments
     if args.input_source is not None:
         input_source = args.input_source
     else:
-        raise AmptoolsException('No input source specified.')
+        raise PGMException('No input source specified.')
     if args.output_directory is not None:
         output_directory = args.output_directory
         # Create directory if it doesn't exist
         if not os.path.exists(output_directory):
                 os.makedirs(output_directory)
     else:
-        raise AmptoolsException('No output directory specified.')
+        raise PGMException('No output directory specified.')
     if args.format is not None:
         input_format = args.format
     else:
         raise AmptoolsException('No input format specified.')
+    if len(args.measurements) < 1:
+         raise PGMException('No measurement type specified.')
     # Get streams
     streams = get_timeseries(input_source, input_format)
     # Process the data
+    # TODO: Bypass process if pulling processed streams from CWB
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         streams = process_streams(streams)
-    # Get IMT and IMC import dictionaries
-    _imt_classes_ = _get_pgm_classes('imt')
-    _imc_classes_ = _get_pgm_classes('imc')
-    # Create a dictionary of PGM values
-    if args.intensity_measurements is not None:
-        arglist = args.intensity_measurements.copy()
-        pgm_list, pgm_dict = _get_requested_imts(args, arglist,
-                _imt_classes_, streams)
-        pgm_dict = _get_requested_imcs(args, _imc_classes_, pgm_dict, pgm_list, streams)
-        # Output flatfile and PGM tables
-        output_flatfile(output_directory, pgm_dict)
-        output_tables(output_directory, pgm_dict, pgm_list)
-    else:
-        raise PGMException('At least one IMT must be specified.')
+    flat_list = []
+    for idx, stream in enumerate(streams):
+        summary = StationSummary(stream, args.components,
+                args.measurements, damping=0.05)
+        flat_rows = summary.create_flatfile_rows()
+        flat_list += [flat_rows]
+        table = summary.create_table()
+        # Create file path
+        station = stream[0].stats['station']
+        filename = station + '.csv'
+        path = os.path.join(output_directory, filename)
+        # Export csv
+        writer = table.to_csv(path, mode = 'w', index=False)
+    all_rows = pd.concat(flat_list)
+    # Create file path
+    today = datetime.datetime.now().strftime("%Y_%m_%d")
+    filename = today + '_flatfile.csv'
+    path = os.path.join(output_directory, filename)
+    # Export csv
+    writer = all_rows.to_csv(path, mode = 'w', index=False)
+
 
 
 def process_streams(streams):
@@ -147,157 +134,6 @@ def process_streams(streams):
     return streams
 
 
-def output_flatfile(output_directory, pgm_dictionary):
-    """
-    Outputs a simplified flatfile.
-
-    Args:
-        output_directory (str): Path to output directory.
-        pgm_dictionary (dictionary): Dictionary of pgm values.
-
-    Notes:
-        Headers:
-            - Record Sequence Number
-            - YEAR
-            - MODY
-            - HRMN
-            - Station Name
-            - Station ID  No.
-            - Station Latitude
-            - Station Longitude
-            - Channel
-            - All requested PGM values (one type per column)
-            ...
-            - Processing Comments
-        The flatfile is exported as a csv with the following filename convention:
-            <YEAR>_<MONTH>_<DAY>_flatfile.csv
-    """
-    # Set metadata column headers
-    columns = ['Record Sequence Number', 'YEAR', 'MODY', 'HRMN',
-            'Station Name', 'Station ID  No.', 'Station Latitude',
-            'Station Longitude', 'Channel']
-    # Initialize dictionary
-    dataframe_dict = OrderedDict()
-    for col in columns:
-        dataframe_dict[col] = []
-    counter = 0
-    for station_key in pgm_dictionary:
-        station = pgm_dictionary[station_key]['channels']
-        for channel_key in station:
-            counter += 1
-            channel = station[channel_key]
-            # Set metadata
-            dataframe_dict['Record Sequence Number'] += [counter]
-            metadata = channel['metadata']
-            dataframe_dict['YEAR'] += [metadata['starttime'].year]
-            # Format the date
-            month = '{:02d}'.format(metadata['starttime'].month)
-            day = '{:02d}'.format(metadata['starttime'].day)
-            dataframe_dict['MODY'] += [month + day]
-            hour = '{:02d}'.format(metadata['starttime'].hour)
-            minute = '{:02d}'.format(metadata['starttime'].minute)
-            dataframe_dict['HRMN'] += [hour + minute]
-            dataframe_dict['Station Name'] += [metadata['name']]
-            dataframe_dict['Station ID  No.'] += [metadata['station']]
-            dataframe_dict['Station Latitude'] += [metadata['lat']]
-            dataframe_dict['Station Longitude'] += [metadata['lon']]
-            dataframe_dict['Channel'] += [metadata['channel']]
-            # Set PGM values
-            for pgm in channel['PGM']:
-                if pgm == 'SA':
-                    for period in channel['PGM'][pgm]:
-                        if counter == 1:
-                            dataframe_dict[period] = []
-                        dataframe_dict[period] += [channel['PGM'][pgm][period]['value']]
-                else:
-                    if counter == 1:
-                        dataframe_dict[pgm] = []
-                    dataframe_dict[pgm] += [channel['PGM'][pgm]['value']]
-            # Set processing comments
-            if counter == 1:
-                dataframe_dict['Processing Comments'] = []
-            dataframe_dict['Processing Comments'] += [metadata['processing']]
-    # Create pandas dataframe
-    dataframe = pd.DataFrame(data=dataframe_dict)
-    # Create file path
-    today = datetime.datetime.now().strftime("%Y_%m_%d")
-    filename = today + '_flatfile.csv'
-    path = os.path.join(output_directory, filename)
-    # Export csv
-    writer = dataframe.to_csv(path, mode = 'w', index=False)
-
-
-def output_tables(output_directory, pgm_dictionary, pgm_list):
-    """
-    Outputs a table of IMCs vs IMTs.
-
-    Args:
-        output_directory (str): Path to output directory.
-        pgm_dictionary (dictionary): Dictionary of pgm values.
-        pgm_list (dictionary): Record of requested IMTs.
-
-    Notes:
-        The table is formated with IMCs as the column labels and IMTs
-        as the row labels.
-
-        The table is exported as a csv with the following filename convention:
-            <station>.csv
-    """
-
-    for station_key in pgm_dictionary:
-        # Initialize dictionary
-        dataframe_dict = OrderedDict()
-        dataframe_dict[''] = []
-        for imt in pgm_dictionary[station_key]['timeseries']:
-            dataframe_dict[''] += [imt]
-        # Get channel columns
-        station = pgm_dictionary[station_key]['channels']
-        for channel_key in station:
-            channel = station[channel_key]
-            dataframe_dict[channel_key] = []
-            for imt in dataframe_dict['']:
-                if imt.startswith('T'):
-                    dataframe_dict[channel_key] += [channel['PGM']['SA'][imt]['value']]
-                else:
-                    dataframe_dict[channel_key] += [channel['PGM'][imt]['value']]
-        # Get calculated IMC columns
-        station = pgm_dictionary[station_key]['components']
-        for component_key in station:
-            component = station[component_key]
-            dataframe_dict[component_key] = []
-            for imt in dataframe_dict['']:
-                    dataframe_dict[component_key] += [component[imt]['value']]
-        # Create pandas dataframe
-        dataframe = pd.DataFrame(data=dataframe_dict)
-        # Create file path
-        filename = station_key + '.csv'
-        path = os.path.join(output_directory, filename)
-        # Export csv
-        writer = dataframe.to_csv(path, mode = 'w', index=False)
-
-
-def _get_metadata(stream):
-    """
-    Internal method to get dictionary of metadata for one station.
-
-    Args:
-        stream (obspy.core.stream.Stream): Stream of strong ground motion.
-
-    Returns:
-        tuple: Tuple of station and metadata (str, dictionary).
-    """
-    # TODO: Simplify processing metadata
-    metadata = OrderedDict()
-    for trace in stream:
-        station = trace.stats['station']
-        channel = trace.stats['channel']
-        metadata[channel] = OrderedDict()
-        for key in trace.stats:
-            if key != 'units':
-                metadata[channel][key] = trace.stats[key]
-    return station, metadata
-
-
 def _get_parser():
     """
     Internal method to get argparse parser instance.
@@ -309,19 +145,21 @@ def _get_parser():
     Get requested PGM values.
     '''
     # Get valid classes
-    _imt_classes_ = _get_pgm_classes('imt')
-    _imc_classes_ = _get_pgm_classes('imc')
+    _imt_classes_ = get_pgm_classes('imt')
+    _imc_classes_ = get_pgm_classes('imc')
     # Create descriptions
     epilog = 'PGM Parameters:\n'
     epilog += '\tAvailable IMTs:\n'
-    for key, core_class in _imt_classes_.items():
-        epilog += '\t\t- %s\n' % inspect.getdoc(core_class)
+    for func in _imt_classes_:
+        epilog += '\t\t- %s\n' % func[10:]
     epilog += '\tAvailable IMCs:\n'
-    for key, core_class in _imc_classes_.items():
-        epilog += '\t\t- %s\n' % inspect.getdoc(core_class)
+    for func in _imc_classes_:
+        epilog += '\t\t- %s\n' % func[10:]
 
-    epilog += '\nUse "help command" to see the options for a '\
-              'specific PGM.\n'
+    epilog += '\nFor parameters with specific percentiles or periods,\n' + \
+            'append the number on the end of the parameter string\n' + \
+            'Example spectral amplitude: sa1.0\n' + \
+            'Example geometric mean rotation: gmrotd50\n'
     # Define parser arguments
     parser = argparse.ArgumentParser(
         description=description,
@@ -333,173 +171,11 @@ def _get_parser():
                         help='The directory of all output files.')
     parser.add_argument('format',
                         help='Format of the files that are read in.')
-    parser.add_argument('-c', '--components', type=str, dest='components',
-            default=[], action='append', help='The IMC parameters to get.')
-    parser.add_argument('-m', '--intensity-measurements', nargs=argparse.REMAINDER,
-                        help='The IMT parameters to get.')
+    parser.add_argument('-c', '--components', nargs='+', dest='components',
+            default=[], help='The IMC parameters to get.', required=True)
+    parser.add_argument('-m', '--measurements', nargs='+', dest='measurements',
+            default=[], help='The IMT parameters to get.', required=True)
     return parser
-
-
-def _get_pgm_classes(im_type):
-    """
-    Create a dictionary of classname:class to be used in main().
-
-    Args:
-        im_type (str): Representation of eith intensity measure type
-                or component. (imt or imc)
-
-    Returns:
-        dictionary: Dictionary of classname:class where each class
-            is a subclass of pgm.base.PGM.
-    """
-    # Get list of available modules (excluding base and __init__)
-    modules = _get_pgm_modules(im_type)
-    # Put imported modules into a dictionary
-    pgm_modules = OrderedDict()
-    for modname in modules:
-        mod = importlib.import_module(modname)
-        cm = {
-            mod.__name__: mod
-        }
-        pgm_modules.update(cm)
-    # Put imported classes into a dictionary
-    classes = OrderedDict()
-    for name, module in pgm_modules.items():
-        for m in inspect.getmembers(module, inspect.isclass):
-            if m[1].__module__ == name:
-                core_class = getattr(module, m[0])
-                classes[core_class.__name__] = core_class
-    ordered_classes = OrderedDict()
-    keys = sorted(classes.keys())
-    for k in keys:
-        ordered_classes[k] = classes[k]
-    return ordered_classes
-
-
-def _get_pgm_modules(im_type):
-    """
-    Internal method to get all pgm modules.
-
-    Args:
-        im_type (str): Representation of eith intensity measure type
-                or component. (imt or imc)
-
-    Returns:
-        list: List of pgm modules.
-    """
-    # Get path
-    home = os.path.dirname(os.path.abspath(__file__))
-    pgm_directory = os.path.abspath(os.path.join(home, '..', 'pgm', im_type))
-    path = 'pgm.' + im_type + '.'
-    # Create list
-    pgm_modules = []
-    for file in os.listdir(pgm_directory):
-        if file.endswith(".py") and file not in EXCLUDED_MODULES:
-            file = file[0:-3]
-            pgm_modules += [path + file]
-    return pgm_modules
-
-
-def _get_requested_imcs(args, _imc_classes_, pgm_dict, pgm_list, streams):
-    """
-    Internal method for populating the pgm dictionary.
-
-    Args:
-        args (argparse.Namespace): Arguments passed.
-        _imc_classes_ (dictionary): Dictionary of imported imc classes.
-        pgm_dict (dictionary): Dictionary of pgm values. Already populated
-            with IMT values.
-        pgm_list (dictionary): Record of requested IMTs.
-        streams (list): List of obspy.core.stream.Stream objects.
-
-    Returns:
-        dictionary: Dictionary of pgm values. Populated
-            with IMT and IMC values.
-    """
-    for component in args.components:
-        component = component.upper()
-        # Check that the class exists and select from import dictionary
-        if component not in _imc_classes_:
-            raise KeyError('"%s" not a valid imc type.' % component)
-        pgm_class = _imc_classes_[component]
-        pgm_obj = pgm_class()
-        for station in pgm_dict:
-            for imt in pgm_dict[station]['timeseries']:
-                stream = pgm_dict[station]['timeseries'][imt]
-                station, metadata = _get_metadata(stream)
-                if 'components' not in pgm_dict[station]:
-                    pgm_dict[station]['components'] = OrderedDict()
-                if component not in pgm_dict[station]['components']:
-                    pgm_dict[station]['components'][component] = OrderedDict()
-                imc_value, imc_timeseries = pgm_obj.getPGM(stream)
-                imc_dict = OrderedDict()
-                imc_dict['value'] = imc_value
-                imc_dict['timeseries'] = imc_timeseries
-                pgm_dict[station]['components'][component][imt] = imc_dict
-    return pgm_dict
-
-
-def _get_requested_imts(args, arglist, _imt_classes_, streams):
-    """
-    Internal method for populating the pgm dictionary.
-
-    Args:
-        args (argparse.Namespace): Arguments passed.
-        arglist (list): List of all remaining arguments form the parser.
-        _imt_classes_ (dictionary): Dictionary of imported imt classes.
-        streams (list): List of obspy.core.stream.Stream objects.
-
-    Returns:
-        dictionary: Dictionary of pgm values. Populated
-            with IMT values.
-    """
-    oldpgm = ''
-    pgm_dict = OrderedDict()
-    pgm_list = OrderedDict()
-    pgm_list['SA'] = OrderedDict()
-    while(len(arglist) > 0):
-        pgm = arglist.pop(0).upper()
-        # Check that the class exists and select from import dictionary
-        if pgm.startswith('-'):
-            raise KeyError('"%s" cannot process option "%s"' %
-                           (oldpgm, pgm))
-        if pgm not in _imt_classes_:
-            raise KeyError('"%s" not a valid imt type.' % pgm)
-        pgm_class = _imt_classes_[pgm]
-        pgm_obj = pgm_class()
-        arglist = pgm_obj.parseArgs(arglist)
-        for stream in streams:
-            station, metadata = _get_metadata(stream)
-            pgm_values, pgm_timeseries = pgm_obj.getPGM(stream)
-            if station not in pgm_dict:
-                pgm_dict[station] = OrderedDict()
-                pgm_dict[station]['channels'] = OrderedDict()
-                pgm_dict[station]['timeseries'] = OrderedDict()
-            for channel in metadata:
-                if channel not in pgm_dict[station]['channels']:
-                    pgm_dict[station]['channels'][channel] = OrderedDict()
-                    pgm_dict[station]['channels'][channel]['metadata'] = metadata[channel]
-                    pgm_dict[station]['channels'][channel]['PGM'] = OrderedDict()
-                if pgm.upper() not in pgm_dict[station]['channels'][channel]['PGM']:
-                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()] = OrderedDict()
-                if pgm.upper() == 'SA':
-                    period_dict = OrderedDict()
-                    period = pgm_obj.period_str
-                    period_dict['units'] = pgm_obj.getUnits()
-                    period_dict['value'] = pgm_values[channel]
-                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()][period] = period_dict
-                    pgm_list['SA'][period] = pgm_obj
-                    pgm_dict[station]['timeseries'][period] = pgm_timeseries
-                else:
-                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()]['units'] = pgm_obj.getUnits()
-                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()]['value'] = pgm_values[channel]
-                    pgm_dict[station]['channels'][channel]['PGM'][pgm.upper()]['timeseries'] = pgm_timeseries
-                    pgm_list[pgm] = pgm_obj
-                    pgm_dict[station]['timeseries'][pgm.upper()] = pgm_timeseries
-        oldpgm = pgm
-        if args.input_source.lower() == 'help':
-            arglist = ['-h']
-    return pgm_list, pgm_dict
 
 
 if __name__ == '__main__':
