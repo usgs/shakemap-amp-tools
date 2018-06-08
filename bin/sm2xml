@@ -15,12 +15,14 @@ from openpyxl.styles.borders import Border, Side
 
 # local imports
 from amptools.table import dataframe_to_xml
-from amptools.stream import streams_to_dataframe
+from amptools.stream import streams_to_dataframe, group_channels
 from amptools.io.cwb.core import read_cwb, is_cwb
 from amptools.io.geonet.core import read_geonet, is_geonet
 from amptools.io.knet.core import read_knet, is_knet
+from amptools.io.cosmos.core import read_cosmos, is_cosmos
+from amptools.io.smc.core import read_smc, is_smc
 
-FORMATS = ['cwb', 'geonet', 'knet']
+FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc']
 
 
 def _clean_sheet(outfile_excel, dataframe):
@@ -103,6 +105,10 @@ def main(args):
     outdir = args.outdir
     format = args.format
 
+    # make the output directory if it does not exist
+    if not os.path.isdir(outdir):
+        os.makedirs(outdir)
+    
     # get appropriate file reader/checker for format
     data_files = []
     if format == 'cwb':
@@ -114,6 +120,12 @@ def main(args):
     elif format == 'knet':
         reader = read_knet
         checker = is_knet
+    elif format == 'cosmos':
+        reader = read_cosmos
+        checker = is_cosmos
+    elif format == 'smc':
+        reader = read_smc
+        checker = is_smc
     else:
         raise Exception('Unsupported format %s' % format)
 
@@ -136,12 +148,20 @@ def main(args):
     for dfile in data_files:
         if args.verbose:
             print('Parsing %s...' % dfile)
-        stream = reader(dfile)
+        try:
+            stream = reader(dfile)
+        except Exception as e:
+            print('Error reading a file: "%s". Skipping.' % (str(e)))
+            continue
+        
+        streams.append(stream)
+
+    streams = group_channels(streams)
+    for stream in streams:
         if args.debug:
             station = stream[0].stats['station']
             stream_file = os.path.join(outdir, '%s_data.png' % station)
             stream.plot(outfile=stream_file)
-        streams.append(stream)
 
     # Extract station/peak information from each stream, save to a dataframe
     dataframe, spectral_streams = streams_to_dataframe(streams)

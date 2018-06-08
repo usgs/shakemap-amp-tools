@@ -19,10 +19,10 @@ FILTER_FREQ = 0.02
 CORNERS = 4
 
 
-def _group_channels(streams):
+def group_channels(streams):
     """Consolidate streams for the same event.
 
-    Checks to see if there channels for one event in different streams, and
+    Checks to see if there are channels for one event in different streams, and
     groups them into one stream. Then streams are checked for duplicate
     channels (traces).
 
@@ -72,8 +72,7 @@ def _group_channels(streams):
                 elif (
                         network == trace2.stats['network'] and
                         station == trace2.stats['station'] and
-                        starttime == trace2.stats['starttime'] and
-                        endtime == trace2.stats['endtime']
+                        starttime == trace2.stats['starttime']
                     ):
                     event_match = True
                 if duplicate:
@@ -146,7 +145,7 @@ def streams_to_dataframe(streams):
     columns = ['station', 'name', 'source', 'netid', 'lat', 'lon']
 
     # Check for common events and group channels
-    streams = _group_channels(streams)
+    streams = group_channels(streams)
 
     # Determine which channels should be created
     channels = []
