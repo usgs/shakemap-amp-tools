@@ -8,7 +8,7 @@ import numpy as np
 
 # local imports
 from amptools.io.geonet.core import read_geonet
-from pgm.imt.sa import SA
+from pgm.station_summary import StationSummary
 
 
 def test_sa():
@@ -22,11 +22,11 @@ def test_sa():
         vtrace = trace.copy()
         vtrace.integrate()
         sa_target[vtrace.stats['channel']] = np.abs(vtrace.max())
-    sa_obj = SA()
-    sa_dict, sa_stream = sa_obj.getPGM(stream_v2, period=2)
-    assert sa_obj._units == '%%g'
-    assert sa_obj.period == 2
-    assert sa_obj.period_str == 'T2.00'
+    station_summary = StationSummary(stream_v2,
+            ['vertical', 'greater_of_two_horizontals', 'gmrotd50'],
+            ['sa1.0', 'saincorrect'])
+    #station_dict = station_summary.pgms['SA1.0']
+    # TODO: test against real values
 
 
 if __name__ == '__main__':

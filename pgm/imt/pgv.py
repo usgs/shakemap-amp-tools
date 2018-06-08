@@ -1,45 +1,47 @@
+# stdlib imports
+import warnings
+
 # third party imports
 import numpy as np
 from obspy.core.stream import Stream
 
 # local imports
-from pgm.base import PGM
+from pgm.exception import PGMException
+from pgm.gather import get_pgm_classes, group_imcs
 
 
-class PGV(PGM):
+def calculate_pgv(stream, imcs):
     """
-    pgv -- Extract Peak Ground Acceleration in %g from input Stream.
+    Calculate the peak ground velocity.
+
+    Args:
+        stream (obspy.core.stream.Stream): streams of strong ground motion.
+            Traces in stream must be in units of cm/s.
+        imcs (list): list of imcs.
+
+    Returns:
+        dictionary: Dictionary of pgv for different components.
     """
-
-    def __init__(self):
-        self._units = 'cm/s'
-
-    def getPGM(self, stream, **kwargs):
-        """Return PGV value for given input Stream.
-
-        The max velocity from all Trace objects will be returned.
-        In the case of a Stream containing data that has been
-        converted to (say) Rotd50, then that will presumably be
-        a single Trace.
-
-        NB: The input Stream should have already been "processed",
-        i.e., filtered, detrended, tapered, etc.)
-
-        Args:
-            stream (Obspy Stream): Stream containing one or Traces of
-                acceleration data in gals.
-            kwargs (**args): Not used in this class.
-        Returns:
-            tuple: (PGV in cm/s units (float), timeseries with cm/s
-                    units (obspy.core.trace.Trace))
-        """
-        pgm_dict = {}
-        pgv_stream = Stream()
-        for trace in stream:
-            vtrace = trace.copy()
-            vtrace.integrate()
-            vtrace.stats['units'] = self._units
-            pgv = np.abs(vtrace.max())
-            pgm_dict[trace.stats['channel']] = pgv
-            pgv_stream.append(vtrace)
-        return pgm_dict, pgv_stream
+    pgv_dict = {}
+    # check units and add channel pga
+    for trace in stream:
+        if trace.stats['units'] != 'cm/s':
+            raise PGMException('Invalid units for PGV: %r. '
+            'Units must be cm/s' % trace.stats['units'])
+        pgv_dict[trace.stats['channel']] = np.abs(trace.max())
+    grouped_imcs = group_imcs(imcs)
+    # gather imc classes
+    pgm_classes = get_pgm_classes('imc')
+    # store pgv for imcs
+    for imc in grouped_imcs:
+        if 'calculate_' + imc in pgm_classes:
+            pgv_func = pgm_classes['calculate_' + imc]
+            pgv = pgv_func(stream, percentiles=grouped_imcs[imc])
+            if imc.find('rot') >= 0:
+                for percentile in pgv:
+                    pgv_dict[imc.upper() + str(percentile)] = pgv[percentile]
+            else:
+                pgv_dict[imc.upper()] = pgv
+        else:
+            warnings.warn('Not a valid IMC: %r. Skipping...' % imc)
+    return pgv_dict

@@ -8,8 +8,7 @@ import numpy as np
 
 # local imports
 from amptools.io.geonet.core import read_geonet
-from pgm.imt.pga import PGA
-from pgm.imc.greater_of_two_horizontals import GREATER_OF_TWO_HORIZONTALS
+from pgm.station_summary import StationSummary
 
 
 def test_greater_of_two_horizontals():
@@ -18,11 +17,11 @@ def test_greater_of_two_horizontals():
     datafile_v2 = os.path.join(homedir, '..', 'data', 'geonet',
                                '20161113_110259_WTMC_20.V2A')
     stream_v2 = read_geonet(datafile_v2)
-    pga_obj = PGA()
-    pga_dict, pga_stream = pga_obj.getPGM(stream_v2)
-    greater_of_two_obj = GREATER_OF_TWO_HORIZONTALS()
-    greater_of_two_value, greater_of_two_stream = greater_of_two_obj.getPGM(pga_stream)
-    np.testing.assert_almost_equal(greater_of_two_value, 99.3173469387755)
+    station_summary = StationSummary(stream_v2,
+            ['greater_of_two_horizontals'], ['pga'])
+    station_dict = station_summary.pgms['PGA']
+    greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
+    np.testing.assert_almost_equal(greater, 99.3173469387755)
 
 
 if __name__ == '__main__':
