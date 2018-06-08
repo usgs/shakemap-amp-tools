@@ -67,6 +67,9 @@ if [ $? -ne 0 ]; then
 
     # Need this to get conda into path
     . $HOME/miniconda/etc/profile.d/conda.sh
+
+    # remove the shell script
+    rm miniconda.sh
 else
     echo "conda detected, installing $VENV environment..."
 fi
