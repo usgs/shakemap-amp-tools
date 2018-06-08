@@ -26,8 +26,6 @@ def test_pgv():
             ['vertical', 'greater_of_two_horizontals', 'gmrotd50'],
             ['pgv', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGV']
-    greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
-    vertical = station_dict['VERTICAL']
     np.testing.assert_almost_equal(station_dict['HHE'], pgv_target['HHE'])
     np.testing.assert_almost_equal(station_dict['HHN'], pgv_target['HHN'])
     np.testing.assert_almost_equal(station_dict['HHZ'], pgv_target['HHZ'])

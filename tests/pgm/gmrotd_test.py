@@ -20,7 +20,6 @@ def test_gmrotd():
     station_summary = StationSummary(stream_v2,
             ['gmrotd50'], ['pga'])
     station_dict = station_summary.pgms['PGA']
-    greater = station_dict['GMROTD50.0']
 
 
 if __name__ == '__main__':

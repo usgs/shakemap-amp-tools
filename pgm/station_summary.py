@@ -10,7 +10,6 @@ from obspy.signal.invsim import corn_freq_2_paz, simulate_seismometer
 import pandas as pd
 
 # local imports
-from amptools.io.geonet.core import read_geonet
 from pgm.imt.pga import calculate_pga
 from pgm.imt.pgv import calculate_pgv
 from pgm.imt.sa import calculate_sa

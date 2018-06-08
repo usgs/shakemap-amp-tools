@@ -8,7 +8,6 @@ import numpy as np
 
 # local imports
 from amptools.io.geonet.core import read_geonet
-from pgm.imc.vertical import calculate_vertical
 from pgm.station_summary import StationSummary
 
 

@@ -12,12 +12,12 @@ def calculate_vertical(stream, **kwargs):
         stream (Obspy Stream): Stream containing one or Traces of
             acceleration data in gals.
         kwargs (**args): Ignored by this class.
-        
+
     Returns:
         float: VERTICAL.
     """
     vertical = ''
-    for idx, trace in enumerate(stream):
+    for trace in stream:
         # Group all of the max values from traces with
         # Z in the channel name
         if 'Z' in trace.stats['channel'].upper():

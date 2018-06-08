@@ -33,8 +33,8 @@ def calculate_gmrotd(stream, percentiles, **kwargs):
     osc2_matrix = np.multiply(np.ones((91,1)),osc2)
 
     # Calculate GMs
-    osc1_rot = osc1 * cos_matrix + osc2 * sin_matrix
-    osc2_rot = osc1 * sin_matrix + osc2 * cos_matrix
+    osc1_rot = osc1_matrix * cos_matrix + osc2_matrix * sin_matrix
+    osc2_rot = osc1_matrix * sin_matrix + osc2_matrix * cos_matrix
     osc1_max = np.amax(osc1_rot, 1)
     osc2_max = np.amax(osc2_rot, 1)
     GMs = np.sqrt(osc1_max * osc2_max)

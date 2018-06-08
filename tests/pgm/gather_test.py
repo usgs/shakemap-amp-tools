@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # local imports
-from pgm.gather import get_pgm_classes, group_imcs, _get_pgm_modules
+from pgm.gather import get_pgm_classes, group_imcs
 
 
 def test_gather():
@@ -38,6 +38,7 @@ def test_gather():
         ],
         'vertical': ''
     }
+    assert grouping == target_dict
 
 
 if __name__ == '__main__':

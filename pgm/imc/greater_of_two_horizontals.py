@@ -12,12 +12,12 @@ def calculate_greater_of_two_horizontals(stream, **kwargs):
         stream (Obspy Stream): Stream containing one or Traces of
             acceleration data in gals.
         kwargs (**args): Ignored by this class.
-        
+
     Returns:
         float: GREATER_OF_TWO_HORIZONTALS (float).
     """
     horizontal_vals = []
-    for idx, trace in enumerate(stream):
+    for trace in stream:
         # Group all of the max values from traces without
         # Z in the channel name
         if 'Z' not in trace.stats['channel'].upper():

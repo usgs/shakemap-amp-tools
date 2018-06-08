@@ -25,7 +25,7 @@ def test_sa():
     station_summary = StationSummary(stream_v2,
             ['vertical', 'greater_of_two_horizontals', 'gmrotd50'],
             ['sa1.0', 'saincorrect'])
-    station_dict = station_summary.pgms['SA1.0']
+    #station_dict = station_summary.pgms['SA1.0']
     # TODO: test against real values
 
 
