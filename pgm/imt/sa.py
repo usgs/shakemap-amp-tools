@@ -31,7 +31,6 @@ def calculate_sa(stream, imcs):
         if trace.stats['units'] != '%%g':
             raise PGMException('Invalid units for sa: %r. '
             'Units must be %%g' % trace.stats['units'])
-        sa_dict[trace.stats['channel']] = np.abs(trace.max())
     grouped_imcs = group_imcs(imcs)
     # gather imc classes
     pgm_classes = get_pgm_classes('imc')
@@ -43,6 +42,9 @@ def calculate_sa(stream, imcs):
             if imc.find('rot') >= 0:
                 for percentile in sa:
                     sa_dict[imc.upper() + str(percentile)] = sa[percentile]
+            elif imc.find('channels') >= 0:
+                for channel in sa:
+                    sa_dict[channel] = sa[channel]
             else:
                 sa_dict[imc.upper()] = sa
         else:

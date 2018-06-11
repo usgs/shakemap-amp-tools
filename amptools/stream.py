@@ -209,6 +209,7 @@ def streams_to_dataframe(streams):
                 statskey = key
             meta_dict[key].append(stream[0].stats[statskey])
         spectral_traces = []
+        # process acceleration and store velocity traces
         for idx, trace in enumerate(stream):
             channel = trace.stats['channel']
             if trace.stats['units'] == 'acc':
@@ -220,12 +221,13 @@ def streams_to_dataframe(streams):
                             taper_percentage=0.05, filter_type='highpass',
                             filter_frequency=FILTER_FREQ,
                             filter_zerophase=True, filter_corners=CORNERS)
-            else:
+            elif trace.stats['units'] == 'vel':
                 # we only have a velocity channel
-                pgv = np.abs(vtrace.max())
+                pgv = np.abs(trace.max())
                 channel_dicts[channel]['pgv'].append(pgv)
-        station = StationSummary(stream, ['vertical'], ['pga', 'pgv', 'sa0.3',
-                'sa1.0', 'sa3.0'])
+        # get station summary and assign values
+        station = StationSummary(stream, ['channels'],
+                ['pga', 'pgv', 'sa0.3', 'sa1.0', 'sa3.0'])
         for channel in channels:
             pga = station.pgms['PGA'][channel]
             pgv = station.pgms['PGA'][channel]

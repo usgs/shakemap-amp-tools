@@ -23,7 +23,7 @@ def test_sa():
         vtrace.integrate()
         sa_target[vtrace.stats['channel']] = np.abs(vtrace.max())
     station_summary = StationSummary(stream_v2,
-            ['vertical', 'greater_of_two_horizontals', 'gmrotd50'],
+            ['greater_of_two_horizontals', 'gmrotd50', 'channels'],
             ['sa1.0', 'saincorrect'])
     #station_dict = station_summary.pgms['SA1.0']
     # TODO: test against real values

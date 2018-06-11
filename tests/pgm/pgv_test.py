@@ -23,7 +23,7 @@ def test_pgv():
         vtrace.integrate()
         pgv_target[vtrace.stats['channel']] = np.abs(vtrace.max())
     station_summary = StationSummary(stream_v2,
-            ['vertical', 'greater_of_two_horizontals', 'gmrotd50'],
+            ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
             ['pgv', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGV']
     np.testing.assert_almost_equal(station_dict['HHE'], pgv_target['HHE'])

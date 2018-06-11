@@ -18,16 +18,14 @@ def test_pga():
                                '20161113_110259_WTMC_20.V2A')
     stream_v2 = read_geonet(datafile_v2)
     station_summary = StationSummary(stream_v2,
-            ['vertical', 'greater_of_two_horizontals', 'gmrotd50'],
+            ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
             ['pga', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGA']
     greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
-    vertical = station_dict['VERTICAL']
     np.testing.assert_almost_equal(station_dict['HHE'], 81.28979591836733)
     np.testing.assert_almost_equal(station_dict['HHN'], 99.3173469387755)
     np.testing.assert_almost_equal(station_dict['HHZ'], 183.89693877551022)
     np.testing.assert_almost_equal(greater, 99.3173469387755)
-    np.testing.assert_almost_equal(vertical, 183.89693877551022)
 
 
 if __name__ == '__main__':

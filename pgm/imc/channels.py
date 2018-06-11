@@ -2,8 +2,8 @@
 import numpy as np
 
 
-def calculate_vertical(stream, **kwargs):
-    """Return VERTICAL value for given input Stream.
+def calculate_channels(stream, **kwargs):
+    """Return the pgm for each channel in a given input Stream.
 
     NB: The input Stream should have already been "processed",
     i.e., filtered, detrended, tapered, etc.)
@@ -14,12 +14,10 @@ def calculate_vertical(stream, **kwargs):
         kwargs (**args): Ignored by this class.
 
     Returns:
-        float: VERTICAL.
+        dictionary: Dictionary of peak ground motion for each channel.
     """
-    vertical = ''
+    channels_dict = {}
     for trace in stream:
-        # Group all of the max values from traces with
-        # Z in the channel name
-        if 'Z' in trace.stats['channel'].upper():
-            vertical = np.abs(trace.max())
-    return vertical
+        channel = trace.stats['channel']
+        channels_dict[channel] = np.abs(trace.max())
+    return channels_dict
