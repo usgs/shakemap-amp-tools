@@ -15,7 +15,7 @@ import warnings
 # local imports
 from amptools.exception import AmptoolsException
 from amptools.process import filter_detrend
-from amptools.stream import _group_channels
+from amptools.stream import group_channels
 from pgm.exception import PGMException
 from pgm.gather import get_pgm_classes
 from pgm.station_summary import StationSummary
@@ -54,7 +54,7 @@ def get_timeseries(input_source, input_format):
     streams = []
     for file_path in glob.glob(input_source + '/*'):
         streams += [read_method(file_path)]
-    streams = _group_channels(streams)
+    streams = group_channels(streams)
     return streams
 
 

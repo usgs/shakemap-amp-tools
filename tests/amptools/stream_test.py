@@ -10,7 +10,7 @@ import numpy as np
 from amptools.io.cwb.core import read_cwb
 from amptools.io.geonet.core import read_geonet
 from amptools.io.knet.core import read_knet
-from amptools.stream import _group_channels, streams_to_dataframe
+from amptools.stream import group_channels, streams_to_dataframe
 
 def test_spectral():
     homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
@@ -45,7 +45,7 @@ def test():
         filename = 'AOM0031801241951' + ext
         datafile = os.path.join(homedir, '..', 'data', 'knet', filename)
         streams += [read_knet(datafile)]
-    grouped_streams = _group_channels(streams)
+    grouped_streams = group_channels(streams)
     assert len(grouped_streams) == 1
     assert grouped_streams[0].count() == 3
 
@@ -54,7 +54,7 @@ def test():
         filename = 'AOM0031801241951' + ext
         datafile = os.path.join(homedir, '..', 'data', 'knet', filename)
         streams += [read_knet(datafile)]
-    grouped_streams = _group_channels(streams)
+    grouped_streams = group_channels(streams)
     assert len(grouped_streams) == 1
     assert grouped_streams[0].count() == 3
 
@@ -62,7 +62,7 @@ def test():
     filename = '20161113_110313_THZ_20.V2A'
     datafile = os.path.join(homedir, '..', 'data', 'geonet', filename)
     streams += [read_geonet(datafile)]
-    grouped_streams = _group_channels(streams)
+    grouped_streams = group_channels(streams)
     assert len(grouped_streams) == 2
     assert grouped_streams[0].count() == 3
     assert grouped_streams[1].count() == 3
@@ -72,7 +72,7 @@ def test():
     datafile = os.path.join(homedir, '..', 'data', 'knet', filename)
     streams += [read_knet(datafile)]
     with warnings.catch_warnings(record=True) as w:
-        grouped_streams = _group_channels(streams)
+        grouped_streams = group_channels(streams)
         assert issubclass(w[-1].category, Warning)
         assert "One channel stream:" in str(w[-1].message)
     assert len(grouped_streams) == 3
