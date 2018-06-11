@@ -2,7 +2,6 @@
 import warnings
 
 # third party imports
-import numpy as np
 from obspy.core.stream import Stream
 
 # local imports
@@ -28,7 +27,6 @@ def calculate_pga(stream, imcs):
         if trace.stats['units'] != '%%g':
             raise PGMException('Invalid units for PGA: %r. '
             'Units must be %%g' % trace.stats['units'])
-        pga_dict[trace.stats['channel']] = np.abs(trace.max())
     # sort imcs
     grouped_imcs = group_imcs(imcs)
     # gather imc classes
@@ -41,6 +39,9 @@ def calculate_pga(stream, imcs):
             if imc.find('rot') >= 0:
                 for percentile in pga:
                     pga_dict[imc.upper() + str(percentile)] = pga[percentile]
+            elif imc.find('channels') >= 0:
+                for channel in pga:
+                    pga_dict[channel] = pga[channel]
             else:
                 pga_dict[imc.upper()] = pga
         else:

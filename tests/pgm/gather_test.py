@@ -8,7 +8,7 @@ def test_gather():
     imcs = get_pgm_classes('imc')
     imts = get_pgm_classes('imt')
 
-    required_imcs = ['calculate_vertical',
+    required_imcs = ['calculate_channels',
             'calculate_greater_of_two_horizontals',
             'calculate_gmrotd']
     required_imts = ['calculate_pga',
@@ -19,9 +19,9 @@ def test_gather():
     for imt in required_imts:
         assert imt in imts
 
-    imcs = ['rotd0', 'roti10', 'gmrotd22', 'gmroti10', 'vertical',
+    imcs = ['rotd0', 'roti10', 'gmrotd22', 'gmroti10',
             'rotd0invalid', 'roti10invalid', 'gmrotd22invalid',
-            'gmroti10invalid']
+            'gmroti10invalid', 'greater_of_two_horizontals']
     grouping = group_imcs(imcs)
     target_dict = {
         'rotd':[
@@ -36,7 +36,7 @@ def test_gather():
         'gmroti':[
             10.0
         ],
-        'vertical': ''
+        'greater_of_two_horizontals': ''
     }
     assert grouping == target_dict
 

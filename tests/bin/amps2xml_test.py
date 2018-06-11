@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 
 import subprocess
-from xml.dom import minidom
 import os.path
 import shutil
 import tempfile
@@ -46,24 +45,6 @@ def test_amps2xml():
     finally:
         shutil.rmtree(tmpdir)
 
-def test_sm2xml():
-    homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
-    indir = os.path.join(homedir,'..','data','knet')
-    sm2xml = os.path.join(homedir,'..','..','bin','sm2xml')
-    eventid = 'us2018abcd'
-    tmpdir = tempfile.mkdtemp()
-    dformat = 'knet'
-    try:
-        cmd = '%s %s %s %s %s' % (sm2xml,eventid,indir,tmpdir,dformat)
-        res,stdout,stderr = get_command_output(cmd)
-        if not res:
-            raise AssertionError('sm2xml command %s failed with errors "%s"' % (cmd,stderr))
-        print(stdout)
-    except Exception as e:
-        raise(e)
-    finally:
-        shutil.rmtree(tmpdir)
-        
+
 if __name__ == '__main__':
     test_amps2xml()
-    test_sm2xml()

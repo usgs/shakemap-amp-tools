@@ -2,7 +2,6 @@
 import warnings
 
 # third party imports
-import numpy as np
 from obspy.core.stream import Stream
 
 # local imports
@@ -28,7 +27,6 @@ def calculate_pgv(stream, imcs):
         if trace.stats['units'] != 'cm/s':
             raise PGMException('Invalid units for PGV: %r. '
             'Units must be cm/s' % trace.stats['units'])
-        pgv_dict[trace.stats['channel']] = np.abs(trace.max())
     grouped_imcs = group_imcs(imcs)
     # gather imc classes
     pgm_classes = get_pgm_classes('imc')
@@ -40,6 +38,9 @@ def calculate_pgv(stream, imcs):
             if imc.find('rot') >= 0:
                 for percentile in pgv:
                     pgv_dict[imc.upper() + str(percentile)] = pgv[percentile]
+            elif imc.find('channels') >= 0:
+                for channel in pgv:
+                    pgv_dict[channel] = pgv[channel]
             else:
                 pgv_dict[imc.upper()] = pgv
         else:

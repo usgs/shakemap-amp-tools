@@ -10,7 +10,7 @@ def calculate_gmrotd(stream, percentiles, **kwargs):
             Example: [100, 50, 75] results in RotD100, RotD50, RotD75.
 
     Returns:
-        obspy.core.trace.Trace: Trace of combined, rotated horizontals.
+        dictionary: Dictionary of geometric mean for each percentile.
     """
     horizontals = _get_horizontals(stream)
     if len(horizontals) > 2:
