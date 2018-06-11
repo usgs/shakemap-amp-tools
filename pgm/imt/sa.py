@@ -4,7 +4,6 @@ import inspect
 import warnings
 
 # third party imports
-import numpy as np
 from obspy.core.stream import Stream
 from obspy.signal.invsim import simulate_seismometer, corn_freq_2_paz
 

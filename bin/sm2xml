@@ -21,8 +21,9 @@ from amptools.io.geonet.core import read_geonet, is_geonet
 from amptools.io.knet.core import read_knet, is_knet
 from amptools.io.cosmos.core import read_cosmos, is_cosmos
 from amptools.io.smc.core import read_smc, is_smc
+from amptools.io.dmg.core import read_dmg, is_dmg
 
-FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc']
+FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc', 'dmg']
 
 
 def _clean_sheet(outfile_excel, dataframe):
@@ -108,7 +109,7 @@ def main(args):
     # make the output directory if it does not exist
     if not os.path.isdir(outdir):
         os.makedirs(outdir)
-    
+
     # get appropriate file reader/checker for format
     data_files = []
     if format == 'cwb':
@@ -126,6 +127,9 @@ def main(args):
     elif format == 'smc':
         reader = read_smc
         checker = is_smc
+    elif format == 'dmg':
+        reader = read_dmg
+        checker = is_dmg
     else:
         raise Exception('Unsupported format %s' % format)
 
@@ -153,7 +157,7 @@ def main(args):
         except Exception as e:
             print('Error reading a file: "%s". Skipping.' % (str(e)))
             continue
-        
+
         streams.append(stream)
 
     streams = group_channels(streams)

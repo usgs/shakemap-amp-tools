@@ -230,7 +230,7 @@ def streams_to_dataframe(streams):
                 ['pga', 'pgv', 'sa0.3', 'sa1.0', 'sa3.0'])
         for channel in channels:
             pga = station.pgms['PGA'][channel]
-            pgv = station.pgms['PGA'][channel]
+            pgv = station.pgms['PGV'][channel]
             psa03 = station.pgms['SA0.3'][channel]
             psa10 = station.pgms['SA1.0'][channel]
             psa30 = station.pgms['SA3.0'][channel]

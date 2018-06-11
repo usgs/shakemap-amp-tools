@@ -25,7 +25,6 @@ import pandas as pd
 
 
 EXCLUDED_MODULES = ['base.py', '__init__.py']
-VALID_FORMATS = ['cosmos', 'cwb', 'dmg', 'geonet', 'knet']
 
 
 def get_timeseries(input_source, input_format):
@@ -41,9 +40,16 @@ def get_timeseries(input_source, input_format):
     """
     # TODO: If input_format == db, get from COMCAT and CWB
     # Check that the file format is valid
-    if input_format.lower() not in VALID_FORMATS:
+    valid_formats = []
+    home = os.path.dirname(os.path.abspath(__file__))
+    io_directory = os.path.abspath(os.path.join(home, '..', 'amptools', 'io'))
+    # Create valid list
+    for module in os.listdir(io_directory):
+        if module.find('.') < 0:
+            valid_formats += [module]
+    if input_format.lower() not in valid_formats:
         raise AmptoolsException('%r is not a supported format. Supported '
-                'formats are: %r' % (input_format, VALID_FORMATS))
+                'formats are: %r' % (input_format, valid_formats))
     # Create the module and function name from the request
     reader = 'amptools.io.' + input_format + '.core'
     function_name = 'read_' + input_format

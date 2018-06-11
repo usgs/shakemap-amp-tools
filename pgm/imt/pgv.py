@@ -2,7 +2,6 @@
 import warnings
 
 # third party imports
-import numpy as np
 from obspy.core.stream import Stream
 
 # local imports
