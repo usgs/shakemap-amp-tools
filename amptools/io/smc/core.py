@@ -81,6 +81,17 @@ STRUCTURES = {1: 'building',
               4: 'other',
               np.nan: 'not a structure'}
 
+BRIDGE_LOCATIONS = {0: 'free field',
+                    1: 'at the base of a pier or abutment',
+                    2: 'on an abutment',
+                    3: 'on the deck at the top of a pier',
+                    4: 'on the deck between piers or between an abutment and a pier'}
+
+DAM_LOCATIONS = {0: 'upstream or downstream free field',
+                 1: 'at the base of the dam',
+                 2: 'on the crest of the dam',
+                 3: 'on the abutment of the dam'}
+
 def is_smc(filename):
     """Check to see if file is a SMC (corrected, in acc.) strong motion file.
 
@@ -231,18 +242,17 @@ def _get_header_info(filename, any_structure=False):
     stats['starttime'] = datetime.strptime(datestr,'%Y %j %H %M %S %f')
 
     standard['sensor_serial_number'] = ''
-    if intheader[1,3] == missing_data:
+    if intheader[1,3] != missing_data:
         standard['sensor_serial_number'] = intheader[1,3]
     
     # second line is information about number of channels, orientations
     # we care about orientations
-    if intheader[1,4] == missing_data:
-        format_specific['vertical_orientation'] = np.nan
-    else:
+    format_specific['vertical_orientation'] = np.nan
+    if intheader[1,4] != missing_data:
         format_specific['vertical_orientation'] = intheader[1,4]
-    if intheader[1,5] == missing_data:
-        standard['horizontal_orientation'] = np.nan
-    else:
+
+    standard['horizontal_orientation'] = np.nan
+    if intheader[1,5] != missing_data:
         standard['horizontal_orientation'] = intheader[1,5]
 
     # figure out the channel code
@@ -276,20 +286,34 @@ def _get_header_info(filename, any_structure=False):
         fmt = 'Record found in file %s is not a free-field sensor!'
         raise Exception(fmt % filename)
 
-    format_specific['building_floor'] = intheader[3,0]
-    
-    format_specific['bridge_number_spans'] = intheader[3,1]
-    format_specific['bridge_transducer_location'] = intheader[3,2]
-    format_specific['dam_transducer_location'] = intheader[3,3]
-    c1 = format_specific['bridge_transducer_location'] != 0
-    c2 = format_specific['dam_transducer_location'] != 0
+    format_specific['building_floor'] = np.nan
+    if intheader[3,0] != missing_data:
+        format_specific['building_floor'] = intheader[3,0]
+
+    format_specific['bridge_number_spans'] = np.nan
+    if intheader[3,1] != missing_data:
+        format_specific['bridge_number_spans'] = intheader[3,1]
+
+    format_specific['bridge_transducer_location'] = BRIDGE_LOCATIONS[0]
+    if intheader[3,2] != missing_data:
+        format_specific['bridge_transducer_location'] = intheader[3,2]
+
+    format_specific['dam_transducer_location'] = DAM_LOCATIONS[0]
+    if intheader[3,3] != missing_data:
+        format_specific['dam_transducer_location'] = intheader[3,3]
+        
+    c1 = format_specific['bridge_transducer_location'].find('free field') == -1
+    c2 = format_specific['dam_transducer_location'].find('free field') == -1
     if c1 and c2 and not any_structure:
         raise Exception(fmt % filename)
-    format_specific['construction_type'] = CONTRUCTION_TYPES[intheader[3,4]]
+
+    format_specific['construction_type'] = CONSTRUCTION_TYPES[4]
+    if intheader[3,4] != missing_data:
+        format_specific['construction_type'] = CONSTRUCTION_TYPES[intheader[3,4]]
     
     # station is repeated here if all numeric
-    if not len(station):
-        station = '%i' % intheader[3,5]
+    if not len(stats['station']):
+        stats['station'] = '%i' % intheader[3,5]
 
     # read float header data
     skip = ASCII_HEADER_LINES + INTEGER_HEADER_LINES
@@ -303,7 +327,9 @@ def _get_header_info(filename, any_structure=False):
     stats['sampling_rate'] = floatheader[0,1]
     coordinates['latitude'] = floatheader[2,0]
     coordinates['longitude'] = floatheader[2,1]
-    coordinates['elevation'] = floatheader[2,2]
+    coordinates['elevation'] = 0
+    if floatheader[2,2] != missing_data:
+        coordinates['elevation'] = floatheader[2,2]
 
     # we never get a two character location code
     stats['location'] = '--'
@@ -320,8 +346,9 @@ def _get_header_info(filename, any_structure=False):
     with open(filename) as f:
         skip = ASCII_HEADER_LINES + INTEGER_HEADER_LINES + FLOAT_HEADER_LINES
         _ = [next(f) for x in range(skip)]
-        standard['comments'] = [next(f).strip() for x in range(num_comments)]
-    
+        standard['comments'] = [next(f).strip().lstrip('|') for x in range(num_comments)]
+
+    standard['comments'] = ' '.join(standard['comments'])
     stats['coordinates'] = coordinates
     stats['standard'] = standard
     stats['format_specific'] = format_specific
