@@ -203,11 +203,30 @@ def streams_to_dataframe(streams):
     spectral_streams = []
     for stream in streams:
         for key in meta_dict.keys():
-            if key == 'netid':
-                statskey = 'network'
+            if key == 'name':
+                try:
+                    name_str = stream[0].stats['standard']['station_name']
+                except KeyError:
+                    name_str = stream[0].stats['name']
+                meta_dict[key].append(name_str)
+            elif key == 'lat':
+                try:
+                    latitude = stream[0].stats['coordinates']['latitude']
+                except KeyError:
+                    latitude = stream[0].stats['lat']
+                meta_dict[key].append(latitude)
+            elif key == 'lon':
+                try:
+                    longitude = stream[0].stats['coordinates']['longitude']
+                except KeyError:
+                    longitude = stream[0].stats['lon']
+                meta_dict[key].append(longitude)
             else:
-                statskey = key
-            meta_dict[key].append(stream[0].stats[statskey])
+                if key == 'netid':
+                    statskey = 'network'
+                else:
+                    statskey = key
+                meta_dict[key].append(stream[0].stats[statskey])
         spectral_traces = []
         # process acceleration and store velocity traces
         for idx, trace in enumerate(stream):
