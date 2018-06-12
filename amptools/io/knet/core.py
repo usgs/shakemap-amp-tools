@@ -50,29 +50,34 @@ def read_knet(filename):
         lines = [next(f) for x in range(TEXT_HDR_ROWS)]
 
     hdr = {}
+    coordinates = {}
+    standard = {}
+    hdr['network'] = 'KNET'
     hdr['station'] = lines[5].split()[2]
-    hdr['name'] = 'unknown'
+    standard['station_name'] = ''
 
     # according to the powers that defined the Network.Station.Channel.Location
     # "standard", Location is a two character field.  Most data providers,
     # including KNET here, don't provide this.  We'll flag it as "--".
     hdr['location'] = '--' 
     
-    hdr['lat'] = float(lines[6].split()[2])
-    hdr['lon'] = float(lines[7].split()[2])
+    coordinates['latitude'] = float(lines[6].split()[2])
+    coordinates['longitude'] = float(lines[7].split()[2])
+    coordinates['elevation'] = float(lines[8].split()[2])
+    
     hdr['sampling_rate'] = float(
         re.search('\\d+', lines[10].split()[2]).group())
     hdr['delta'] = 1 / hdr['sampling_rate']
     hdr['calib'] = 1.0
-    hdr['units'] = 'acc'
-    hdr['network'] = 'KNET'
-    hdr['source'] = 'Japan National Research Institute for Earth Science and Disaster Resilience'
+    standard['units'] = 'acc'
+
+    
     if lines[12].split()[1] == 'N-S':
-        hdr['channel'] = 'HHN'
+        hdr['channel'] = 'H1'
     elif lines[12].split()[1] == 'E-W':
-        hdr['channel'] = 'HHE'
+        hdr['channel'] = 'H2'
     elif lines[12].split()[1] == 'U-D':
-        hdr['channel'] = 'HHZ'
+        hdr['channel'] = 'Z'
     else:
         raise Exception('Could not parse direction %s' %
                         lines[12].split()[1])
@@ -111,6 +116,24 @@ def read_knet(filename):
 
     # apply the correction factor we're given in the header
     data *= calib
+
+    # fill out the rest of the standard dictionary
+    standard['horizontal_orientation'] = np.nan
+    standard['instrument_period'] = np.nan
+    standard['instrument_damping'] = np.nan
+    standard['processing_time'] = ''
+    standard['process_level'] = 'V1'
+    standard['sensor_serial_number'] = ''
+    standard['instrument'] = ''
+    standard['comments'] = ''
+    standard['structure_type'] = ''
+    standard['corner_frequency'] = np.nan
+    standard['units'] = 'acc'
+    standard['source'] = 'Japan National Research Institute for Earth Science and Disaster Resilience'
+    standard['source_format'] = 'KNET'
+
+    hdr['coordinates'] = coordinates
+    hdr['standard'] = standard
 
     # create a Trace from the data and metadata
     trace = Trace(data.copy(), Stats(hdr.copy()))

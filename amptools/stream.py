@@ -155,9 +155,13 @@ def streams_to_dataframe(streams):
             if trace.stats['channel'] not in channels:
                 channels.append(trace.stats['channel'])
             if not len(subchannels):
-                if trace.stats['units'] == 'acc':
+                try:
+                    units = trace.stats.standard['units']
+                except:
+                    units = trace.stats['units']
+                if units == 'acc':
                     subchannels = ['pga', 'pgv', 'psa03', 'psa10', 'psa30']
-                elif trace.stats['units'] == 'vel':
+                elif units == 'vel':
                     subchannels = ['pgv']
                 else:
                     raise ValueError('Unknown units %s' % trace['units'])
@@ -221,17 +225,27 @@ def streams_to_dataframe(streams):
                 except KeyError:
                     longitude = stream[0].stats['lon']
                 meta_dict[key].append(longitude)
+            elif key == 'station':
+                meta_dict[key].append(stream[0].stats['station'])
+            elif key == 'source':
+                try:
+                    source = stream[0].stats.standard['source']
+                except:
+                    source = stream[0].stats['source']
+                meta_dict[key].append(source)
+            elif key == 'netid':
+                meta_dict[key].append(stream[0].stats['network'])
             else:
-                if key == 'netid':
-                    statskey = 'network'
-                else:
-                    statskey = key
-                meta_dict[key].append(stream[0].stats[statskey])
+                pass
         spectral_traces = []
         # process acceleration and store velocity traces
         for idx, trace in enumerate(stream):
             channel = trace.stats['channel']
-            if trace.stats['units'] == 'acc':
+            try:
+                units = trace.stats.standard['units']
+            except:
+                units = trace.stats['units']
+            if units == 'acc':
                 # do some basic data processing - if this has already been done,
                 # it shouldn't hurt to repeat it.
                 with warnings.catch_warnings():

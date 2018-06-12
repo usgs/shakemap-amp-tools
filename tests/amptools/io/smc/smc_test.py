@@ -33,7 +33,7 @@ def test_smc():
 
         # test that the traces are acceleration
         for trace in stream:
-            assert trace.stats['units'] == 'acc'
+            assert trace.stats.standard.units == 'acc'
 
         # compare the start/end points
         np.testing.assert_almost_equal(accvals[0],stream[0].data[0])

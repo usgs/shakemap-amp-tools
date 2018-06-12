@@ -112,13 +112,22 @@ def _read_channel(filename, line_offset):
     name = lines[2].replace(' ', '_').strip()
     component = lines[12].split()[1]
 
+    # parse the instrument type from the text header
+    instrument = lines[3].split()[1]
+
+    # parse the sensor resolution from the text header
+    resolution_str = lines[4].split()[1]
+    resolution = int(re.search('\d+',resolution_str).group())
+    
     # read floating point header array
     skip_header = line_offset + TEXT_HDR_ROWS
     hdr_data = np.genfromtxt(filename, skip_header=skip_header,
                              max_rows=FP_HDR_ROWS)
 
     # parse header dictionary from float header array
-    hdr = _read_header(hdr_data, station, name, component, data_format)
+    hdr = _read_header(hdr_data, station, name,
+                       component, data_format,
+                       instrument, resolution)
 
     # according to the powers that defined the Network.Station.Channel.Location
     # "standard", Location is a two character field.  Most data providers,
@@ -186,7 +195,7 @@ def _read_channel(filename, line_offset):
     return (trace, offset, velocity)
 
 
-def _read_header(hdr_data, station, name, component, data_format):
+def _read_header(hdr_data, station, name, component, data_format, instrument, resolution):
     """Construct stats dictionary from header lines.
 
     Args:
@@ -196,24 +205,44 @@ def _read_header(hdr_data, station, name, component, data_format):
         component (str): Component direction (N18E, S72W, etc.)
     Returns:
         Dictionary containing fields:
+            - network "GNS"
             - station
-            - name
+            - channel H1,H2,or Z.
+            - location
             - sampling_rate Samples per second.
             - delta Interval between samples (seconds)
             - calib Calibration factor (always 1.0)
             - npts Number of samples in record.
-            - network "GNS"
-            - units "acc"
-            - source 'New Zealand Institute of Geological and Nuclear Science'
-            - channel HHE,HHN,or HHZ.
             - starttime Datetime object containing start of record.
-            - lat Latitude of station.
-            - lon Longitude of station.
+            - standard:
+              - station_name
+              - units "acc"
+              - source 'New Zealand Institute of Geological and Nuclear Science'
+              - horizontal_orientation 
+              - instrument_period
+              - instrument_damping
+              - processing_time
+              - process_level
+              - sensor_serial_number
+              - instrument
+              - comments
+              - structure_type
+              - corner_frequency
+              - source_format
+            - coordinates:
+              - lat Latitude of station.
+              - lon Longitude of station.
+              - elevation Elevation of station.
+            - format_specific:
+              - sensor_bit_resolution
 
     """
     hdr = {}
+    standard = {}
+    coordinates = {}
+    format_specific = {}
     hdr['station'] = station
-    hdr['name'] = name
+    standard['station_name'] = name
     if data_format == 'V1':
         hdr['sampling_rate'] = hdr_data[4, 0]
         hdr['delta'] = 1 / hdr['sampling_rate']
@@ -226,12 +255,14 @@ def _read_header(hdr_data, station, name, component, data_format):
     else:
         hdr['npts'] = int(hdr_data[3, 3])
     hdr['network'] = 'GNS'
-    hdr['units'] = 'acc'
-    hdr['source'] = 'New Zealand Institute of Geological and Nuclear Science'
+    standard['units'] = 'acc'
+    standard['source'] = 'New Zealand Institute of Geological and Nuclear Science'
     if component == 'Up':
-        hdr['channel'] = 'HHZ'
+        hdr['channel'] = 'Z'
     else:
-        hdr['channel'] = _get_channel(component)
+        hdr['channel'],standard['horizontal_orientation'] = _get_channel(component)
+
+    hdr['location'] = '--'
 
     # figure out the start time
     milliseconds = hdr_data[3, 9]
@@ -246,11 +277,31 @@ def _read_header(hdr_data, station, name, component, data_format):
         year, month, day, hour, minute, seconds, microseconds)
 
     # figure out station coordinates
-    hdr['lat'] = -hdr_data[2, 0] + \
+    coordinates['latitude'] = -hdr_data[2, 0] + \
         ((hdr_data[2, 1] + hdr_data[2, 2] / 60.0) / 60.0)
-    hdr['lon'] = hdr_data[2, 3] + \
+    coordinates['longitude'] = hdr_data[2, 3] + \
         ((hdr_data[2, 4] + hdr_data[2, 5] / 60.0) / 60.0)
+    coordinates['elevation'] = 0.0
 
+    # get other standard metadata
+    standard['instrument_period'] = 1/hdr_data[4,0]
+    standard['instrument_damping'] = hdr_data[4,1]
+    standard['processing_time'] = ''
+    standard['process_level'] = data_format
+    standard['sensor_serial_number'] = ''
+    standard['instrument'] = instrument
+    standard['comments'] = ''
+    standard['structure_type'] = ''
+    standard['corner_frequency'] = ''
+    standard['source_format'] = 'GeoNet'
+
+    # get format specific metadata
+    format_specific['sensor_bit_resolution'] = resolution
+    
+    hdr['coordinates'] = coordinates
+    hdr['standard'] = standard
+    hdr['format_specific'] = format_specific
+    
     return hdr
 
 
@@ -277,8 +328,8 @@ def _get_channel(component):
         else:
             comp_angle = 180 + angle
     if comp_angle > 315 or comp_angle < 45 or comp_angle > 135 and comp_angle < 225:
-        channel = 'HHN'
+        channel = 'H1'
     else:
-        channel = 'HHE'
+        channel = 'H2'
 
-    return channel
+    return (channel,comp_angle)

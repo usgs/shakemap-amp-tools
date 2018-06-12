@@ -26,9 +26,9 @@ def test_pgv():
             ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
             ['pgv', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGV']
-    np.testing.assert_almost_equal(station_dict['HHE'], pgv_target['HHE'])
-    np.testing.assert_almost_equal(station_dict['HHN'], pgv_target['HHN'])
-    np.testing.assert_almost_equal(station_dict['HHZ'], pgv_target['HHZ'])
+    np.testing.assert_almost_equal(station_dict['H2'], pgv_target['H2'])
+    np.testing.assert_almost_equal(station_dict['H1'], pgv_target['H1'])
+    np.testing.assert_almost_equal(station_dict['Z'], pgv_target['Z'])
 
 
 if __name__ == '__main__':
