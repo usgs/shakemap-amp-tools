@@ -96,10 +96,22 @@ class StationSummary(object):
             hour = '{:02d}'.format(stats['starttime'].hour)
             minute = '{:02d}'.format(stats['starttime'].minute)
             dataframe_dict['HRMN'] += [hour + minute]
-            dataframe_dict['Station Name'] += [stats['name']]
+            try:
+                station_str = stats['standard']['station_name']
+            except KeyError:
+                station_str = stats['name']
+            dataframe_dict['Station Name'] = [station_str]
             dataframe_dict['Station ID  No.'] += [stats['station']]
-            dataframe_dict['Station Latitude'] += [stats['lat']]
-            dataframe_dict['Station Longitude'] += [stats['lon']]
+            try:
+                latitude = stats['coordinates']['latitude']
+            except KeyError:
+                latitude = stats['lat']
+            dataframe_dict['Station Latitude'] += [latitude]
+            try:
+                longitude = stats['coordinates']['longitude']
+            except KeyError:
+                longitude = stats['lon']
+            dataframe_dict['Station Longitude'] += [longitude]
             dataframe_dict['Channel'] += [imc]
             for imt_key in np.sort(imt_keys):
                 dataframe_dict[imt_key] += [pgms[imt_key][imc]]
