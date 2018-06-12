@@ -259,9 +259,11 @@ def _get_header_info(filename, any_structure=False):
     if format_specific['vertical_orientation'] in [0,180]:
         stats['channel'] = 'Z'
     else:
-        if standard['horizontal_orientation'] > 0 and \
-          standard['horizontal_orientation'] < 180:
-            stats['channel'] = 'H1'
+        quad1 = horizontal_orientation > 315 and horizontal_orientation <= 360
+        quad2 = horizontal_orientation > 0 and horizontal_orientation <= 45
+        quad3 = horizontal_orientation > 135 and horizontal_orientation <= 225
+        if quad1 or quad2 or quad3:
+            channel = 'H1'
         else:
             stats['channel'] = 'H2'
 
