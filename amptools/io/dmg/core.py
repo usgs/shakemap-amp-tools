@@ -26,8 +26,10 @@ VALID_MARKERS = [
 ]
 
 homedir = os.path.dirname(os.path.abspath(__file__))
-codedir = os.path.join(homedir,'..','fdsn_codes.txt')
-VALID_CODES = np.loadtxt(codedir, skiprows=1, usecols=0, dtype=str)
+codedir = os.path.join(homedir, '..', 'fdsn_codes.csv')
+CODES, SOURCES = np.genfromtxt(codedir, skip_header=1, usecols=(0,1),
+                               unpack=True, dtype=bytes, delimiter=',')
+CODES = CODES.astype(str)
 
 UNITS = [
         'acc',
@@ -141,7 +143,7 @@ def _read_volume_two(filename, line_offset):
     name = re.sub(' +',' ',lines[6][:name_length]).strip().replace(' ', '_')
     hdr['name'] = name
     code = re.sub(' +',' ',lines[1][name_length:]).strip().split(' ')[-1][:2]
-    if code.upper() in VALID_CODES:
+    if code.upper() in CODES:
         hdr['network'] = code.upper()
     else:
         hdr['network'] = 'UNK'
