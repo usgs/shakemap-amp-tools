@@ -15,7 +15,7 @@ def test_dmg():
 
     for filename in [file1, file2]:
         assert is_dmg(file1)
-        
+
         # test acceleration from the file
         stream1 = read_dmg(filename)
 
@@ -24,7 +24,7 @@ def test_dmg():
 
         # test that the traces are acceleration
         for trace in stream1:
-            assert trace.stats['units'] == 'acc'
+            assert trace.stats['standard']['units'] == 'acc'
 
         # test velocity from the file
         stream2 = read_dmg(filename, units='vel')
@@ -34,7 +34,7 @@ def test_dmg():
 
         # test that the traces are velocity
         for trace in stream2:
-            assert trace.stats['units'] == 'vel'
+            assert trace.stats['standard']['units'] == 'vel'
 
         # test displacement from the file
         stream3 = read_dmg(filename, units='disp')
@@ -44,7 +44,7 @@ def test_dmg():
 
         # test that the traces are displacement
         for trace in stream3:
-            assert trace.stats['units'] == 'disp'
+            assert trace.stats['standard']['units'] == 'disp'
 
     # Test for wrong format exception
     success = True
@@ -57,12 +57,13 @@ def test_dmg():
     assert success == False
 
     # Test for bad date in header warning
-    with warnings.catch_warnings(record=True) as w:
+    try:
         datadir = os.path.join(homedir,'..','..','..','data','dmg')
         file4 = os.path.join(datadir,'BadHeader.V2')
         read_dmg(file4)
-        assert issubclass(w[-1].category, Warning)
-        assert "Incorrectformat for trigger time" in str(w[-1].message)
+    except Exception:
+        success = False
+    assert success == False
 
 
 if __name__ == '__main__':

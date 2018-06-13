@@ -176,7 +176,7 @@ def _get_parser():
     parser.add_argument('output_directory',
                         help='The directory of all output files.')
     parser.add_argument('format',
-                        help='Format of the files that are read in.')
+                        help='Format of the files that are read in. Note CSMIP is called DMG.')
     parser.add_argument('-c', '--components', nargs='+', dest='components',
             default=[], help='The IMC parameters to get.', required=True)
     parser.add_argument('-m', '--measurements', nargs='+', dest='measurements',

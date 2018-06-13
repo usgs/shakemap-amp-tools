@@ -16,6 +16,9 @@ from obspy.core.stream import read
 from amptools.io.cwb.core import read_cwb, is_cwb
 from amptools.io.geonet.core import read_geonet, is_geonet
 from amptools.io.knet.core import read_knet, is_knet
+from amptools.io.cosmos.core import read_cosmos, is_cosmos
+from amptools.io.smc.core import read_smc, is_smc
+from amptools.io.dmg.core import read_dmg, is_dmg
 
 
 FORMATS = ['AH',
@@ -53,6 +56,15 @@ def main(args):
         reader = read_knet
         checker = is_knet
         split_files = True
+    elif format == 'cosmos':
+        reader = read_cosmos
+        checker = is_cosmos
+    elif format == 'smc':
+        reader = read_smc
+        checker = is_smc
+    elif format == 'dmg':
+        reader = read_dmg
+        checker = is_dmg
     else:
         raise Exception('Unsupported format %s' % format)
 
@@ -110,13 +122,13 @@ if __name__ == '__main__':
 
 https://docs.obspy.org/packages/autogen/obspy.core.stream.Stream.write.html#supported-formats
 
-   
+
     '''
     parser = argparse.ArgumentParser(description=desc,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('indir', help='Directory containing input data.')
     parser.add_argument('outdir', help='Output data directory.')
-    parser.add_argument('format', help='Output strong motion data format.',
+    parser.add_argument('format', help='Output strong motion data format. Note CSMIP is called DMG.',
                         choices=FORMATS)
     pargs = parser.parse_args()
     main(pargs)
