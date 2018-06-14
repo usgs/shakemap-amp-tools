@@ -101,7 +101,7 @@ def _get_header_info(file, data):
       - process_time (datetime): Reported date of processing
       - process_level: Either 'V0', 'V1', 'V2', or 'V3'
       - station_name (str): Long form station description
-      - sensor_serial_number (int): Reported sensor serial
+      - sensor_serial_number (str): Reported sensor serial
       - instrument (str)
       - comments (str): Processing comments
       - structure_type (str)
@@ -132,16 +132,10 @@ def _get_header_info(file, data):
             hdr['station'] = line.split(':')[1].strip()
         if line.startswith('#StationName'):
             standard['station_name'] = line.split(':')[1].strip()
-        else:
-            standard['station_name'] = ''
         if line.startswith('#StationLongitude'):
             coordinates['longitude'] = float(line.split(':')[1].strip())
-        else:
-            coordinates['longitude'] = np.nan
         if line.startswith('#StationLatitude'):
             coordinates['latitude'] = float(line.split(':')[1].strip())
-        else:
-            coordinates['latitude'] = np.nan
         if line.startswith('#StartTime'):
             timestr = ':'.join(line.split(':')[1:]).strip()
             hdr['starttime'] = datetime.strptime(timestr, DATE_FMT)
@@ -150,19 +144,13 @@ def _get_header_info(file, data):
         if line.startswith('#SampleRate'):
             hdr['sampling_rate'] = int(line.split(':')[1].strip())
         if line.startswith('#InstrumentKind'):
-            hdr['instrument'] = line.split(':')[1].strip()
+            standard['instrument'] = line.split(':')[1].strip()
         if line.startswith('#AmplitudeMAX. U:'):
             format_specific['dc_offset_hhz'] = float(line.split('~')[1])
-        else:
-            coordinates['dc_offset_hhz'] = np.nan
         if line.startswith('#AmplitudeMAX. N:'):
             format_specific['dc_offset_hhn'] = float(line.split('~')[1])
-        else:
-            coordinates['dc_offset_hhn'] = np.nan
         if line.startswith('#AmplitudeMAX. E:'):
             format_specific['dc_offset_hhe'] = float(line.split('~')[1])
-        else:
-            coordinates['dc_offset_hhe'] = np.nan
         if line.startswith('#Data'):
             break
 
@@ -183,6 +171,10 @@ def _get_header_info(file, data):
 
     # Set defaults
     coordinates['elevation'] = np.nan
+    if 'longitude' not in coordinates:
+        coordinates['longitude'] = np.nan
+    if 'latitude' not in coordinates:
+        coordinates['latitude'] = np.nan
     standard['instrument_period'] = np.nan
     standard['instrument_damping'] = np.nan
     standard['process_time'] = np.nan
@@ -194,10 +186,18 @@ def _get_header_info(file, data):
     standard['source'] = 'Taiwan Strong Motion Instrumentation Program' + \
             'via Central Weather Bureau'
     standard['source_format'] = 'cwb'
+    if 'station_name' not in standard:
+        standard['station_name'] = ''
+    if 'instrument' not in standard:
+        standard['instrument'] = ''
+    if 'dc_offset_hhz' not in format_specific:
+        format_specific['dc_offset_hhz'] = np.nan
+    if 'dc_offset_hhe' not in format_specific:
+        format_specific['dc_offset_hhe'] = np.nan
+    if 'dc_offset_hhn' not in format_specific:
+        format_specific['dc_offset_hhn'] = np.nan
     # Set dictionary
     hdr['standard'] = standard
     hdr['coordinates'] = coordinates
     hdr['format_specific'] = format_specific
     return hdr
-
-read_cwb('/Users/hschovanec/Repositories/shakemap-amp-tools/tests/data/cwb/1-EAS.dat')

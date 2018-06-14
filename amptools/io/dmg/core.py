@@ -29,7 +29,7 @@ VALID_MARKERS = [
 
 homedir = os.path.dirname(os.path.abspath(__file__))
 codedir = os.path.join(homedir, '..', 'fdsn_codes.csv')
-CODES, SOURCES = np.genfromtxt(codedir, skip_header=1, usecols=(0,1),
+CODES, SOURCES1, SOURCES2 = np.genfromtxt(codedir, skip_header=1, usecols=(0,1,2),
                                unpack=True, dtype=bytes, delimiter=',')
 CODES = CODES.astype(str)
 
@@ -102,6 +102,8 @@ def read_dmg(filename, **kwargs):
         if reader == 'V2':
            traces, line_offset = _read_volume_two(filename, line_offset)
            trace_list += traces
+        else:
+            line_offset = line_count
 
     stream = Stream([])
     for trace in trace_list:
@@ -188,7 +190,6 @@ def _get_header_info(int_data, flt_data, lines, level):
      - starttime (datetime)
      - sampling_rate (float)
      - delta (float)
-     - npts (int)
      - coordinates:
        - latitude (float)
        - longitude (float)
@@ -200,7 +201,7 @@ def _get_header_info(int_data, flt_data, lines, level):
       - process_time (datetime): Reported date of processing
       - process_level: Either 'V0', 'V1', 'V2', or 'V3'
       - station_name (str): Long form station description
-      - sensor_serial_number (int): Reported sensor serial
+      - sensor_serial_number (str): Reported sensor serial
       - instrument (str)
       - comments (str): Processing comments
       - structure_type (str)
@@ -236,12 +237,12 @@ def _get_header_info(int_data, flt_data, lines, level):
 
     # Required metadata
     name_length = int_data[29]
-    station_name = re.sub(' +',' ',lines[6][:name_length]).strip().replace(' ', '_')
+    station_name = re.sub(' +',' ',lines[6][:name_length]).strip()
     code = re.sub(' +',' ',lines[1][name_length:]).strip().split(' ')[-1][:2]
     if code.upper() in CODES:
         network = code.upper()
         idx = np.argwhere(CODES == network)[0][0]
-        source = SOURCES[idx].decode('utf-8')
+        source = SOURCES1[idx].decode('utf-8') +  ', ' + SOURCES2[idx].decode('utf-8')
     else:
         network = '--'
         source = ''
@@ -365,12 +366,15 @@ def _get_header_info(int_data, flt_data, lines, level):
     standard['units'] = 'acc'
     standard['source'] = source
     standard['source_format'] = 'dmg'
-    standard['station_name'] = 'dmg'
+    standard['station_name'] = station_name
 
     # Format specific metadata
     format_specific['fractional_unit'] =  flt_data[4]
     format_specific['sensor_sensitivity'] = flt_data[5]
-    format_specific['time_sd'] = flt_data[13]
+    if flt_data[13] == -999:
+        format_specific['time_sd'] = np.nan
+    else:
+        format_specific['time_sd'] = flt_data[13]
     format_specific['scaling_factor'] = flt_data[51]
     format_specific['low_filter_corner'] = flt_data[61]
     format_specific['high_filter_corner'] = flt_data[72]

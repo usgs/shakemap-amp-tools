@@ -21,7 +21,7 @@ VALID_MARKERS = ['CORRECTED ACCELERATION',
 ]
 homedir = os.path.dirname(os.path.abspath(__file__))
 codedir = os.path.join(homedir, '..', 'fdsn_codes.csv')
-CODES, SOURCES = np.genfromtxt(codedir, skip_header=1, usecols=(0,1),
+CODES, SOURCES1, SOURCES2 = np.genfromtxt(codedir, skip_header=1, usecols=(0,1,2),
                                unpack=True, dtype=bytes, delimiter=',')
 CODES = CODES.astype(str)
 BUILDING_TYPES = {
@@ -120,7 +120,7 @@ SENSOR_TYPES = {
         7: 'Kinemetrics FBA-23 accelerometer',
         8: 'Kinemetrics FBA-23DH accelerometer',
         20: 'Kinemetrics Episensor accelerometer',
-        20: 'Kinemetrics Episensor ES-U accelerometer',
+        21: 'Kinemetrics Episensor ES-U accelerometer',
         50: 'Sprengnether FBX-23 accelerometer',
         51: 'Sprengnether FBX-26 accelerometer',
         100: 'Terratech SSA 120 accelerometer',
@@ -271,7 +271,7 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
       - process_time (datetime): Reported date of processing
       - process_level: Either 'V0', 'V1', 'V2', or 'V3'
       - station_name (str): Long form station description
-      - sensor_serial_number (int): Reported sensor serial
+      - sensor_serial_number (str): Reported sensor serial
       - instrument (str): See SENSOR_TYPES
       - comments (str): Processing comments
       - structure_type (str): See BUILDING_TYPES
@@ -302,6 +302,7 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
             Should be described in more depth in comments.
       - scaling_factor (float): Scaling used for converting acceleration
             from g/10 to cm/sec/sec
+      - sensor_sensitivity (float): Sensitvity in volts/g
 
     Args:
         int_data (ndarray): Array of integer data
@@ -334,12 +335,12 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
         if network_code in CODES:
             network = network_code
             idx = np.argwhere(CODES == network_code)[0][0]
-            source = SOURCES[idx].decode('utf-8')
+            source = SOURCES1[idx].decode('utf-8') +  ', ' + SOURCES2[idx].decode('utf-8')
         else:
             network = '--'
             source = ''
     hdr['network'] = network
-    hdr['station'] = lines[4][28:34]
+    hdr['station'] = lines[4][28:34].strip()
     horizontal_angle = int_data[53]
     # Determine the angle based upon the cosmos table
     # Set horizontal angles other than N,S,E,W to H1 and H2
@@ -430,7 +431,7 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
     station_name = lines[4][40:-1].strip()
     standard['station_name'] = station_name
     instrument_frequency = flt_data[39]
-    standard['sensor_period'] = 1.0 / _check_assign(instrument_frequency,
+    standard['instrument_period'] = 1.0 / _check_assign(instrument_frequency,
             unknown, np.nan)
     instrument_damping = flt_data[40]
     standard['instrument_damping'] = _check_assign(instrument_damping,
@@ -457,22 +458,21 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
             standard['process_time'] = ''
     else:
         standard['process_time'] = ''
-    processing_level = int_data[0]
-    if processing_level == 0:
-        standard['processing_level'] = 'V0'
-    elif processing_level == 1:
-        standard['processing_level'] = 'V1'
-    elif processing_level == 2:
-        standard['processing_level'] = 'V2'
-    elif processing_level == 3:
-        standard['processing_level'] = 'V3'
+    process_level = int_data[0]
+    if process_level == 0:
+        standard['process_level'] = 'V0'
+    elif process_level == 1:
+        standard['process_level'] = 'V1'
+    elif process_level == 2:
+        standard['process_level'] = 'V2'
+    elif process_level == 3:
+        standard['process_level'] = 'V3'
     else:
-        standard['processing_level'] = ''
+        standard['process_level'] = ''
     serial = int_data[52]
     if serial != unknown:
-        standard['sensor_serial_number'] = serial
-    else:
-        standard['sensor_serial_number'] = ''
+        standard['sensor_serial_number'] = str(_check_assign(serial,
+                unknown, ''))
     instrument = int_data[51]
     if instrument != unknown and instrument in SENSOR_TYPES:
         standard['instrument'] = SENSOR_TYPES[instrument]
@@ -480,14 +480,11 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
         standard['instrument'] = lines[6][57:-1].strip()
     structure_type = int_data[18]
     if structure_type != unknown and structure_type in BUILDING_TYPES:
-        standard['structure_type'] = structure_type
+        standard['structure_type'] = BUILDING_TYPES[structure_type]
     else:
         standard['structure_type'] = ''
     frequency = flt_data[25]
-    if frequency != unknown:
-        standard['corner_frequency'] = frequency
-    else:
-        standard['corner_frequency'] = np.nan
+    standard['corner_frequency'] = _check_assign(frequency, unknown, np.nan)
     physical_parameter = int_data[2]
     units = int_data[1]
     if units != unknown and units in UNITS:
@@ -551,6 +548,9 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
         format_specific['record_flag'] = ''
     scaling_factor = flt_data[87]
     format_specific['scaling_factor'] = _check_assign(scaling_factor,
+            unknown, np.nan)
+    scaling_factor = flt_data[41]
+    format_specific['sensor_sensitivity'] = _check_assign(scaling_factor,
             unknown, np.nan)
     # Set dictionary
     hdr['standard'] = standard
