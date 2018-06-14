@@ -199,7 +199,7 @@ if __name__ == '__main__':
     parser.add_argument('eventid', help='Earthquake event ID.')
     parser.add_argument('indir', help='Directory containing input data.')
     parser.add_argument('outdir', help='Output data directory.')
-    parser.add_argument('format', help='Input strong motion data format.',
+    parser.add_argument('format', help='Input strong motion data format. Note CSMIP is called DMG.',
                         choices=FORMATS)
     parser.add_argument('-v', '--verbose', help='Print progress information.',
                         action='store_true', default=False)

@@ -2,32 +2,32 @@ Corrected acceleration    (Format v01.20 with 13 text lines) Src: fakefile.txt
 Somewhere in Los Angeles, CA            June 16,2005 13:53 PDT
 Hypocenter: 34.0580  -117.0110  H= 12km(SCSN) ML=4.9, Mw=4.8(CIT), Ms=4.2(NEIC)
 Origin: 06/16/2005, 20:53:26.1 UTC (SCSN)
-Statn No: 01-23075  Code:CE-J2236  CDMG Yucaipa - Bryant & Oak Glen
+Statn No: 01-23075  Code:CI-J2236  CDMG Yucaipa - Bryant & Oak Glen
 Coords: 34.0460 -117.0350  Site Geology:  geology description here
 Recorder: SSA-2  s/n 1238 ( 1 Chns of 12  at Sta) Sensor:FBA-11  s/n 1889
 Rcrd start time:06/16/2005, 20:53:04.400 UTC (Q=2) RcrdId: 23075-L1889-05167.06
 Sta Cha:  1: 340 deg (Rcrdr Chan  1) Location: building location description
 Raw record length = 70.000  sec, Uncor max =   -.167 g  at   27.850 sec
-Processed: 06/17/2005, 12:01:00 PDT      Max =  -161.962 cm/sec2  at  27.850 sec
+Processed: 06/17/2005,          PDT      Max =  -161.962 cm/sec2  at  27.850 sec
 Record filtered below 0.30  Hz (periods over  14.5 secs), and above 40.0 Hz
-Values used when parameter or data value is unknown/unspecified:   -999, -999.0
+Values used when parameter or data value is unknown/unspecified:
  100 Integer-header values follow on  10 lines, Format= (10I8)
-       2       1       4     120       1    -999    -999   23075     123    -999
-       5       5       2       5    -999       1    -999      99      10      90
+    -999    -999       4     120       1    -999    -999   23075     123    -999
+    -999       5       2       5    -999       1    -999      99    -999      90
       10       3      12    -999       6       4       2       3    -999     105
        3    1238      12      11      16      15    -999       1       1    2005
      167       6      16      20      53       2       1    -999    -999       9
-       3       4    1889     340      20       2    -999    -999    -999       2
-       4       1    -999       2       0    -999    -999    -999    -999    7000
-       5    -999    -999    -999       1       0       2    -999    -999    -999
+       3    -999    -999     400      20       2    -999    -999    -999    -999
+    -999    -999    -999       2       0    -999    -999    -999    -999    7000
+       5    -999    -999    -999       1       2       2    -999    -999    -999
     -999    -999    -999    -999    -999    -999    -999    -999    -999    -999
     -999    -999    -999    -999    -999    -999    -999    -999    -999    -999
  100 Real-header values follow on  17 lines, Format= (6F13.6)
-    34.046000  -117.035000    15.000000   120.000000  -999.000000  -999.000000
+    34.046000  -117.035000  -999.000000   120.000000  -999.000000  -999.000000
   -999.000000  -999.000000  -999.000000    34.058000  -117.011000    11.800000
      4.800000     4.200000     4.900000     5.100000    45.030000   120.500000
   -999.000000  -999.000000  -999.000000  123.4500000     2.000000     1.500000
-     0.500000    40.000000     2.500000  -999.000000  -999.000000     4.400000
+     0.500000    40.000000     2.500000  -999.000000  -999.000000  -999.000000
      0.600000     8.000000  -999.000000     0.005000    72.000000     0.400000
   -999.000000  -999.000000  -999.000000    25.000000     0.200000    220.00000
    100.000000     2.000000     0.040000     5.500000     1.000000  -999.000000
@@ -924,7 +924,7 @@ Corrected acceleration    (Format v01.20 with 13 text lines) Src: fakefile.txt
 Somewhere in Los Angeles, CA            June 16,2005 13:53 PDT
 Hypocenter: 34.0580  -117.0110  H= 12km(SCSN) ML=4.9, Mw=4.8(CIT), Ms=4.2(NEIC)
 Origin: 06/16/2005, 20:53:26.1 UTC (SCSN)
-Statn No: 01-23075  Code:CE-J2236  CDMG Yucaipa - Bryant & Oak Glen
+Statn No: 01-23075  Code:---J2236  CDMG Yucaipa - Bryant & Oak Glen
 Coords: 34.0460 -117.0350  Site Geology:  geology description here
 Recorder: SSA-2  s/n 1238 ( 1 Chns of 12  at Sta) Sensor:FBA-11  s/n 1889
 Rcrd start time:06/16/2005, 20:53:04.400 UTC (Q=2) RcrdId: 23075-L1889-05167.06
@@ -934,7 +934,7 @@ Processed: 06/17/2005, 12:01:00 PDT      Max =  -161.962 cm/sec2  at  27.850 sec
 Record filtered below 0.30  Hz (periods over  14.5 secs), and above 40.0 Hz
 Values used when parameter or data value is unknown/unspecified:   -999, -999.0
  100 Integer-header values follow on  10 lines, Format= (10I8)
-       2       1       4     120       1    -999    -999   23075     123    -999
+       1    -999      25     120       1    -999    -999   23075     123    -999
        5       5       2       5    -999       1    -999      99      10      90
       10       3      12    -999       6       4       2       3    -999     105
        3    1238      12      11      16      15    -999       1       1    2005
