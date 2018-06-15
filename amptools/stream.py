@@ -7,6 +7,7 @@ import numpy as np
 from obspy.signal.invsim import simulate_seismometer, corn_freq_2_paz
 from obspy.core.trace import Trace
 from obspy.core.stream import Stream
+from obspy.geodetics import gps2dist_azimuth
 
 # local imports
 from amptools.process import filter_detrend
@@ -17,7 +18,6 @@ GAL_TO_PCTG = 1 / (9.8)
 
 FILTER_FREQ = 0.02
 CORNERS = 4
-
 
 def group_channels(streams):
     """Consolidate streams for the same event.
@@ -107,11 +107,13 @@ def group_channels(streams):
     return streams
 
 
-def streams_to_dataframe(streams):
+def streams_to_dataframe(streams, lat=None, lon=None):
     """Extract peak ground motions from list of Stream objects.
 
     Args:
         streams (list): List of Stream objects.
+        lat (float): Epicentral latitude.
+        lon (float): Epicentral longitude
     Returns:
         DataFrame: Pandas dataframe containing columns:
             - station Station code.
@@ -121,6 +123,7 @@ def streams_to_dataframe(streams):
             - network Short network code.
             - lat Station latitude
             - lon Station longitude
+            - distance Epicentral distance (km) (if epicentral lat/lon provided)
             - HHE East-west channel (or H1) (multindex with pgm columns):
                 - pga Peak ground acceleration (%g).
                 - pgv Peak ground velocity (cm/s).
@@ -144,6 +147,9 @@ def streams_to_dataframe(streams):
     # top level columns
     columns = ['station', 'name', 'source', 'netid', 'lat', 'lon']
 
+    if lat is not None and lon is not None:
+        columns.append('distance')
+    
     # Check for common events and group channels
     streams = group_channels(streams)
 
@@ -192,6 +198,9 @@ def streams_to_dataframe(streams):
               'lat': np.float64,
               'lon': np.float64}
 
+    if lat is not None:
+        dtypes.update({'distance':np.float64})
+
     dataframe = dataframe.astype(dtypes)
 
     # create a dictionary for pgm data.  Because it is difficult to set columns
@@ -237,6 +246,13 @@ def streams_to_dataframe(streams):
                 meta_dict[key].append(stream[0].stats['network'])
             else:
                 pass
+
+        if lat is not None:
+            dist, _, _ = gps2dist_azimuth(lat, lon, 
+                                          latitude,
+                                          longitude)
+            meta_dict['distance'].append(dist/1000)
+            
         spectral_traces = []
         # process acceleration and store velocity traces
         for idx, trace in enumerate(stream):
@@ -261,16 +277,25 @@ def streams_to_dataframe(streams):
         # get station summary and assign values
         station = StationSummary(stream, ['channels'],
                 ['pga', 'pgv', 'sa0.3', 'sa1.0', 'sa3.0'])
+        tchannels = [t.stats.channel for t in stream]
         for channel in channels:
-            pga = station.pgms['PGA'][channel]
-            pgv = station.pgms['PGV'][channel]
-            psa03 = station.pgms['SA0.3'][channel]
-            psa10 = station.pgms['SA1.0'][channel]
-            psa30 = station.pgms['SA3.0'][channel]
+            if channel not in tchannels:
+                pga = np.nan
+                pgv = np.nan
+                psa03 = np.nan
+                psa10 = np.nan
+                psa30 = np.nan
+            else:
+                pga = station.pgms['PGA'][channel]
+                pgv = station.pgms['PGV'][channel]
+                psa03 = station.pgms['SA0.3'][channel]
+                psa10 = station.pgms['SA1.0'][channel]
+                psa30 = station.pgms['SA3.0'][channel]
 
-            spectral_traces += [station.oscillators['SA0.3'],
-                    station.oscillators['SA1.0'],
-                    station.oscillators['SA3.0']]
+                sa03 = station.oscillators['SA0.3'].select(channel=channel)[0]
+                sa10 = station.oscillators['SA1.0'].select(channel=channel)[0]
+                sa30 = station.oscillators['SA3.0'].select(channel=channel)[0]
+                spectral_traces += [sa03,sa10,sa30]
 
             # assign values into dictionary
             channel_dicts[channel]['pga'].append(pga)

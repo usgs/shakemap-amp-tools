@@ -22,21 +22,19 @@ V2_REAL_HDR_ROWS = 13
 V2_REAL_FMT = [10] * 8
 
 VALID_MARKERS = [
-        'UNCORRECTED ACCELEROGRAM',
-        'CORRECTED ACCELEROGRAM',
-        'RESPONSE AND FOURIER AMPLITUDE SPECTRA'
+    'UNCORRECTED ACCELEROGRAM',
+    'CORRECTED ACCELEROGRAM',
+    'RESPONSE AND FOURIER AMPLITUDE SPECTRA'
 ]
 
 homedir = os.path.dirname(os.path.abspath(__file__))
-codedir = os.path.join(homedir, '..', 'fdsn_codes.csv')
-CODES, SOURCES1, SOURCES2 = np.genfromtxt(codedir, skip_header=1, usecols=(0,1,2),
-                               unpack=True, dtype=bytes, delimiter=',')
-CODES = CODES.astype(str)
+codedir = os.path.join(homedir, '..', 'fdsn_codes.txt')
+VALID_CODES = np.loadtxt(codedir, skiprows=1, usecols=0, dtype=str)
 
 UNITS = [
-        'acc',
-        'vel',
-        'disp'
+    'acc',
+    'vel',
+    'disp'
 ]
 
 
@@ -100,10 +98,8 @@ def read_dmg(filename, **kwargs):
     trace_list = []
     while line_offset < line_count:
         if reader == 'V2':
-           traces, line_offset = _read_volume_two(filename, line_offset)
-           trace_list += traces
-        else:
-            line_offset = line_count
+            traces, line_offset = _read_volume_two(filename, line_offset)
+            trace_list += traces
 
     stream = Stream([])
     for trace in trace_list:
@@ -138,10 +134,72 @@ def _read_volume_two(filename, line_offset):
     flt_data = flt_data[:100]
     skip_rows += V2_REAL_HDR_ROWS
 
-    # according to the powers that defined the Network.Station.Channel.Location
-    # "standard", Location is a two character field.  Most data providers,
-    # including csmip/dmg here, don't always provide this.  We'll flag it as "--".
-    hdr = _get_header_info(int_data, flt_data, lines, 'V2')
+    # Parse name and code information
+    name_length = int_data[29]
+    name = re.sub(' +', ' ', lines[6][:name_length]).strip().replace(' ', '_')
+    hdr['name'] = name
+    code = re.sub(' +', ' ', lines[1][name_length:]).strip().split(' ')[-1][:2]
+    if code.upper() in VALID_CODES:
+        hdr['network'] = code.upper()
+    else:
+        hdr['network'] = 'UNK'
+
+    # set statistics
+    hdr['units'] = 'acc'
+    lat = lines[5][21:27].replace(' ', '')
+    if lat[-1].upper() == 'S':
+        lat = -1 * float(lat[0:-1])
+    lon = lines[5][30:37].replace(' ', '')
+    if lon[-1].upper() == 'W':
+        lon = -1 * float(lon[0:-1])
+    hdr['lat'] = lat
+    hdr['lon'] = lon
+    hdr['location'] = '--'
+    try:
+        datestr = lines[4][36:80].lower().replace(' ', '')
+        date = datestr.split(',')[0].split(':')[-1]
+        time = datestr.split(',')[-1]
+        time = time[:time.find('.') + 2]
+        month = int(date.split('/')[0])
+        day = int(date.split('/')[1])
+        year = int(date.split('/')[2])
+        if int_data[23] != 0:
+            year = int_data[23]
+        hour = int(time.split(':')[0])
+        minute = int(time.split(':')[1])
+        seconds = float(time.split(':')[2])
+        microseconds = int((seconds - int(seconds)) * 1e6)
+    except ValueError:
+        message = "Incorrectformat for trigger time.\n" +\
+            "Correct format examle:\n" + \
+            "TRIGGER TIME: 05/27/80, 14:51:00.9 GMT\n" +\
+            "Attempting to retreive time from integer header."
+        warnings.warn(message, Warning)
+        month = int_data[21]
+        day = int_data[22]
+        year = int_data[23]
+        hour = int_data[16]
+        minute = int_data[17]
+        seconds = int_data[18]
+        microseconds = 0
+        if (
+            year == 0 and month == 0 and day == 0 and hour == 0 and
+            minute == 0 and seconds == 0
+        ):
+            raise Exception('Missing start time data from integer header.')
+    hdr['starttime'] = datetime(
+        year, month, day, hour, minute, int(seconds), microseconds)
+    hdr['delta'] = flt_data[60]
+    hdr['sampling_rate'] = 1 / hdr['delta']
+    hdr['npts'] = int_data[52]
+    hdr['source'] = hdr['network']
+    angle = int_data[26]
+    if angle == 500 or angle == 600:
+        hdr['channel'] = 'HHZ'
+    elif angle > 315 or angle < 45 or (angle > 135 and angle < 225):
+        hdr['channel'] = 'HHN'
+    else:
+        hdr['channel'] = 'HHE'
 
     traces = []
     # read acceleration data
@@ -158,7 +216,8 @@ def _read_volume_two(filename, line_offset):
     vel_hdr['standard']['units'] = 'vel'
     vel_hdr['npts'] = int_data[63]
     if vel_hdr['npts'] > 0:
-        vel_rows, vel_fmt = _get_data_format(filename, skip_rows, vel_hdr['npts'])
+        vel_rows, vel_fmt = _get_data_format(
+            filename, skip_rows, vel_hdr['npts'])
         vel_data = _read_lines(skip_rows + 1, vel_rows, vel_fmt, filename)
         vel_data = vel_data[:vel_hdr['npts']]
         vel_trace = Trace(vel_data.copy(), Stats(vel_hdr.copy()))
@@ -170,13 +229,14 @@ def _read_volume_two(filename, line_offset):
     disp_hdr['standard']['units'] = 'disp'
     disp_hdr['npts'] = int_data[65]
     if disp_hdr['npts'] > 0:
-        disp_rows, disp_fmt = _get_data_format(filename, skip_rows, disp_hdr['npts'])
+        disp_rows, disp_fmt = _get_data_format(
+            filename, skip_rows, disp_hdr['npts'])
         disp_data = _read_lines(skip_rows + 1, disp_rows, disp_fmt, filename)
         disp_data = disp_data[:disp_hdr['npts']]
         disp_trace = Trace(disp_data.copy(), Stats(disp_hdr.copy()))
         traces += [disp_trace]
         skip_rows += int(disp_rows) + 1
-    new_offset = skip_rows + 1 # there is an 'end of record' line after the data]
+    new_offset = skip_rows + 1  # there is an 'end of record' line after the data]
     return (traces, new_offset)
 
 def _get_header_info(int_data, flt_data, lines, level):
@@ -395,8 +455,8 @@ def _read_lines(skip_rows, max_rows, widths, filename):
         array-like: List of comments or array of data.
     """
     data_arr = np.genfromtxt(filename, skip_header=skip_rows,
-            max_rows=max_rows, dtype=np.float64,
-            delimiter=widths).flatten()
+                             max_rows=max_rows, dtype=np.float64,
+                             delimiter=widths).flatten()
     return data_arr
 
 
@@ -411,10 +471,10 @@ def _get_data_format(filename, skip_rows, npts):
         tuple: (int number of rows, list list of widths).
     """
     fmt = np.genfromtxt(filename, skip_header=skip_rows,
-            max_rows=1, dtype=str)[-1]
+                        max_rows=1, dtype=str)[-1]
 
     # Check for a format in header or use default
-    if fmt.find('f') >=0 and fmt.find('(') >=0 and fmt.find(')') >=0:
+    if fmt.find('f') >= 0 and fmt.find('(') >= 0 and fmt.find(')') >= 0:
         fmt = fmt.replace('(', '').replace(')', '')
         cols = int(fmt.split('f')[0])
         widths = int(fmt.split('f')[-1].split('.')[0])

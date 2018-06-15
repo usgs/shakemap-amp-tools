@@ -98,7 +98,7 @@ def is_smc(filename):
     Args:
         filename (str): Path to possible SMC corrected data file.
     Returns:
-        bool: True if DMG , False otherwise.
+        bool: True if SMC, False otherwise.
     """
     line = open(filename, 'rt').readline().strip()
     if line in VALID_HEADERS:
@@ -259,9 +259,10 @@ def _get_header_info(filename, any_structure=False):
     if format_specific['vertical_orientation'] in [0,180]:
         stats['channel'] = 'Z'
     else:
-        quad1 = horizontal_orientation > 315 and horizontal_orientation <= 360
-        quad2 = horizontal_orientation > 0 and horizontal_orientation <= 45
-        quad3 = horizontal_orientation > 135 and horizontal_orientation <= 225
+        ho = standard['horizontal_orientation']
+        quad1 = ho > 315 and ho <= 360
+        quad2 = ho > 0 and ho <= 45
+        quad3 = ho > 135 and ho <= 225
         if quad1 or quad2 or quad3:
             channel = 'H1'
         else:

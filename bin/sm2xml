@@ -7,11 +7,14 @@ import re
 import argparse
 import glob
 import string
+import warnings
 
 # third party imports
 import openpyxl
 from openpyxl.styles import Alignment
 from openpyxl.styles.borders import Border, Side
+from obspy.geodetics import gps2dist_azimuth
+
 
 # local imports
 from amptools.table import dataframe_to_xml
@@ -22,9 +25,10 @@ from amptools.io.knet.core import read_knet, is_knet
 from amptools.io.cosmos.core import read_cosmos, is_cosmos
 from amptools.io.smc.core import read_smc, is_smc
 from amptools.io.dmg.core import read_dmg, is_dmg
+from amptools.io.obspy.core import read_obspy, is_obspy
 
-FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc', 'dmg']
-
+FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc', 'dmg','obspy']
+DEFAULT_DISTANCE = 1500
 
 def _clean_sheet(outfile_excel, dataframe):
     """Put reference at top of spreadsheet, remove index column.
@@ -130,6 +134,9 @@ def main(args):
     elif format == 'dmg':
         reader = read_dmg
         checker = is_dmg
+    elif format == 'obspy':
+        reader = read_obspy
+        checker = is_obspy
     else:
         raise Exception('Unsupported format %s' % format)
 
@@ -160,20 +167,57 @@ def main(args):
 
         streams.append(stream)
 
+    if args.coordinates:
+        lon = args.coordinates[0]
+        lat = args.coordinates[1]
+    else:
+        lon = None
+        lat = None
+        
     streams = group_channels(streams)
+
+    # filter out distant stations
+    if args.filter_distance and args.coordinates:
+        newstreams = []
+        for stream in streams:
+            slat = stream[0].stats.coordinates.latitude
+            slon = stream[0].stats.coordinates.longitude
+            distance, _ ,_ = gps2dist_azimuth(slat,slon,lat,lon)
+            if distance/1000 <= args.filter_distance:
+                newstreams.append(stream)
+        streams = newstreams
+    
     for stream in streams:
         if args.debug:
             station = stream[0].stats['station']
-            stream_file = os.path.join(outdir, '%s_data.png' % station)
-            stream.plot(outfile=stream_file)
+            if lat:
+                slat = stream[0].stats.coordinates.latitude
+                slon = stream[0].stats.coordinates.longitude
+                distance,_,_ = gps2dist_azimuth(slat,slon,lat,lon)
+                fname = '%05ikm_%s_data.png' % (distance/1000,station)
+            else:
+                fname = '%s_data.png' % station
+            stream_file = os.path.join(outdir, fname)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                stream.plot(outfile=stream_file)
 
     # Extract station/peak information from each stream, save to a dataframe
-    dataframe, spectral_streams = streams_to_dataframe(streams)
+    dataframe, spectral_streams = streams_to_dataframe(streams,lon=lon,lat=lat)
     if args.double_debug:
         for stream in spectral_streams:
             station = stream[0].stats['station']
-            stream_file = os.path.join(outdir, '%s_spectral.png' % station)
-            stream.plot(outfile=stream_file)
+            if lat:
+                slat = stream[0].stats.coordinates.latitude
+                slon = stream[0].stats.coordinates.longitude
+                distance,_,_ = gps2dist_azimuth(slat,slon,lat,lon)
+                fname = '%05ikm_%s_spectral.png' % (distance/1000,station)
+            else:
+                fname = '%s_spectral.png' % station
+            stream_file = os.path.join(outdir, fname)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                stream.plot(outfile=stream_file)
 
     # Save peak info in spreadsheet form
     # we're forced here to have the index column, as much as we might not want it
@@ -201,6 +245,11 @@ if __name__ == '__main__':
     parser.add_argument('outdir', help='Output data directory.')
     parser.add_argument('format', help='Input strong motion data format. Note CSMIP is called DMG.',
                         choices=FORMATS)
+    parser.add_argument('-c', '--coordinates', help='Epicentral coordinates (LON LAT).',
+                        nargs=2,type=float)
+    parser.add_argument('-f', '--filter-distance',
+                        help='Do not process stations greater than [DISTANCE].',
+                        type=float, default=DEFAULT_DISTANCE)
     parser.add_argument('-v', '--verbose', help='Print progress information.',
                         action='store_true', default=False)
     parser.add_argument('-d', '--debug', help='Plot acceleration waveforms.',
