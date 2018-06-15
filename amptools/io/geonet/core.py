@@ -134,9 +134,6 @@ def _read_channel(filename, line_offset):
     # including GeoNet here, don't provide this.  We'll flag it as "--".
     hdr['location'] = '--' 
     
-    # inform the user that they have a V1 or V2 file
-    hdr['process_level'] = data_format
-
     # read in the data, handling cases where last row has less than 10 columns
     if hdr['npts'] % COLS_PER_ROW != 0:
         nrows = int(np.floor(hdr['npts'] / COLS_PER_ROW))
@@ -286,7 +283,7 @@ def _read_header(hdr_data, station, name, component, data_format, instrument, re
     # get other standard metadata
     standard['instrument_period'] = 1/hdr_data[4,0]
     standard['instrument_damping'] = hdr_data[4,1]
-    standard['processing_time'] = ''
+    standard['process_time'] = ''
     standard['process_level'] = data_format
     standard['sensor_serial_number'] = ''
     standard['instrument'] = instrument
