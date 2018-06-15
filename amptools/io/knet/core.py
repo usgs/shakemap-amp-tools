@@ -121,7 +121,7 @@ def read_knet(filename):
     standard['horizontal_orientation'] = np.nan
     standard['instrument_period'] = np.nan
     standard['instrument_damping'] = np.nan
-    standard['processing_time'] = ''
+    standard['process_time'] = ''
     standard['process_level'] = 'V1'
     standard['sensor_serial_number'] = ''
     standard['instrument'] = ''

@@ -35,13 +35,11 @@ def test_smc():
 
     files = {'cosmos': (read_cosmos, 'Cosmos12TimeSeriesTest.v1'),
              'cwb': (read_cwb, '1-EAS.dat'),
-             'dmg': (read_dmg, 'CE89146.V1'),
+             'dmg': (read_dmg, 'CE89146.V2'),
              'geonet': (read_geonet, '20161113_110259_WTMC_20.V1A'),
              'knet': (read_knet, 'AOM0011801241951.EW'),
              'obspy': (read_obspy, '51PJW_H1.mseed'),
              'smc': (read_smc, '0111a.smc')}
-
-    files = {'dmg': (read_dmg, 'CE89146.V1')}
 
     for ftype, ftuple in files.items():
         print(ftype)
@@ -49,7 +47,7 @@ def test_smc():
         stream = ftuple[0](filename)
         std_dict = stream[0].stats.standard
         for key in REQUIRED:
-            print(key)
+            print('\t%s' % key)
             assert key in std_dict
         print(ftype, std_dict['source_format'])
 

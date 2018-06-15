@@ -203,13 +203,14 @@ def _get_header_info(filename, any_structure=False):
     with open(filename) as f:
         ascheader = [next(f).strip() for x in range(ASCII_HEADER_LINES)]
 
-    stats['process_level'] = VALID_HEADERS[ascheader[0]]
+    standard['process_level'] = VALID_HEADERS[ascheader[0]]
         
     # station code is in the third line
     stats['station'] = ''
     if len(ascheader[2]) >= 4:
         stats['station'] = ascheader[2][0:4]
 
+    standard['process_time'] = ''
     standard['station_name'] = ascheader[5][10:40].strip()
     # sometimes the data source has nothing in it,
     # most of the time it seems has has USGS in it

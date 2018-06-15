@@ -12,10 +12,12 @@ def main(args):
     # gather arguments
     excelfile = args.excelfile
     dir = args.directory
+
     df, reference = read_excel(excelfile)
-    ppath,fname = os.path.split(excelfile)
-    fbase,ext = os.path.splitext(fname)
-    xmlfile = os.path.join(dir,'%s_dat.xml' % fbase)
+    ppath, fname = os.path.split(excelfile)
+    fbase, ext = os.path.splitext(fname)
+
+    xmlfile = os.path.join(dir, '%s_dat.xml' % fbase)
     dataframe_to_xml(df, xmlfile, reference=reference)
     print('Peak ground motions written to file %s.' % xmlfile)
 

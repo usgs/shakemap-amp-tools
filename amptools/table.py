@@ -1,6 +1,5 @@
 # stdlib imports
 import re
-import os.path
 import time
 import string
 
@@ -10,13 +9,13 @@ import numpy as np
 from lxml import etree
 from openpyxl import load_workbook, utils
 
-
 REQUIRED_COLUMNS = ['station', 'lat', 'lon', 'netid']
 CHANNEL_GROUPS = [['[a-z]{2}e', '[a-z]{2}n', '[a-z]{2}z'],
                   ['h1', 'h2', 'z'],
                   ['unk']]
 PGM_COLS = ['pga', 'pgv', 'psa03', 'psa10', 'psa30']
-OPTIONAL = ['name', 'distance', 'reference', 'intensity', 'source','loc','insttype','elev']
+OPTIONAL = ['name', 'distance', 'reference',
+            'intensity', 'source', 'loc', 'insttype', 'elev']
 
 
 def _move(cellstr, nrows, ncols):
@@ -91,8 +90,8 @@ def read_excel(excelfile):
     two-letter combination, usually adhering to the following standard:
     http://www.fdsn.org/seed_manual/SEEDManual_V2.4_Appendix-A.pdf
 
-    If the input data set provides no channel information, then the channel can be simply
-    "UNK".
+    If the input data set provides no channel information, then the channel
+    can be simply "UNK".
 
     """
 
@@ -128,6 +127,10 @@ def read_excel(excelfile):
     if is_multi:
         try:
             df = pd.read_excel(excelfile, header=header)
+            # if the name column is all blanks, it's filled with NaNs by
+            # default, which causes problems later on.  Replace with
+            # empty strings
+            df['name'] = df['name'].fillna('')
         except pd.errors.ParserError:
             raise IndexError('Input file has invalid empty first data row.')
 
@@ -210,7 +213,7 @@ def dataframe_to_xml(df, xmlfile, reference=None):
      - lat: Station latitude. (REQUIRED)
      - lon: Station longitude. (REQUIRED)
      - netid: Station contributing network. (REQUIRED)
-     - flag: String quality flag, meaningful to contributing networks, 
+     - flag: String quality flag, meaningful to contributing networks,
              but ShakeMap ignores any station with a non-zero value. (REQUIRED)
      - elev: Elevation of station (m). (OPTIONAL)
      - name: String describing station. (OPTIONAL)
@@ -236,7 +239,7 @@ def dataframe_to_xml(df, xmlfile, reference=None):
         stationlist.attrib['reference'] = reference
 
     processed_stations = []
-        
+
     for _, row in df.iterrows():
         tmprow = row.copy()
         if isinstance(tmprow.index, pd.core.indexes.multi.MultiIndex):
@@ -244,7 +247,7 @@ def dataframe_to_xml(df, xmlfile, reference=None):
 
         # assign required columns
         stationcode = str(tmprow['station']).strip()
-        
+
         netid = tmprow['netid'].strip()
         if not stationcode.startswith(netid):
             stationcode = '%s.%s' % (netid, stationcode)
@@ -280,7 +283,7 @@ def dataframe_to_xml(df, xmlfile, reference=None):
             station.attrib['insttype'] = tmprow['insttype'].strip()
         if 'elev' in tmprow:
             station.attrib['elev'] = '%.1f' % tmprow['elev']
-                
+
         if 'imt' not in tmprow.index:
             # sort channels by N,E,Z or H1,H2,Z
             channels = sorted(list(channels))
@@ -310,15 +313,14 @@ def dataframe_to_xml(df, xmlfile, reference=None):
                 channel_rows = station_rows[station_rows['channel'] == channel]
                 component = etree.SubElement(station, 'comp')
                 component.attrib['name'] = channel.upper()
-                for _,channel_row in channel_rows.iterrows():
+                for _, channel_row in channel_rows.iterrows():
                     pgm = channel_row['imt']
                     value = channel_row['value']
-                    
+
                     pgm_el = etree.SubElement(component, pgm)
                     pgm_el.attrib['value'] = '%.4f' % value
                     pgm_el.attrib['flag'] = str(channel_row['flag'])
-                    
-                
+
             processed_stations.append(stationcode)
 
     tree = etree.ElementTree(root)
