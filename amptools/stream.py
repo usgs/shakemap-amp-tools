@@ -4,8 +4,6 @@ import warnings
 # third party imports
 import pandas as pd
 import numpy as np
-from obspy.signal.invsim import simulate_seismometer, corn_freq_2_paz
-from obspy.core.trace import Trace
 from obspy.core.stream import Stream
 from obspy.geodetics import gps2dist_azimuth
 
@@ -18,6 +16,7 @@ GAL_TO_PCTG = 1 / (9.8)
 
 FILTER_FREQ = 0.02
 CORNERS = 4
+
 
 def group_channels(streams):
     """Consolidate streams for the same event.
@@ -32,7 +31,7 @@ def group_channels(streams):
         list: List of Stream objects.
     """
     # Return the original stream if there is only one
-    if len(streams) <=1:
+    if len(streams) <= 1:
         return streams
 
     # Get the all traces
@@ -61,19 +60,19 @@ def group_channels(streams):
                 except AttributeError:
                     same_data = (data == np.asarray(trace2.data))
                 if (
-                        network == trace2.stats['network'] and
-                        station == trace2.stats['station'] and
-                        starttime == trace2.stats['starttime'] and
-                        endtime == trace2.stats['endtime'] and
-                        channel == trace2.stats['channel'] and
-                        same_data
-                    ):
+                    network == trace2.stats['network'] and
+                    station == trace2.stats['station'] and
+                    starttime == trace2.stats['starttime'] and
+                    endtime == trace2.stats['endtime'] and
+                    channel == trace2.stats['channel'] and
+                    same_data
+                ):
                     duplicate = True
                 elif (
-                        network == trace2.stats['network'] and
-                        station == trace2.stats['station'] and
-                        starttime == trace2.stats['starttime']
-                    ):
+                    network == trace2.stats['network'] and
+                    station == trace2.stats['station'] and
+                    starttime == trace2.stats['starttime']
+                ):
                     event_match = True
                 if duplicate:
                     duplicate_list += [idx2]
@@ -92,7 +91,7 @@ def group_channels(streams):
                     stream.append(trace_list[match_idx])
                     duplicate_list += [match_idx]
                     grouped = True
-        if grouped == True:
+        if grouped:
             stream.append(trace_list[idx])
             duplicate_list += [idx]
             streams += [stream]
@@ -102,7 +101,7 @@ def group_channels(streams):
         if idx not in duplicate_list:
             stream = Stream()
             streams += [stream.append(trace)]
-            warnings.warn('One channel stream:\n%s' %(stream), Warning)
+            warnings.warn('One channel stream:\n%s' % (stream), Warning)
 
     return streams
 
@@ -149,7 +148,7 @@ def streams_to_dataframe(streams, lat=None, lon=None):
 
     if lat is not None and lon is not None:
         columns.append('distance')
-    
+
     # Check for common events and group channels
     streams = group_channels(streams)
 
@@ -163,7 +162,7 @@ def streams_to_dataframe(streams, lat=None, lon=None):
             if not len(subchannels):
                 try:
                     units = trace.stats.standard['units']
-                except:
+                except Exception:
                     units = trace.stats['units']
                 if units == 'acc':
                     subchannels = ['pga', 'pgv', 'psa03', 'psa10', 'psa30']
@@ -199,7 +198,7 @@ def streams_to_dataframe(streams, lat=None, lon=None):
               'lon': np.float64}
 
     if lat is not None:
-        dtypes.update({'distance':np.float64})
+        dtypes.update({'distance': np.float64})
 
     dataframe = dataframe.astype(dtypes)
 
@@ -239,7 +238,7 @@ def streams_to_dataframe(streams, lat=None, lon=None):
             elif key == 'source':
                 try:
                     source = stream[0].stats.standard['source']
-                except:
+                except Exception:
                     source = stream[0].stats['source']
                 meta_dict[key].append(source)
             elif key == 'netid':
@@ -248,35 +247,37 @@ def streams_to_dataframe(streams, lat=None, lon=None):
                 pass
 
         if lat is not None:
-            dist, _, _ = gps2dist_azimuth(lat, lon, 
+            dist, _, _ = gps2dist_azimuth(lat, lon,
                                           latitude,
                                           longitude)
             meta_dict['distance'].append(dist/1000)
-            
+
         spectral_traces = []
         # process acceleration and store velocity traces
         for idx, trace in enumerate(stream):
             channel = trace.stats['channel']
             try:
                 units = trace.stats.standard['units']
-            except:
+            except Exception:
                 units = trace.stats['units']
             if units == 'acc':
-                # do some basic data processing - if this has already been done,
-                # it shouldn't hurt to repeat it.
+                # do some basic data processing - if this has already been
+                # done, it shouldn't hurt to repeat it.
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     stream[idx] = filter_detrend(trace, taper_type='cosine',
-                            taper_percentage=0.05, filter_type='highpass',
-                            filter_frequency=FILTER_FREQ,
-                            filter_zerophase=True, filter_corners=CORNERS)
+                                                 taper_percentage=0.05,
+                                                 filter_type='highpass',
+                                                 filter_frequency=FILTER_FREQ,
+                                                 filter_zerophase=True,
+                                                 filter_corners=CORNERS)
             elif trace.stats['units'] == 'vel':
                 # we only have a velocity channel
                 pgv = np.abs(trace.max())
                 channel_dicts[channel]['pgv'].append(pgv)
         # get station summary and assign values
         station = StationSummary(stream, ['channels'],
-                ['pga', 'pgv', 'sa0.3', 'sa1.0', 'sa3.0'])
+                                 ['pga', 'pgv', 'sa0.3', 'sa1.0', 'sa3.0'])
         tchannels = [t.stats.channel for t in stream]
         for channel in channels:
             if channel not in tchannels:
@@ -295,7 +296,7 @@ def streams_to_dataframe(streams, lat=None, lon=None):
                 sa03 = station.oscillators['SA0.3'].select(channel=channel)[0]
                 sa10 = station.oscillators['SA1.0'].select(channel=channel)[0]
                 sa30 = station.oscillators['SA3.0'].select(channel=channel)[0]
-                spectral_traces += [sa03,sa10,sa30]
+                spectral_traces += [sa03, sa10, sa30]
 
             # assign values into dictionary
             channel_dicts[channel]['pga'].append(pga)
