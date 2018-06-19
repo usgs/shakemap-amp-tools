@@ -14,6 +14,7 @@ import numpy as np
 
 # local imports
 from amptools.exception import AmptoolsException
+from amptools.io.usc.core import is_usc
 
 V2_TEXT_HDR_ROWS = 25
 V2_INT_HDR_ROWS = 7
@@ -55,17 +56,18 @@ def is_dmg(filename):
     third_line = f.readline().upper()
     f.close()
 
-    if first_line.find(V1_MARKER) >= 0:
+    # dmg/csmip both have the same markers so is_usc must be checked
+    if first_line.find(V1_MARKER) >= 0 and not is_usc(filename):
         return True
-    elif first_line.find(V2_MARKER) >= 0:
+    elif first_line.find(V2_MARKER) >= 0 and not is_usc(filename):
         if second_line.find(V1_MARKER) >= 0:
             return True
-    elif first_line.find(V3_MARKER) >= 0:
+    elif first_line.find(V3_MARKER) >= 0 and not is_usc(filename):
         if second_line.find(V2_MARKER) >= 0 and third_line.find(V1_MARKER) >= 0:
             return True
     else:
         return False
-        
+
 def read_dmg(filename, **kwargs):
     """Read DMG strong motion file.
 

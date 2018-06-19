@@ -118,9 +118,6 @@ def test_dmg():
     except Exception:
         success = False
     assert success == False
-    V1_MARKER = 'UNCORRECTED ACCELEROGRAM DATA'
-    V2_MARKER = 'CORRECTED ACCELEROGRAM'
-    V3_MARKER = 'RESPONSE AND FOURIER AMPLITUDE SPECTRA'
     # Test alternate defaults
     no_stream = """RESPONSE AND FOURIER AMPLITUDE SPECTRA
     CORRECTED ACCELEROGRAM

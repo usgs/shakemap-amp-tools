@@ -2,11 +2,9 @@
 
 # stdlib imports
 import os.path
-import tempfile
-import warnings
 
 from amptools.io.read import read_data, _get_format, _validate_format
-
+from amptools.exception import AmptoolsException
 
 def test_read():
     homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
@@ -34,9 +32,18 @@ def test_read():
     assert _validate_format(file_dict['cosmos'], 'invalid') == 'cosmos'
 
     for file_format in file_dict:
+        stream = read_data(file_dict[file_format], file_format)
+        assert stream[0].stats.standard['source_format'] == file_format
         stream = read_data(file_dict[file_format])
         assert stream[0].stats.standard['source_format'] == file_format
-
+    # test exception
+    try:
+        file_path = os.path.join(smc_dir, 'not_a_file.smc')
+        read_data(file_path)
+        success = True
+    except AmptoolsException:
+        success = False
+    assert success == False
 
 
 

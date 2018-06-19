@@ -31,6 +31,7 @@ def read_data(filename, read_format=None):
     if read_format is None:
         read_format = _get_format(filename)
     else:
+        print('here')
         read_format = _validate_format(filename, read_format.lower())
     # Load reader and read file
     reader = 'amptools.io.' + read_format + '.core'
