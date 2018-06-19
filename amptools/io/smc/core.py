@@ -218,7 +218,7 @@ def _get_header_info(filename, any_structure=False):
         stats['network'] = 'US'
 
     standard['source'] = ascheader[7].split('=')[2].strip()
-    standard['source_format'] = 'SWC'
+    standard['source_format'] = 'smc'
 
     # read integer header data
     intheader = np.genfromtxt(filename, dtype=np.int32,

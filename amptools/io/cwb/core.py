@@ -57,15 +57,15 @@ def read_cwb(filename, **kwargs):
 
     hdr_hhz = hdr.copy()
     hdr_hhz['channel'] = 'HHZ'
-    hdr_hhz['standard']['horizontal_orientation'] = 400
+    hdr_hhz['standard']['horizontal_orientation'] = np.nan
 
     hdr_hhe = hdr.copy()
     hdr_hhe['channel'] = 'HHE'
-    hdr_hhz['standard']['horizontal_orientation'] = 90
+    hdr_hhz['standard']['horizontal_orientation'] = np.nan
 
     hdr_hhn = hdr.copy()
     hdr_hhn['channel'] = 'HHN'
-    hdr_hhz['standard']['horizontal_orientation'] = 0
+    hdr_hhz['standard']['horizontal_orientation'] = np.nan
 
     stats_hhz = Stats(hdr_hhz)
     stats_hhe = Stats(hdr_hhe)

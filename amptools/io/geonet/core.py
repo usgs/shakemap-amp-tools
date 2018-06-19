@@ -118,7 +118,7 @@ def _read_channel(filename, line_offset):
     # parse the sensor resolution from the text header
     resolution_str = lines[4].split()[1]
     resolution = int(re.search('\d+',resolution_str).group())
-    
+
     # read floating point header array
     skip_header = line_offset + TEXT_HDR_ROWS
     hdr_data = np.genfromtxt(filename, skip_header=skip_header,
@@ -132,8 +132,8 @@ def _read_channel(filename, line_offset):
     # according to the powers that defined the Network.Station.Channel.Location
     # "standard", Location is a two character field.  Most data providers,
     # including GeoNet here, don't provide this.  We'll flag it as "--".
-    hdr['location'] = '--' 
-    
+    hdr['location'] = '--'
+
     # read in the data, handling cases where last row has less than 10 columns
     if hdr['npts'] % COLS_PER_ROW != 0:
         nrows = int(np.floor(hdr['npts'] / COLS_PER_ROW))
@@ -215,7 +215,7 @@ def _read_header(hdr_data, station, name, component, data_format, instrument, re
               - station_name
               - units "acc"
               - source 'New Zealand Institute of Geological and Nuclear Science'
-              - horizontal_orientation 
+              - horizontal_orientation
               - instrument_period
               - instrument_damping
               - processing_time
@@ -290,15 +290,15 @@ def _read_header(hdr_data, station, name, component, data_format, instrument, re
     standard['comments'] = ''
     standard['structure_type'] = ''
     standard['corner_frequency'] = ''
-    standard['source_format'] = 'GeoNet'
+    standard['source_format'] = 'geonet'
 
     # get format specific metadata
     format_specific['sensor_bit_resolution'] = resolution
-    
+
     hdr['coordinates'] = coordinates
     hdr['standard'] = standard
     hdr['format_specific'] = format_specific
-    
+
     return hdr
 
 

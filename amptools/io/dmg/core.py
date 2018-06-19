@@ -21,11 +21,9 @@ V2_INT_FMT = [5] * 16
 V2_REAL_HDR_ROWS = 13
 V2_REAL_FMT = [10] * 8
 
-VALID_MARKERS = [
-        'UNCORRECTED ACCELEROGRAM',
-        'CORRECTED ACCELEROGRAM',
-        'RESPONSE AND FOURIER AMPLITUDE SPECTRA'
-]
+V1_MARKER = 'UNCORRECTED ACCELEROGRAM DATA'
+V2_MARKER = 'CORRECTED ACCELEROGRAM'
+V3_MARKER = 'RESPONSE AND FOURIER AMPLITUDE SPECTRA'
 
 homedir = os.path.dirname(os.path.abspath(__file__))
 codedir = os.path.join(homedir, '..', 'fdsn_codes.csv')
@@ -51,13 +49,23 @@ def is_dmg(filename):
     Returns:
         bool: True if DMG , False otherwise.
     """
-    line = open(filename, 'rt').readline()
-    for marker in VALID_MARKERS:
-        if line.lower().find(marker.lower()) >= 0:
+    f = open(filename, 'rt')
+    first_line = f.readline().upper()
+    second_line = f.readline().upper()
+    third_line = f.readline().upper()
+    f.close()
+
+    if first_line.find(V1_MARKER) >= 0:
+        return True
+    elif first_line.find(V2_MARKER) >= 0:
+        if second_line.find(V1_MARKER) >= 0:
             return True
-    return False
-
-
+    elif first_line.find(V3_MARKER) >= 0:
+        if second_line.find(V2_MARKER) >= 0 and third_line.find(V1_MARKER) >= 0:
+            return True
+    else:
+        return False
+        
 def read_dmg(filename, **kwargs):
     """Read DMG strong motion file.
 
