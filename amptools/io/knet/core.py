@@ -59,19 +59,19 @@ def read_knet(filename):
     # according to the powers that defined the Network.Station.Channel.Location
     # "standard", Location is a two character field.  Most data providers,
     # including KNET here, don't provide this.  We'll flag it as "--".
-    hdr['location'] = '--' 
-    
+    hdr['location'] = '--'
+
     coordinates['latitude'] = float(lines[6].split()[2])
     coordinates['longitude'] = float(lines[7].split()[2])
     coordinates['elevation'] = float(lines[8].split()[2])
-    
+
     hdr['sampling_rate'] = float(
         re.search('\\d+', lines[10].split()[2]).group())
     hdr['delta'] = 1 / hdr['sampling_rate']
     hdr['calib'] = 1.0
     standard['units'] = 'acc'
 
-    
+
     if lines[12].split()[1] == 'N-S':
         hdr['channel'] = 'H1'
     elif lines[12].split()[1] == 'E-W':
@@ -130,7 +130,7 @@ def read_knet(filename):
     standard['corner_frequency'] = np.nan
     standard['units'] = 'acc'
     standard['source'] = 'Japan National Research Institute for Earth Science and Disaster Resilience'
-    standard['source_format'] = 'KNET'
+    standard['source_format'] = 'knet'
 
     hdr['coordinates'] = coordinates
     hdr['standard'] = standard

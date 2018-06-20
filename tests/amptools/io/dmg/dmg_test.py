@@ -119,7 +119,9 @@ def test_dmg():
         success = False
     assert success == False
     # Test alternate defaults
-    no_stream = """RESPONSE AND FOURIER AMPLITUDE SPECTRA"""
+    no_stream = """RESPONSE AND FOURIER AMPLITUDE SPECTRA
+    CORRECTED ACCELEROGRAM
+    UNCORRECTED ACCELEROGRAM DATA"""
     tmp = tempfile.NamedTemporaryFile(delete=True)
     with open(tmp.name, 'w') as f:
         f.write(no_stream)
@@ -127,7 +129,7 @@ def test_dmg():
     st = read_dmg(tmp.name)
     tmp.close()
 
-    no_stream = """UNCORRECTED ACCELEROGRAM"""
+    no_stream = """UNCORRECTED ACCELEROGRAM DATA"""
     tmp = tempfile.NamedTemporaryFile(delete=True)
     with open(tmp.name, 'w') as f:
         f.write(no_stream)
