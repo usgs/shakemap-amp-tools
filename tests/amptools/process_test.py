@@ -8,6 +8,7 @@ from obspy.core.stream import read
 from obspy.core.utcdatetime import UTCDateTime
 from amptools.process import check_max_amplitude, trim_to_window
 
+# function that will test check_max_amplitude and trim_to_window
 def test_amp_check_trim():
     homedir = os.path.dirname(os.path.abspath(__file__))
     
