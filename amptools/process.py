@@ -1,9 +1,9 @@
 """Helper functions for processing strong ground motion data"""
 
 #stdlib imports
+import numpy as np
 
 # third party imports
-import numpy as np
 from obspy.signal.util import next_pow_2
 from obspy.signal.konnoohmachismoothing import konno_ohmachi_smoothing
 
