@@ -1,9 +1,11 @@
 """Helper functions for processing strong ground motion data"""
+
 #stdlib imports
+
+# third party imports
 import numpy as np
 from obspy.signal.util import next_pow_2
 from obspy.signal.konnoohmachismoothing import konno_ohmachi_smoothing
-
 
 def filter_detrend(trace, taper_type='cosine', taper_percentage=0.05,
         filter_type='highpass', filter_frequency=0.02,
@@ -178,6 +180,7 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
             
         Returns:
             list : List of floats representing corner frequencies.
+            Returns two -1 values if inadequate signal to noise ratio.
         """
         
         # Split the noise and signal from the trace
