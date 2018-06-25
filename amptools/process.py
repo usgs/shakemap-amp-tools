@@ -196,7 +196,7 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
                 break
 
         # ...And once for finding high corner
-        for i, freq in enumerate(freqs_signal):
+        for i, freq in enumerate(freqs_noise):
             idx = len(freqs_signal)-i-1  # Looping backwards through freqs
             if (sig_spec_smooth[idx] / noise_spec_smooth[idx] >= ratio):
                 corner_frequencies.append(freqs_signal[idx])
