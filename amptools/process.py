@@ -289,7 +289,7 @@ def rennolet_process(trace, event_time, epi_dist):
     """
     Processes an acceleration trace following the step-by-step process
     described in the Rennolet et al paper. This function completes
-    Step 4 through Step 12 from the paper.
+    Step 4 through Step 11 from the paper.
 
     4) Check Amplitude
     5) Window Signals
