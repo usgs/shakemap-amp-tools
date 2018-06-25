@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 
 # stdlib imports
-import sys
 import os.path
-import re
 import argparse
 import glob
 import string
@@ -14,21 +12,27 @@ import openpyxl
 from openpyxl.styles import Alignment
 from openpyxl.styles.borders import Border, Side
 from obspy.geodetics import gps2dist_azimuth
-
+import yaml
 
 # local imports
 from amptools.table import dataframe_to_xml
-from amptools.stream import streams_to_dataframe, group_channels
-from amptools.io.cwb.core import read_cwb, is_cwb
-from amptools.io.geonet.core import read_geonet, is_geonet
-from amptools.io.knet.core import read_knet, is_knet
-from amptools.io.cosmos.core import read_cosmos, is_cosmos
-from amptools.io.smc.core import read_smc, is_smc
-from amptools.io.dmg.core import read_dmg, is_dmg
-from amptools.io.obspy.core import read_obspy, is_obspy
+from amptools.stream import streams_to_dataframe, group_channels, DEFAULT_IMTS
+from amptools.io.read import read_data
 
-FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc', 'dmg','obspy']
+FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc', 'dmg', 'obspy']
 DEFAULT_DISTANCE = 1500
+
+CONFIG_FILE = '.amptools/config.yml'
+
+
+def get_config():
+    config_file = os.path.join(os.path.expanduser('~'), CONFIG_FILE)
+    if not os.path.isfile(config_file):
+        config = {'sm2xml': {'imtlist': DEFAULT_IMTS}}
+    else:
+        config = yaml.load(open(config_file, 'rt'))
+    return config
+
 
 def _clean_sheet(outfile_excel, dataframe):
     """Put reference at top of spreadsheet, remove index column.
@@ -108,61 +112,25 @@ def main(args):
     indir = args.indir
     eventid = args.eventid
     outdir = args.outdir
-    format = args.format
+
+    config = get_config()
 
     # make the output directory if it does not exist
     if not os.path.isdir(outdir):
         os.makedirs(outdir)
 
-    # get appropriate file reader/checker for format
-    data_files = []
-    if format == 'cwb':
-        reader = read_cwb
-        checker = is_cwb
-    elif format == 'geonet':
-        reader = read_geonet
-        checker = is_geonet
-    elif format == 'knet':
-        reader = read_knet
-        checker = is_knet
-    elif format == 'cosmos':
-        reader = read_cosmos
-        checker = is_cosmos
-    elif format == 'smc':
-        reader = read_smc
-        checker = is_smc
-    elif format == 'dmg':
-        reader = read_dmg
-        checker = is_dmg
-    elif format == 'obspy':
-        reader = read_obspy
-        checker = is_obspy
-    else:
-        raise Exception('Unsupported format %s' % format)
-
     # grab all the files in the input directory
     allfiles = glob.glob(os.path.join(indir, '*'))
 
-    # check each file - if it isn't specified format, skip it
-    for afile in allfiles:
-        if checker(afile):
-            data_files.append(afile)
-
-    # Bail if we didn't find any appropriate files
-    if not len(data_files):
-        print('No data files matching %s format found in %s.  Exiting.' %
-              (format, indir))
-        sys.exit(1)
-
     # read all the data files, gather up a list of obspy Stream objects
     streams = []
-    for dfile in data_files:
+    for dfile in allfiles:
         if args.verbose:
             print('Parsing %s...' % dfile)
         try:
-            stream = reader(dfile)
+            stream = read_data(dfile)
         except Exception as e:
-            print('Error reading a file: "%s". Skipping.' % (str(e)))
+            print('Error reading file %s: "%s". Skipping.' % (dfile, str(e)))
             continue
 
         streams.append(stream)
@@ -173,7 +141,7 @@ def main(args):
     else:
         lon = None
         lat = None
-        
+
     streams = group_channels(streams)
 
     # filter out distant stations
@@ -182,19 +150,19 @@ def main(args):
         for stream in streams:
             slat = stream[0].stats.coordinates.latitude
             slon = stream[0].stats.coordinates.longitude
-            distance, _ ,_ = gps2dist_azimuth(slat,slon,lat,lon)
+            distance, _, _ = gps2dist_azimuth(slat, slon, lat, lon)
             if distance/1000 <= args.filter_distance:
                 newstreams.append(stream)
         streams = newstreams
-    
+
     for stream in streams:
         if args.debug:
             station = stream[0].stats['station']
             if lat:
                 slat = stream[0].stats.coordinates.latitude
                 slon = stream[0].stats.coordinates.longitude
-                distance,_,_ = gps2dist_azimuth(slat,slon,lat,lon)
-                fname = '%05ikm_%s_data.png' % (distance/1000,station)
+                distance, _, _ = gps2dist_azimuth(slat, slon, lat, lon)
+                fname = '%05ikm_%s_data.png' % (distance/1000, station)
             else:
                 fname = '%s_data.png' % station
             stream_file = os.path.join(outdir, fname)
@@ -203,15 +171,17 @@ def main(args):
                 stream.plot(outfile=stream_file)
 
     # Extract station/peak information from each stream, save to a dataframe
-    dataframe, spectral_streams = streams_to_dataframe(streams,lon=lon,lat=lat)
+    imtlist = config['sm2xml']['imtlist']
+    dataframe, spectral_streams = streams_to_dataframe(
+        streams, lon=lon, lat=lat, imtlist=imtlist)
     if args.double_debug:
         for stream in spectral_streams:
             station = stream[0].stats['station']
             if lat:
                 slat = stream[0].stats.coordinates.latitude
                 slon = stream[0].stats.coordinates.longitude
-                distance,_,_ = gps2dist_azimuth(slat,slon,lat,lon)
-                fname = '%05ikm_%s_spectral.png' % (distance/1000,station)
+                distance, _, _ = gps2dist_azimuth(slat, slon, lat, lon)
+                fname = '%05ikm_%s_spectral.png' % (distance/1000, station)
             else:
                 fname = '%s_spectral.png' % station
             stream_file = os.path.join(outdir, fname)
@@ -221,7 +191,7 @@ def main(args):
 
     # Save peak info in spreadsheet form
     # we're forced here to have the index column, as much as we might not want it
-    outfile_excel = os.path.join(outdir, '%s_%s_dat.xlsx' % (format,eventid))
+    outfile_excel = os.path.join(outdir, '%s_%s_dat.xlsx' % (format, eventid))
     dataframe.to_excel(outfile_excel)
 
     # modify the spreadsheet to add a reference at the top and remove index column
@@ -230,23 +200,37 @@ def main(args):
     print('Wrote Excel file %s' % outfile_excel)
 
     # Write out the ShakeMap XML data format
-    xmlfile = os.path.join(outdir,'%s_%s_dat.xml' % (format,eventid))
+    xmlfile = os.path.join(outdir, '%s_%s_dat.xml' % (format, eventid))
     dataframe_to_xml(dataframe, xmlfile)
     print('Peak ground motions written to file %s.' % xmlfile)
 
 
 if __name__ == '__main__':
     desc = '''Convert a directory of strong motion data files into ShakeMap xml.
+
+This program looks for a file ~/.amptools/config.yml, which should be formatted
+thusly:
+
+sm2xml:
+  imtlist: [pga, pgv, sa(0.3), sa(1.0), sa(3.0)]
+
+Where imtlist is the list of the desired intensity measure components. Valid
+IMTs are currently:
+ - PGA
+ - PGV
+ - SA(PERIOD) where PERIOD is a valid float in seconds in the valid range of
+   spectral periods.
+
     '''
+    formatter = argparse.RawDescriptionHelpFormatter
     parser = argparse.ArgumentParser(description=desc,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+                                     formatter_class=formatter)
     parser.add_argument('eventid', help='Earthquake event ID.')
     parser.add_argument('indir', help='Directory containing input data.')
     parser.add_argument('outdir', help='Output data directory.')
-    parser.add_argument('format', help='Input strong motion data format. Note CSMIP is called DMG.',
-                        choices=FORMATS)
-    parser.add_argument('-c', '--coordinates', help='Epicentral coordinates (LON LAT).',
-                        nargs=2,type=float)
+    parser.add_argument('-c', '--coordinates',
+                        help='Epicentral coordinates (LON LAT).',
+                        nargs=2, type=float)
     parser.add_argument('-f', '--filter-distance',
                         help='Do not process stations greater than [DISTANCE].',
                         type=float, default=DEFAULT_DISTANCE)

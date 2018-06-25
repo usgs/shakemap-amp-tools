@@ -1,5 +1,6 @@
 # stdlib imports
 import warnings
+import re
 
 # third party imports
 import pandas as pd
@@ -16,6 +17,8 @@ GAL_TO_PCTG = 1 / (9.8)
 
 FILTER_FREQ = 0.02
 CORNERS = 4
+
+DEFAULT_IMTS = ['PGA', 'PGV', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']
 
 
 def group_channels(streams):
@@ -106,13 +109,21 @@ def group_channels(streams):
     return streams
 
 
-def streams_to_dataframe(streams, lat=None, lon=None):
+def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
     """Extract peak ground motions from list of Stream objects.
+
+    Note: The PGM columns underneath each channel will be variable
+    depending on the units of the Stream being passed in (velocity
+    sensors can only generate PGV) and on the imtlist passed in by
+    user. Spectral acceleration columns will be formatted as SA(0.3)
+    for 0.3 second spectral acceleration, for example.
 
     Args:
         streams (list): List of Stream objects.
         lat (float): Epicentral latitude.
         lon (float): Epicentral longitude
+        imtlist (list): Strings designating desired PGMs to create
+            in table.
     Returns:
         DataFrame: Pandas dataframe containing columns:
             - station Station code.
@@ -123,26 +134,35 @@ def streams_to_dataframe(streams, lat=None, lon=None):
             - lat Station latitude
             - lon Station longitude
             - distance Epicentral distance (km) (if epicentral lat/lon provided)
-            - HHE East-west channel (or H1) (multindex with pgm columns):
-                - pga Peak ground acceleration (%g).
-                - pgv Peak ground velocity (cm/s).
-                - psa03 Pseudo-spectral acceleration at 0.3 seconds (%g).
-                - psa10 Pseudo-spectral acceleration at 1.0 seconds (%g).
-                - psa30 Pseudo-spectral acceleration at 3.0 seconds (%g).
-            - HHN North-south channel (or H2) (multindex with pgm columns):
-                - pga Peak ground acceleration (%g).
-                - pgv Peak ground velocity (cm/s).
-                - psa03 Pseudo-spectral acceleration at 0.3 seconds (%g).
-                - psa10 Pseudo-spectral acceleration at 1.0 seconds (%g).
-                - psa30 Pseudo-spectral acceleration at 3.0 seconds (%g).
-            - HHZ Vertical channel (or HZ) (multindex with pgm columns):
-                - pga Peak ground acceleration (%g).
-                - pgv Peak ground velocity (cm/s).
-                - psa03 Pseudo-spectral acceleration at 0.3 seconds (%g).
-                - psa10 Pseudo-spectral acceleration at 1.0 seconds (%g).
-                - psa30 Pseudo-spectral acceleration at 3.0 seconds (%g).
+            - HHE East-west channel (or H1) (multi-index with pgm columns):
+                - PGA Peak ground acceleration (%g).
+                - PGV Peak ground velocity (cm/s).
+                - SA(0.3) Pseudo-spectral acceleration at 0.3 seconds (%g).
+                - SA(1.0) Pseudo-spectral acceleration at 1.0 seconds (%g).
+                - SA(3.0) Pseudo-spectral acceleration at 3.0 seconds (%g).
+            - HHN North-south channel (or H2) (multi-index with pgm columns):
+                - PGA Peak ground acceleration (%g).
+                - PGV Peak ground velocity (cm/s).
+                - SA(0.3) Pseudo-spectral acceleration at 0.3 seconds (%g).
+                - SA(1.0) Pseudo-spectral acceleration at 1.0 seconds (%g).
+                - SA(3.0) Pseudo-spectral acceleration at 3.0 seconds (%g).
+            - HHZ Vertical channel (or HZ) (multi-index with pgm columns):
+                - PGA Peak ground acceleration (%g).
+                - PGV Peak ground velocity (cm/s).
+                - SA(0.3) Pseudo-spectral acceleration at 0.3 seconds (%g).
+                - SA(1.0) Pseudo-spectral acceleration at 1.0 seconds (%g).
+                - SA(3.0) Pseudo-spectral acceleration at 3.0 seconds (%g).
 
     """
+    # Validate imtlist, ensure everything is a valid IMT
+    if imtlist is None:
+        imtlist = DEFAULT_IMTS
+    else:
+        imtlist, invalid = _validate_imtlist(imtlist)
+        if len(invalid):
+            fmt = 'IMTs %s are invalid specifications. Skipping.'
+            warnings.warn(fmt % (str(invalid)), Warning)
+
     # top level columns
     columns = ['station', 'name', 'source', 'netid', 'lat', 'lon']
 
@@ -165,9 +185,9 @@ def streams_to_dataframe(streams, lat=None, lon=None):
                 except Exception:
                     units = trace.stats['units']
                 if units == 'acc':
-                    subchannels = ['pga', 'pgv', 'psa03', 'psa10', 'psa30']
+                    subchannels = imtlist
                 elif units == 'vel':
-                    subchannels = ['pgv']
+                    subchannels = list(set(['pgv']).intersection(set(imtlist)))
                 else:
                     raise ValueError('Unknown units %s' % trace['units'])
 
@@ -277,33 +297,21 @@ def streams_to_dataframe(streams, lat=None, lon=None):
                 channel_dicts[channel]['pgv'].append(pgv)
         # get station summary and assign values
         station = StationSummary(stream, ['channels'],
-                                 ['pga', 'pgv', 'sa0.3', 'sa1.0', 'sa3.0'])
+                                 imtlist)
+        spectral_streams = []
         tchannels = [t.stats.channel for t in stream]
         for channel in channels:
             if channel not in tchannels:
-                pga = np.nan
-                pgv = np.nan
-                psa03 = np.nan
-                psa10 = np.nan
-                psa30 = np.nan
+                for station_imt in imtlist:
+                    channel_dicts[channel][station_imt].append(np.nan)
             else:
-                pga = station.pgms['PGA'][channel]
-                pgv = station.pgms['PGV'][channel]
-                psa03 = station.pgms['SA0.3'][channel]
-                psa10 = station.pgms['SA1.0'][channel]
-                psa30 = station.pgms['SA3.0'][channel]
+                for station_imt in imtlist:
+                    imt_value = station.pgms[station_imt][channel]
+                    channel_dicts[channel][station_imt].append(imt_value)
+                    osc = station.oscillators[station_imt]
+                    if station_imt.startswith('SA'):
+                        spectral_streams.append(osc.select(channel=channel)[0])
 
-                sa03 = station.oscillators['SA0.3'].select(channel=channel)[0]
-                sa10 = station.oscillators['SA1.0'].select(channel=channel)[0]
-                sa30 = station.oscillators['SA3.0'].select(channel=channel)[0]
-                spectral_traces += [sa03, sa10, sa30]
-
-            # assign values into dictionary
-            channel_dicts[channel]['pga'].append(pga)
-            channel_dicts[channel]['pgv'].append(pgv)
-            channel_dicts[channel]['psa03'].append(psa03)
-            channel_dicts[channel]['psa10'].append(psa10)
-            channel_dicts[channel]['psa30'].append(psa30)
         outstream = Stream(spectral_traces)
         spectral_streams.append(outstream)
 
@@ -319,3 +327,24 @@ def streams_to_dataframe(streams, lat=None, lon=None):
         dataframe[channel] = subdf
 
     return (dataframe, spectral_streams)
+
+
+def _validate_imtlist(imtlist):
+    """Filter list of input IMTs, make sure each is a valid IMT spec.
+
+    Args:
+        imtlist (list): List of IMT strings.
+    Returns:
+        list: Filtered list of IMT strings
+    """
+    newimtlist = []
+    invalid = []
+    for imt in imtlist:
+        if imt.upper() in ['PGA', 'PGV']:
+            newimtlist.append(imt)
+        else:
+            if imt.upper().startswith('SA('):
+                newimtlist.append(imt)
+            else:
+                invalid.append(imt)
+    return (newimtlist, invalid)

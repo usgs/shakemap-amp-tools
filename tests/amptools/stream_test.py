@@ -12,30 +12,34 @@ from amptools.io.geonet.core import read_geonet
 from amptools.io.knet.core import read_knet
 from amptools.stream import group_channels, streams_to_dataframe
 
-def test_spectral():
-    homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
-    datafile_v2 = os.path.join(homedir, '..', 'data', 'geonet',
-            '20161113_110259_WTMC_20.V2A')
-    stream_v2 = read_geonet(datafile_v2)
-    df2,_ = streams_to_dataframe([stream_v2])
 
-    assert df2['H1']['psa03'].iloc[0]/323.8532 >= 0.95
-    assert df2['H1']['psa10'].iloc[0]/136.6972 >= 0.95
-    assert df2['H1']['psa30'].iloc[0]/17.9511 >= 0.95
+def test_spectral():
+    # where is this script?
+    homedir = os.path.dirname(os.path.abspath(__file__))
+    datafile_v2 = os.path.join(homedir, '..', 'data', 'geonet',
+                               '20161113_110259_WTMC_20.V2A')
+    stream_v2 = read_geonet(datafile_v2)
+    df2, _ = streams_to_dataframe([stream_v2])
+
+    assert df2['H1']['SA(0.3)'].iloc[0]/323.8532 >= 0.95
+    assert df2['H1']['SA(1.0)'].iloc[0]/136.6972 >= 0.95
+    assert df2['H1']['SA(3.0)'].iloc[0]/17.9511 >= 0.95
 
     # Lat, Lon, Station, Channel, Accmax(%g), Velmax(cm/s), psa03 (%g), psa10 (%g), psa30 (%g),Abs pgamax (%g)
     # -42.619,173.054, WTMC, N28W,-112.3823,-101.655,323.8532,136.6972,17.9511,112.3823
 
+
 def test():
-    homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
+    homedir = os.path.dirname(os.path.abspath(
+        __file__))  # where is this script?
     datadir = os.path.join(homedir, '..', 'data', 'cwb')
     datafiles = glob.glob(os.path.join(datadir, '*.dat'))
     streams = []
     for datafile in datafiles:
         stream = read_cwb(datafile)
         streams.append(stream)
-    df,_ = streams_to_dataframe(streams)
-    pgasum = df['HHE']['pga'].sum()
+    df, _ = streams_to_dataframe(streams)
+    pgasum = df['HHE']['PGA'].sum()
     np.testing.assert_almost_equal(pgasum, 1.7209452756509136)
 
     # Test for channel grouping with three unique channels
@@ -79,6 +83,7 @@ def test():
     assert grouped_streams[0].count() == 3
     assert grouped_streams[1].count() == 3
     assert grouped_streams[2].count() == 1
+
 
 if __name__ == '__main__':
     test_spectral()

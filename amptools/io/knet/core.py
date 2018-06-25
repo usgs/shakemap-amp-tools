@@ -26,10 +26,13 @@ def is_knet(filename):
     """
     if not os.path.isfile(filename):
         return False
-    with open(filename, 'rt') as f:
-        lines = [next(f) for x in range(TEXT_HDR_ROWS)]
-    if lines[0].startswith('Origin Time') and lines[5].startswith('Station Code'):
-        return True
+    try:
+        with open(filename, 'rt') as f:
+            lines = [next(f) for x in range(TEXT_HDR_ROWS)]
+            if lines[0].startswith('Origin Time') and lines[5].startswith('Station Code'):
+                return True
+    except Exception as e:
+        return False
     return False
 
 
@@ -69,7 +72,6 @@ def read_knet(filename):
         re.search('\\d+', lines[10].split()[2]).group())
     hdr['delta'] = 1 / hdr['sampling_rate']
     standard['units'] = 'acc'
-
 
     if lines[12].split()[1] == 'N-S':
         hdr['channel'] = 'H1'

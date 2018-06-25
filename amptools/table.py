@@ -293,13 +293,24 @@ def dataframe_to_xml(df, xmlfile, reference=None):
                 component.attrib['name'] = channel.upper()
 
                 # create sub elements out of any of the PGMs
+                # this is extra confusing because we're trying to
+                # transition from psa03 style to SA(0.3) style.
+                # station xml format only accepts the former, but we're
+                # supporting the latter as input, and the format as output.
+
+                # loop over desired output fields
                 for pgm in ['pga', 'pgv', 'psa03', 'psa10', 'psa30']:
-                    if pgm not in row[channel] or np.isnan(row[channel][pgm]):
+                    newpgm = _translate_imt(pgm)
+                    c1 = newpgm not in row[channel]
+                    c2 = False
+                    if not c1:
+                        c2 = np.isnan(row[channel][newpgm])
+                    if c1 or c2:
                         continue
-                    if pgm in row[channel]:
-                        pgm_el = etree.SubElement(component, pgm)
-                        pgm_el.attrib['flag'] = '0'
-                        pgm_el.attrib['value'] = '%.4f' % row[channel][pgm]
+                    # make an element with the old style name
+                    pgm_el = etree.SubElement(component, pgm)
+                    pgm_el.attrib['flag'] = '0'
+                    pgm_el.attrib['value'] = '%.4f' % row[channel][newpgm]
             processed_stations.append(stationcode)
         else:
             # this file was created by a process that has imt/value columns
@@ -325,3 +336,17 @@ def dataframe_to_xml(df, xmlfile, reference=None):
 
     tree = etree.ElementTree(root)
     tree.write(xmlfile, pretty_print=True)
+
+
+def _translate_imt(oldimt):
+    # translate from psa03 to sa(0.3)
+    if oldimt.upper() in ['PGA', 'PGV']:
+        newimt = oldimt.lower()
+    else:
+        match = re.search(r'\d+', oldimt)
+        if match is not None:
+            period = float(match.group())
+            newimt = 'sa(%.1f)' % (period/10)
+        else:
+            newimt = ''
+    return newimt
