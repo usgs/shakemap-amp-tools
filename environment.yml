@@ -18,5 +18,3 @@ dependencies:
 - openpyxl
 - obspy
 - xlsxwriter
-
-

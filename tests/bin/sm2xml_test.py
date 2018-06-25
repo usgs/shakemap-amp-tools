@@ -64,7 +64,7 @@ def test_sm2xml():
     target_source = 'Japan National Research Institute for Earth Science and Disaster Resilience'
     for idx in range(3, len(columns['Unnamed: 2'])):
         assert columns['Unnamed: 2'][idx] == target_source
-    target_network = 'KNET'
+    target_network = 'BO'
     for idx in range(3, len(columns['Unnamed: 3'])):
         assert columns['Unnamed: 3'][idx] == target_network
     target_latitudes = np.asarray([41.5267, 41.328, 41.4053, 41.4087, 41.2948,

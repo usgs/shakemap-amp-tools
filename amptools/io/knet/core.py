@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # stdlib imports
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import os.path
 
@@ -52,7 +52,7 @@ def read_knet(filename):
     hdr = {}
     coordinates = {}
     standard = {}
-    hdr['network'] = 'KNET'
+    hdr['network'] = 'BO'
     hdr['station'] = lines[5].split()[2]
     standard['station_name'] = ''
 
@@ -68,7 +68,6 @@ def read_knet(filename):
     hdr['sampling_rate'] = float(
         re.search('\\d+', lines[10].split()[2]).group())
     hdr['delta'] = 1 / hdr['sampling_rate']
-    hdr['calib'] = 1.0
     standard['units'] = 'acc'
 
 
@@ -87,13 +86,19 @@ def read_knet(filename):
     num = float(parts[0].replace('(gal)', ''))
     den = float(parts[1])
     calib = num / den
+    hdr['calib'] = calib
 
     duration = float(lines[11].split()[2])
 
     hdr['npts'] = int(duration * hdr['sampling_rate'])
 
     timestr = ' '.join(lines[9].split()[2:4])
-    hdr['starttime'] = datetime.strptime(timestr, TIMEFMT)
+    # The K-NET and KiK-Net data logger adds a 15s time delay
+    # this is removed here
+    sttime = datetime.strptime(timestr, TIMEFMT) - timedelta(seconds=15.0)
+    # Shift the time to utc (Japanese time is 9 hours ahead)
+    sttime = sttime - timedelta(seconds=9 * 3600.)
+    hdr['starttime'] = sttime
 
     # read in the data - there is a max of 8 columns per line
     # the code below handles the case when last line has

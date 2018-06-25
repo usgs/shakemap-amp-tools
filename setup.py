@@ -1,8 +1,10 @@
 from distutils.core import setup
+import glob
 
 setup(name='amptools',
       version='0.1dev',
       description='USGS ShakeMap Strong Motion Data Tools',
+      include_package_data=True,
       author='Mike Hearne',
       author_email='mhearne@usgs.gov',
       url='',
@@ -14,11 +16,16 @@ setup(name='amptools',
                 'amptools.io.cosmos',
                 'amptools.io.smc',
                 'amptools.io.obspy',
+                'amptools.io.usc',
                 'pgm',
                 'pgm.imt',
                 'pgm.imc'],
+      package_data={
+          'amptools': glob.glob('amptools/io/*.csv') + glob.glob('tests/data/*/*'),
+          'pgm': glob.glob('amptools/io/*.csv') + glob.glob('tests/data/*/*')
+      },
       scripts=['bin/amps2xml',
                'bin/ftpfetch',
                'bin/sm2xml',
-               'bin/getpgm'],
+               'bin/getpgm']
       )
