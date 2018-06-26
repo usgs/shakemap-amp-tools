@@ -2,6 +2,7 @@
 
 # stdlib imports
 import numpy as np
+import warnings
 
 # third party imports
 from obspy.signal.util import next_pow_2
@@ -78,11 +79,18 @@ def trim_total_window(trace, org_time, epi_dist, v_min=1.0):
 
         Returns:
             stream (obspy.core.stream.Stream) after windowing.
+            If trim failure occurs: -1
         """
 
         end_time = org_time + max(120, epi_dist / v_min)
-        trace.trim(endtime=end_time)
-        return trace
+
+        # Check to make sure that the trimming end time is after
+        # the start time of our trace
+        if (end_time <= trace.stats.starttime):
+            return -1
+        else:
+            trace.trim(endtime=end_time)
+            return trace
 
 
 def zero_pad(trace):
@@ -119,12 +127,20 @@ def split_signal_and_noise(trace, event_time, epi_dist):
             tuple of two traces:
                 1) Noise trace
                 2) Signal trace
+            If cannot separate noise/signal, returns -1.
         """
 
+        # Calculate the arrival time of a 7 km/s phase
         phase_arrival_time = event_time + epi_dist / 7.0
 
-        orig_trace_1 = trace.copy()
-        orig_trace_2 = trace.copy()
+        # Check if the arrival time is before or after the trace window
+        if (phase_arrival_time <= trace.stats.starttime):
+            return (-1, -1)
+        elif (phase_arrival_time >= trace.stats.endtime):
+            return (-1, -1)
+        else:
+            orig_trace_1 = trace.copy()
+            orig_trace_2 = trace.copy()
 
         noise_trace = orig_trace_1.trim(endtime=phase_arrival_time)
         signal_trace = orig_trace_2.trim(starttime=phase_arrival_time)
@@ -175,6 +191,10 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
         # Split the noise and signal into two separate traces
         signal, noise = split_signal_and_noise(trace, event_time, epi_dist)
 
+        # Check if signal and noise splitting failed
+        if (signal == -1 and noise == -1):
+            return [-1, -1]
+
         # find the number of points for the Fourier transform
         nfft = max(next_pow_2(signal.stats.npts), next_pow_2(noise.stats.npts))
 
@@ -205,9 +225,7 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
         # if we reached the end without finding two corner frequencies
         # inadequate S/N
         if len(corner_frequencies) != 2:
-            print('Inadequate signal to noise ratio.')
-            print('Unable to find corner frequencies.')
-            return [-1, -1]
+            return [-2, -2]
         else:
             return corner_frequencies
 
@@ -233,9 +251,9 @@ def filter_waveform_high_low(trace, high_pass_freq, low_pass_freq):
         if (low_pass_freq < nyquist_freq):
             trace.filter('lowpass', freq=low_pass_freq, zerophase=True)
         else:
-            print('Low pass frequency greater than or equal to the Nyquist.')
-            print('Low pass filter not applied.')
-
+            warnings.warn('Low pass frequency is greater than or equal '
+                          'to the Nyquist frequency. Low pass filter will '
+                          'not be applied.')
         return trace
 
 
@@ -319,14 +337,23 @@ def process_all(trace, event_time, epi_dist):
     """
 
     trace_copy = trace.copy()
+    trace_info = trace.stats.network + '_' + trace.stats.station + '_'
+    trace_info += trace.stats.channel + '_' + str(trace.stats.starttime)
 
     # Step 4 - Check amplitude
     if not check_max_amplitude(trace_copy):
-        print('Amplitudes are outside the allowable range.')
-        return trace
+        warnings.warn('Trace maximum amplitude is not within the '
+                      'acceptable range. ' + trace_info)
+        return
 
     # Step 5 - Window signal
     trace_trim = trim_total_window(trace_copy, event_time, epi_dist)
+
+    # Check if windowing failed
+    if (trace_trim == -1):
+        warnings.warn('Invalid time windowing. The start time of the trace '
+                      'is after the calculated end time. ' + trace_info)
+        return
 
     # Step 6 - Taper
     trace_tap = trace_trim.taper(max_percentage=0.05, side='both')
@@ -338,8 +365,15 @@ def process_all(trace, event_time, epi_dist):
     # Step 8 - Corner frequencies
     corners = get_corner_frequencies(trace_pad, event_time, epi_dist)
 
+    # Check if corner frequency calculation failed
     if (corners == [-1, -1]):
-        return trace
+        warnings.warn('Not enough pre-event noise to calculate signal '
+                      'to noise ratio. ' + trace_info)
+        return
+    if (corners == [-2, -2]):
+        warnings.warn('Signal-to-noise ratio is not high enough to '
+                      'to find corner-frequencies. ' + trace_info)
+        return
 
     high_freq = corners[0]
     low_freq = corners[1]

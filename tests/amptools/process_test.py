@@ -17,7 +17,7 @@ def test_amp_check_trim():
 
     # read the two sac files for testing
     # one is unedited with a standard maximum amplitude
-    # the second has been multiplied so that it fails the ampltidue check
+    # the second has been multiplied so that it fails the amplitude check
     NOWS_tr = read(os.path.join(datadir, 'NOWSENR.sac'))[0]
     NOWS_tr_mul = read(os.path.join(datadir, 'NOWSENR_mul.sac'))[0]
 
@@ -50,7 +50,7 @@ def test_corner_freqs():
     ALKI_dist = 37.87883
 
     corners_3 = process.get_corner_frequencies(ALKI_tr, event_time, ALKI_dist)
-    np.testing.assert_allclose(corners_3, [-1, -1], atol=0)
+    np.testing.assert_allclose(corners_3, [-2, -2], atol=0)
 
 
 def test_all():
@@ -76,7 +76,7 @@ def test_all():
     BRI_tr = read(os.path.join(datadir, 'BRIHN1.GS..sac'))[0]
     process.process_all(BRI_tr, event_time, BRI_dist)
 
-    # Triggers the invalid low pass filtering message
+    # Triggers the invalid low pass filtering warning
     event_time = UTCDateTime('2001-02-28T18:54:32')
     ALCT_dist = 75.9559
     ALCT_tr = read(os.path.join(datadir, 'ALCTENE.UW..sac'))[0]
@@ -90,17 +90,16 @@ def test_all():
     NOWS_tr_mul = read(os.path.join(datadir, 'NOWSENR_mul.sac'))[0]
     time = UTCDateTime('2001-02-14T22:03:58')
     dist = 50.05
-    assert process.process_all(NOWS_tr_mul, time, dist) == NOWS_tr_mul
+    assert process.process_all(NOWS_tr_mul, time, dist) is None
 
     # Test trace with low S/N ratio
     event_time = UTCDateTime('2016-10-22T17:17:05')
     ALKI_tr = read(os.path.join(datadir, 'ALKIENE.UW..sac'))[0]
     ALKI_dist = 37.87883
     ALKI_processed = process.process_all(ALKI_tr, event_time, ALKI_dist)
-    assert ALKI_processed == ALKI_tr
-
+    assert ALKI_processed is None
 
 if __name__ == '__main__':
-    # test_amp_check_trim()
-    # test_corner_freqs()
+    test_amp_check_trim()
+    test_corner_freqs()
     test_all()
