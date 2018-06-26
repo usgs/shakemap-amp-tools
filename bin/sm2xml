@@ -129,11 +129,10 @@ def main(args):
             print('Parsing %s...' % dfile)
         try:
             stream = read_data(dfile)
+            streams.append(stream)
         except Exception as e:
             print('Error reading file %s: "%s". Skipping.' % (dfile, str(e)))
             continue
-
-        streams.append(stream)
 
     if args.coordinates:
         lon = args.coordinates[0]

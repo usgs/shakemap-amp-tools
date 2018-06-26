@@ -15,6 +15,12 @@ TEXT_HDR_ROWS = 17
 TIMEFMT = '%Y/%m/%d %H:%M:%S'
 COLS_PER_LINE = 8
 
+HDR1 = 'Origin Time'
+HDR2 = 'Station Code'
+
+SRC = ('Japan National Research Institute '
+       'for Earth Science and Disaster Resilience')
+
 
 def is_knet(filename):
     """Check to see if file is a Japanese KNET strong motion file.
@@ -27,11 +33,15 @@ def is_knet(filename):
     if not os.path.isfile(filename):
         return False
     try:
+        open(filename, 'rt').read(os.stat(filename).st_size)
+    except UnicodeDecodeError:
+        return False
+    try:
         with open(filename, 'rt') as f:
             lines = [next(f) for x in range(TEXT_HDR_ROWS)]
-            if lines[0].startswith('Origin Time') and lines[5].startswith('Station Code'):
+            if lines[0].startswith(HDR1) and lines[5].startswith(HDR2):
                 return True
-    except Exception as e:
+    except Exception:
         return False
     return False
 
@@ -43,7 +53,8 @@ def read_knet(filename):
         filename (str): Path to possible KNET data file.
         kwargs (ref): Other arguments will be ignored.
     Returns:
-        Stream: Obspy Stream containing three channels of acceleration data (cm/s**2).
+        Stream: Obspy Stream containing three channels of acceleration data
+            (cm/s**2).
     """
     if not is_knet(filename):
         raise Exception('%s is not a valid KNET file' % filename)
@@ -136,7 +147,7 @@ def read_knet(filename):
     standard['structure_type'] = ''
     standard['corner_frequency'] = np.nan
     standard['units'] = 'acc'
-    standard['source'] = 'Japan National Research Institute for Earth Science and Disaster Resilience'
+    standard['source'] = SRC
     standard['source_format'] = 'knet'
 
     hdr['coordinates'] = coordinates

@@ -26,11 +26,14 @@ def is_cwb(filename):
     Returns:
         bool: True if CWB, False otherwise.
     """
-    f = open(filename, 'rt')
-    line = f.readline()
-    f.close()
-    if line.startswith('#Earthquake Information'):
-        return True
+    try:
+        f = open(filename, 'rt')
+        line = f.readline()
+        f.close()
+        if line.startswith('#Earthquake Information'):
+            return True
+    except UnicodeDecodeError:
+        return False
     return False
 
 
@@ -76,6 +79,7 @@ def read_cwb(filename, **kwargs):
     trace_hhe = Trace(data=data[:, 3], header=stats_hhe)
     stream = Stream([trace_hhz, trace_hhn, trace_hhe])
     return stream
+
 
 def _get_header_info(file, data):
     """Return stats structure from various headers.
@@ -184,7 +188,7 @@ def _get_header_info(file, data):
     standard['structure_type'] = ''
     standard['corner_frequency'] = np.nan
     standard['source'] = 'Taiwan Strong Motion Instrumentation Program' + \
-            'via Central Weather Bureau'
+        'via Central Weather Bureau'
     standard['source_format'] = 'cwb'
     if 'station_name' not in standard:
         standard['station_name'] = ''

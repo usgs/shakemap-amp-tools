@@ -32,13 +32,16 @@ def is_geonet(filename):
     Returns:
         bool: True if GNS V1/V2, False otherwise.
     """
-    line = open(filename, 'rt').readline()
-    if line.find('GNS Science') >= 0:
-        c1 = line.find('Corrected accelerogram') >= 0
-        c2 = line.find('Uncorrected accelerogram') >= 0
-        if c1 or c2:
-            return True
-    return False
+    try:
+        line = open(filename, 'rt').readline()
+        if line.find('GNS Science') >= 0:
+            c1 = line.find('Corrected accelerogram') >= 0
+            c2 = line.find('Uncorrected accelerogram') >= 0
+            if c1 or c2:
+                return True
+        return False
+    except UnicodeDecodeError:
+        return False
 
 
 def read_geonet(filename, **kwargs):
@@ -117,7 +120,7 @@ def _read_channel(filename, line_offset):
 
     # parse the sensor resolution from the text header
     resolution_str = lines[4].split()[1]
-    resolution = int(re.search('\d+',resolution_str).group())
+    resolution = int(re.search('\d+', resolution_str).group())
 
     # read floating point header array
     skip_header = line_offset + TEXT_HDR_ROWS
@@ -257,7 +260,8 @@ def _read_header(hdr_data, station, name, component, data_format, instrument, re
     if component == 'Up':
         hdr['channel'] = 'Z'
     else:
-        hdr['channel'],standard['horizontal_orientation'] = _get_channel(component)
+        hdr['channel'], standard['horizontal_orientation'] = _get_channel(
+            component)
 
     hdr['location'] = '--'
 
@@ -281,8 +285,8 @@ def _read_header(hdr_data, station, name, component, data_format, instrument, re
     coordinates['elevation'] = 0.0
 
     # get other standard metadata
-    standard['instrument_period'] = 1/hdr_data[4,0]
-    standard['instrument_damping'] = hdr_data[4,1]
+    standard['instrument_period'] = 1/hdr_data[4, 0]
+    standard['instrument_damping'] = hdr_data[4, 1]
     standard['process_time'] = ''
     standard['process_level'] = data_format
     standard['sensor_serial_number'] = ''
@@ -329,4 +333,4 @@ def _get_channel(component):
     else:
         channel = 'H2'
 
-    return (channel,comp_angle)
+    return (channel, comp_angle)

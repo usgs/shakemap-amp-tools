@@ -96,10 +96,13 @@ def is_smc(filename):
     Returns:
         bool: True if SMC, False otherwise.
     """
-    line = open(filename, 'rt').readline().strip()
-    if line in VALID_HEADERS:
-        return True
-    return False
+    try:
+        line = open(filename, 'rt').readline().strip()
+        if line in VALID_HEADERS:
+            return True
+        return False
+    except UnicodeDecodeError:
+        return False
 
 
 def read_smc(filename, **kwargs):

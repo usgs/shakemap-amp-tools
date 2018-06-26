@@ -13,21 +13,21 @@ from amptools.exception import AmptoolsException
 
 
 VOLUMES = {
-        'V1' : {
-                'TEXT_HDR_ROWS': 13,
-                'INT_HDR_ROWS': 6,
-                'INT_FMT': 16 * [5],
-                'FLT_HDR_ROWS': 7,
-                'FLT_FMT': 8 * [10],
-                'COL_FMT': [8, 7, 7, 7, 7, 7, 7, 7, 7, 7]
-        }
+    'V1': {
+        'TEXT_HDR_ROWS': 13,
+        'INT_HDR_ROWS': 6,
+        'INT_FMT': 16 * [5],
+        'FLT_HDR_ROWS': 7,
+        'FLT_FMT': 8 * [10],
+        'COL_FMT': [8, 7, 7, 7, 7, 7, 7, 7, 7, 7]
+    }
 }
 USC_ORIENTATIONS = {
-        400: ('Vertical', 'Vert'),
-        500: ('Up', 'Up'),
-        600: ('Down', 'Down'),
-        700: ('Longitudinal (relative to structure)', 'Long'),
-        800: ('', 'Tran')
+    400: ('Vertical', 'Vert'),
+    500: ('Up', 'Up'),
+    600: ('Down', 'Down'),
+    700: ('Longitudinal (relative to structure)', 'Long'),
+    800: ('', 'Tran')
 }
 
 
@@ -42,19 +42,22 @@ def is_usc(filename):
     # USC requires unique integer values
     # in column 73-74 on all text header lines
     # excluding the first file line
-    f = open(filename, 'rt')
-    first_line = f.readline()
-    if first_line.find('OF UNCORRECTED ACCELEROGRAM DATA OF') < 0:
-        return False
-    counter = 12
-    while counter > 0:
-        line = f.readline()
-        try:
-            int(line[72:74])
-        except ValueError:
+    try:
+        f = open(filename, 'rt')
+        first_line = f.readline()
+        if first_line.find('OF UNCORRECTED ACCELEROGRAM DATA OF') < 0:
             return False
-        counter -= 1
-    return True
+        counter = 12
+        while counter > 0:
+            line = f.readline()
+            try:
+                int(line[72:74])
+            except ValueError:
+                return False
+            counter -= 1
+        return True
+    except UnicodeDecodeError:
+        return False
 
 
 def read_usc(filename, **kwargs):
@@ -79,6 +82,7 @@ def read_usc(filename, **kwargs):
         raise AmptoolsException('Not a supported volume.')
     return stream
 
+
 def read_volume_one(filename):
     """Read channel data from USC volume 1 text file.
 
@@ -102,6 +106,7 @@ def read_volume_one(filename):
             stream.append(trace)
 
     return stream
+
 
 def _read_channel(filename, line_offset, volume):
     """Read channel data from USC V1 text file.
@@ -138,14 +143,15 @@ def _read_channel(filename, line_offset, volume):
     # read in the data
     nrows = int(np.floor(hdr['npts'] * 2 / 10))
     data = np.genfromtxt(filename, skip_header=skiprows,
-                             max_rows=nrows, dtype=np.float64,
-                             delimiter=volume['COL_FMT']).flatten()[1::2]
+                         max_rows=nrows, dtype=np.float64,
+                         delimiter=volume['COL_FMT']).flatten()[1::2]
     trace = Trace(data.copy(), Stats(hdr.copy()))
     # set new offset
     new_offset = skiprows + nrows
     new_offset += 1  # there is an 'end of record' line after the data
 
     return (trace, new_offset)
+
 
 def _get_header_info(int_data, flt_data, lines, volume):
     """Return stats structure from various headers.
@@ -214,10 +220,10 @@ def _get_header_info(int_data, flt_data, lines, volume):
                 elif horizontal_angle == 270:
                     channel = 'W'
                 elif (
-                        horizontal_angle > 315 or
-                        horizontal_angle < 45 or
-                        (horizontal_angle > 135 and horizontal_angle < 225)
-                      ):
+                    horizontal_angle > 315 or
+                    horizontal_angle < 45 or
+                    (horizontal_angle > 135 and horizontal_angle < 225)
+                ):
                     channel = 'H1'
                 else:
                     channel = 'H2'
@@ -249,7 +255,7 @@ def _get_header_info(int_data, flt_data, lines, volume):
         lon_min = int_data[13]
         lon_sec = int_data[14]
         # Check for southern hemisphere, default is northern
-        if lines[4].find('STATION USC#') >=0:
+        if lines[4].find('STATION USC#') >= 0:
             idx = lines[4].find('STATION USC#') + 12
             if 'S' in lines[4][idx:]:
                 lat_sign = -1
@@ -258,7 +264,7 @@ def _get_header_info(int_data, flt_data, lines, volume):
         else:
             lat_sign = 1
         # Check for western hemisphere, default is western
-        if lines[4].find('STATION USC#') >=0:
+        if lines[4].find('STATION USC#') >= 0:
             idx = lines[4].find('STATION USC#') + 12
             if 'W' in lines[4][idx:]:
                 lon_sign = -1
