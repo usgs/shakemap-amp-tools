@@ -285,10 +285,12 @@ def correct_baseline(trace):
         return trace
 
 
-def rennolet_process(trace, event_time, epi_dist):
+def process_all(trace, event_time, epi_dist):
     """
     Processes an acceleration trace following the step-by-step process
-    described in the Rennolet et al paper. This function completes
+    described in the Rennolet et al paper
+    (https://doi.org/10.1193/101916EQS175DP)
+    This function completes
     Step 4 through Step 11 from the paper.
 
     4) Check Amplitude
