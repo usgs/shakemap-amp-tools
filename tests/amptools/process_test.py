@@ -99,6 +99,14 @@ def test_all():
     ALKI_processed = process.process_all(ALKI_tr, event_time, ALKI_dist)
     assert ALKI_processed is None
 
+    # Test with invalid starttime
+    ALKI_tr.stats.starttime += 500
+    assert process.process_all(ALKI_tr, event_time, ALKI_dist) is None
+
+    ALKI_split = process.split_signal_and_noise(ALKI_tr, event_time, ALKI_dist)
+    assert ALKI_split == (-1, -1)
+
+
 if __name__ == '__main__':
     test_amp_check_trim()
     test_corner_freqs()
