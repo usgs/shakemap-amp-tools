@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def calculate_gmrotd(stream, percentiles, **kwargs):
     """
     Rotate two horizontal channels using the geometric mean.
@@ -29,8 +30,8 @@ def calculate_gmrotd(stream, percentiles, **kwargs):
     sin_matrix = np.sin(degree_matrix)
 
     # Create timeseries matrix
-    osc1_matrix = np.multiply(np.ones((91,1)),osc1)
-    osc2_matrix = np.multiply(np.ones((91,1)),osc2)
+    osc1_matrix = np.multiply(np.ones((91, 1)), osc1)
+    osc2_matrix = np.multiply(np.ones((91, 1)), osc2)
 
     # Calculate GMs
     osc1_rot = osc1_matrix * cos_matrix + osc2_matrix * sin_matrix
@@ -59,7 +60,7 @@ def _get_horizontals(stream):
         list: list of horizontal channels (obspy.core.trac.Trace)
     """
     horizontal_channels = []
-    for idx, trace in enumerate(stream):
+    for _, trace in enumerate(stream):
         # Group all of the max values from traces without
         # Z in the channel name
         if 'Z' not in trace.stats['channel'].upper():

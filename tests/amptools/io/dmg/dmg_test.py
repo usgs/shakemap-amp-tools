@@ -3,16 +3,16 @@
 # stdlib imports
 import os.path
 import tempfile
-import warnings
 
 from amptools.io.dmg.core import is_dmg, read_dmg
 
 
 def test_dmg():
-    homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
-    datadir = os.path.join(homedir,'..','..','..','data','dmg')
-    file1 = os.path.join(datadir,'CE89146.V2')
-    file2 = os.path.join(datadir,'CIWLT.V2')
+    homedir = os.path.dirname(os.path.abspath(
+        __file__))  # where is this script?
+    datadir = os.path.join(homedir, '..', '..', '..', 'data', 'dmg')
+    file1 = os.path.join(datadir, 'CE89146.V2')
+    file2 = os.path.join(datadir, 'CIWLT.V2')
 
     for filename in [file1, file2]:
         assert is_dmg(file1)
@@ -98,13 +98,13 @@ def test_dmg():
         assert stats.standard['instrument'] == ''
         assert stats.standard['sensor_serial_number'] == '4310'
         assert stats.standard['source'] == 'Southern California Seismic ' + \
-                'Network, California Institute of Technology (Caltech)'
+            'Network, California Institute of Technology (Caltech)'
 
     # Test for wrong format exception
     success = True
     try:
-        datadir = os.path.join(homedir,'..','..','..','data','cwb')
-        file3 = os.path.join(datadir,'1-EAS.dat')
+        datadir = os.path.join(homedir, '..', '..', '..', 'data', 'cwb')
+        file3 = os.path.join(datadir, '1-EAS.dat')
         read_dmg(file3)
     except Exception:
         success = False
@@ -112,8 +112,8 @@ def test_dmg():
 
     # Test for bad date in header warning
     try:
-        datadir = os.path.join(homedir,'..','..','..','data','dmg')
-        file4 = os.path.join(datadir,'BadHeader.V2')
+        datadir = os.path.join(homedir, '..', '..', '..', 'data', 'dmg')
+        file4 = os.path.join(datadir, 'BadHeader.V2')
         read_dmg(file4)
     except Exception:
         success = False
@@ -126,7 +126,7 @@ def test_dmg():
     with open(tmp.name, 'w') as f:
         f.write(no_stream)
     f = open(tmp.name, 'rt')
-    st = read_dmg(tmp.name)
+    read_dmg(tmp.name)
     tmp.close()
 
     no_stream = """UNCORRECTED ACCELEROGRAM DATA"""
@@ -134,8 +134,9 @@ def test_dmg():
     with open(tmp.name, 'w') as f:
         f.write(no_stream)
     f = open(tmp.name, 'rt')
-    st = read_dmg(tmp.name)
+    read_dmg(tmp.name)
     tmp.close()
+
 
 if __name__ == '__main__':
     test_dmg()

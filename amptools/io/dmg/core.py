@@ -28,14 +28,14 @@ V3_MARKER = 'RESPONSE AND FOURIER AMPLITUDE SPECTRA'
 
 homedir = os.path.dirname(os.path.abspath(__file__))
 codedir = os.path.join(homedir, '..', 'fdsn_codes.csv')
-CODES, SOURCES1, SOURCES2 = np.genfromtxt(codedir, skip_header=1, usecols=(0,1,2),
-                               unpack=True, dtype=bytes, delimiter=',')
+CODES, SOURCES1, SOURCES2 = np.genfromtxt(codedir, skip_header=1, usecols=(0, 1, 2),
+                                          unpack=True, dtype=bytes, delimiter=',')
 CODES = CODES.astype(str)
 
 UNITS = [
-        'acc',
-        'vel',
-        'disp'
+    'acc',
+    'vel',
+    'disp'
 ]
 
 
@@ -50,23 +50,27 @@ def is_dmg(filename):
     Returns:
         bool: True if DMG , False otherwise.
     """
-    f = open(filename, 'rt')
-    first_line = f.readline().upper()
-    second_line = f.readline().upper()
-    third_line = f.readline().upper()
-    f.close()
+    try:
+        f = open(filename, 'rt')
+        first_line = f.readline().upper()
+        second_line = f.readline().upper()
+        third_line = f.readline().upper()
+        f.close()
 
-    # dmg/csmip both have the same markers so is_usc must be checked
-    if first_line.find(V1_MARKER) >= 0 and not is_usc(filename):
-        return True
-    elif first_line.find(V2_MARKER) >= 0 and not is_usc(filename):
-        if second_line.find(V1_MARKER) >= 0:
+        # dmg/csmip both have the same markers so is_usc must be checked
+        if first_line.find(V1_MARKER) >= 0 and not is_usc(filename):
             return True
-    elif first_line.find(V3_MARKER) >= 0 and not is_usc(filename):
-        if second_line.find(V2_MARKER) >= 0 and third_line.find(V1_MARKER) >= 0:
-            return True
-    else:
+        elif first_line.find(V2_MARKER) >= 0 and not is_usc(filename):
+            if second_line.find(V1_MARKER) >= 0:
+                return True
+        elif first_line.find(V3_MARKER) >= 0 and not is_usc(filename):
+            if second_line.find(V2_MARKER) >= 0 and third_line.find(V1_MARKER) >= 0:
+                return True
+        else:
+            return False
+    except UnicodeDecodeError:
         return False
+
 
 def read_dmg(filename, **kwargs):
     """Read DMG strong motion file.
@@ -110,8 +114,8 @@ def read_dmg(filename, **kwargs):
     trace_list = []
     while line_offset < line_count:
         if reader == 'V2':
-           traces, line_offset = _read_volume_two(filename, line_offset)
-           trace_list += traces
+            traces, line_offset = _read_volume_two(filename, line_offset)
+            trace_list += traces
         else:
             line_offset = line_count
 
@@ -168,7 +172,8 @@ def _read_volume_two(filename, line_offset):
     vel_hdr['standard']['units'] = 'vel'
     vel_hdr['npts'] = int_data[63]
     if vel_hdr['npts'] > 0:
-        vel_rows, vel_fmt = _get_data_format(filename, skip_rows, vel_hdr['npts'])
+        vel_rows, vel_fmt = _get_data_format(
+            filename, skip_rows, vel_hdr['npts'])
         vel_data = _read_lines(skip_rows + 1, vel_rows, vel_fmt, filename)
         vel_data = vel_data[:vel_hdr['npts']]
         vel_trace = Trace(vel_data.copy(), Stats(vel_hdr.copy()))
@@ -180,14 +185,16 @@ def _read_volume_two(filename, line_offset):
     disp_hdr['standard']['units'] = 'disp'
     disp_hdr['npts'] = int_data[65]
     if disp_hdr['npts'] > 0:
-        disp_rows, disp_fmt = _get_data_format(filename, skip_rows, disp_hdr['npts'])
+        disp_rows, disp_fmt = _get_data_format(
+            filename, skip_rows, disp_hdr['npts'])
         disp_data = _read_lines(skip_rows + 1, disp_rows, disp_fmt, filename)
         disp_data = disp_data[:disp_hdr['npts']]
         disp_trace = Trace(disp_data.copy(), Stats(disp_hdr.copy()))
         traces += [disp_trace]
         skip_rows += int(disp_rows) + 1
-    new_offset = skip_rows + 1 # there is an 'end of record' line after the data]
+    new_offset = skip_rows + 1  # there is an 'end of record' line after the data]
     return (traces, new_offset)
+
 
 def _get_header_info(int_data, flt_data, lines, level):
     """Return stats structure from various headers.
@@ -247,12 +254,13 @@ def _get_header_info(int_data, flt_data, lines, level):
 
     # Required metadata
     name_length = int_data[29]
-    station_name = re.sub(' +',' ',lines[6][:name_length]).strip()
-    code = re.sub(' +',' ',lines[1][name_length:]).strip().split(' ')[-1][:2]
+    station_name = re.sub(' +', ' ', lines[6][:name_length]).strip()
+    code = re.sub(' +', ' ', lines[1][name_length:]).strip().split(' ')[-1][:2]
     if code.upper() in CODES:
         network = code.upper()
         idx = np.argwhere(CODES == network)[0][0]
-        source = SOURCES1[idx].decode('utf-8') +  ', ' + SOURCES2[idx].decode('utf-8')
+        source = SOURCES1[idx].decode(
+            'utf-8') + ', ' + SOURCES2[idx].decode('utf-8')
     else:
         network = '--'
         source = ''
@@ -278,8 +286,8 @@ def _get_header_info(int_data, flt_data, lines, level):
     hdr['location'] = '--'
     trigger_line = lines[4][35:77]
     starttime_message = "Start time must be specified with " + \
-            "full date on header line 5, columns 36=77 " + \
-            "(Example: 'Start time: 3/29/2014, 04:09:34.0 UTC')"
+        "full date on header line 5, columns 36=77 " + \
+        "(Example: 'Start time: 3/29/2014, 04:09:34.0 UTC')"
     if trigger_line.find('-') >= 0 or trigger_line.find('/') >= 0:
         if trigger_line.find('-') >= 0:
             delimeter = '-'
@@ -296,7 +304,7 @@ def _get_header_info(int_data, flt_data, lines, level):
             microsecond = int((second - int(second)) * 1e6)
             year = int(date[2][:4])
             hdr['starttime'] = datetime(year, month, day, hour, minute,
-               int(second), microsecond)
+                                        int(second), microsecond)
         except ValueError:
             # Looking for full year on earthquake line
             try:
@@ -311,9 +319,9 @@ def _get_header_info(int_data, flt_data, lines, level):
                 date = earthquake_year_line.split(',')[1].split(':')[0].strip()
                 year = int(date.split(' ')[0])
                 hdr['starttime'] = datetime(year, month, day, hour, minute,
-                       int(second), microsecond)
+                                            int(second), microsecond)
             except ValueError:
-                 raise AmptoolsException(starttime_message)
+                raise AmptoolsException(starttime_message)
     else:
         raise AmptoolsException(starttime_message)
     hdr['delta'] = flt_data[60]
@@ -327,7 +335,7 @@ def _get_header_info(int_data, flt_data, lines, level):
         latitude = float(latitude_str[:-1])
         if latitude_str.upper().find('S') >= 0:
             latitude = -1 * latitude
-    except:
+    except Exception:
         warnings.warn('No latitude or invalid latitude format provided. '
                       'Setting to np.nan.', Warning)
         latitude = np.nan
@@ -379,7 +387,7 @@ def _get_header_info(int_data, flt_data, lines, level):
     standard['station_name'] = station_name
 
     # Format specific metadata
-    format_specific['fractional_unit'] =  flt_data[4]
+    format_specific['fractional_unit'] = flt_data[4]
     format_specific['sensor_sensitivity'] = flt_data[5]
     if flt_data[13] == -999:
         format_specific['time_sd'] = np.nan
@@ -405,8 +413,8 @@ def _read_lines(skip_rows, max_rows, widths, filename):
         array-like: List of comments or array of data.
     """
     data_arr = np.genfromtxt(filename, skip_header=skip_rows,
-            max_rows=max_rows, dtype=np.float64,
-            delimiter=widths).flatten()
+                             max_rows=max_rows, dtype=np.float64,
+                             delimiter=widths).flatten()
     return data_arr
 
 
@@ -421,10 +429,10 @@ def _get_data_format(filename, skip_rows, npts):
         tuple: (int number of rows, list list of widths).
     """
     fmt = np.genfromtxt(filename, skip_header=skip_rows,
-            max_rows=1, dtype=str)[-1]
+                        max_rows=1, dtype=str)[-1]
 
     # Check for a format in header or use default
-    if fmt.find('f') >=0 and fmt.find('(') >=0 and fmt.find(')') >=0:
+    if fmt.find('f') >= 0 and fmt.find('(') >= 0 and fmt.find(')') >= 0:
         fmt = fmt.replace('(', '').replace(')', '')
         cols = int(fmt.split('f')[0])
         widths = int(fmt.split('f')[-1].split('.')[0])

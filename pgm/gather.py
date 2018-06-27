@@ -38,6 +38,7 @@ def get_pgm_classes(im_type):
         ordered_classes[k] = classes[k]
     return ordered_classes
 
+
 def group_imcs(imcs):
     imc_dict = {}
     for imc in imcs:
@@ -47,32 +48,33 @@ def group_imcs(imcs):
                 if 'rotd' not in imc_dict:
                     imc_dict['rotd'] = []
                 imc_dict['rotd'] += [float(imc[4:])]
-            except:
+            except Exception:
                 warnings.warn('Invalid percentile for RotD: %r' % imc)
         elif imc.startswith('roti'):
             try:
                 if 'roti' not in imc_dict:
                     imc_dict['roti'] = []
                 imc_dict['roti'] += [float(imc[4:])]
-            except:
+            except Exception:
                 warnings.warn('Invalid percentile for RotI: %r' % imc)
         elif imc.startswith('gmrotd'):
             try:
                 if 'gmrotd' not in imc_dict:
                     imc_dict['gmrotd'] = []
                 imc_dict['gmrotd'] += [float(imc[6:])]
-            except:
+            except Exception:
                 warnings.warn('Invalid percentile for GMRotD: %r' % imc)
         elif imc.startswith('gmroti'):
             try:
                 if 'gmroti' not in imc_dict:
                     imc_dict['gmroti'] = []
                 imc_dict['gmroti'] += [float(imc[6:])]
-            except:
+            except Exception:
                 warnings.warn('Invalid percentile for GMRotI: %r' % imc)
         else:
             imc_dict[imc] = ''
     return imc_dict
+
 
 def _get_pgm_modules(im_type):
     """

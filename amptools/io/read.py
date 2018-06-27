@@ -31,15 +31,14 @@ def read_data(filename, read_format=None):
     if read_format is None:
         read_format = _get_format(filename)
     else:
-        print('here')
         read_format = _validate_format(filename, read_format.lower())
     # Load reader and read file
     reader = 'amptools.io.' + read_format + '.core'
     reader_module = importlib.import_module(reader)
     read_name = 'read_' + read_format
-    read_method =  getattr(reader_module, read_name)
-    streams = read_method(filename)
-    return streams
+    read_method = getattr(reader_module, read_name)
+    stream = read_method(filename)
+    return stream
 
 
 def _get_format(filename):
@@ -67,7 +66,7 @@ def _get_format(filename):
         reader = 'amptools.io.' + valid_format + '.core'
         reader_module = importlib.import_module(reader)
         is_name = 'is_' + valid_format
-        is_method =  getattr(reader_module, is_name)
+        is_method = getattr(reader_module, is_name)
         if is_method(filename):
             formats += [valid_format]
     # Return the format
@@ -80,7 +79,7 @@ def _get_format(filename):
         raise AmptoolsException('No format found for file %r.' % filename)
     else:
         raise AmptoolsException('Multiple formats passing: %r. Please retry file %r '
-                'with a specified format.' % (formats.tolist(), filename))
+                                'with a specified format.' % (formats.tolist(), filename))
 
 
 def _validate_format(filename, read_format):
@@ -107,7 +106,7 @@ def _validate_format(filename, read_format):
         reader = 'amptools.io.' + read_format + '.core'
         reader_module = importlib.import_module(reader)
         is_name = 'is_' + read_format
-        is_method =  getattr(reader_module, is_name)
+        is_method = getattr(reader_module, is_name)
     else:
         warnings.warn('Not a supported format %r. '
                       'Attempting to find a supported format.' % read_format)

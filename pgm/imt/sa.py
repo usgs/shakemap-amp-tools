@@ -1,11 +1,5 @@
 # stdlib imports
-import argparse
-import inspect
 import warnings
-
-# third party imports
-from obspy.core.stream import Stream
-from obspy.signal.invsim import simulate_seismometer, corn_freq_2_paz
 
 # local imports
 from pgm.exception import PGMException
@@ -29,7 +23,7 @@ def calculate_sa(stream, imcs):
     for trace in stream:
         if trace.stats['units'] != '%%g':
             raise PGMException('Invalid units for sa: %r. '
-            'Units must be %%g' % trace.stats['units'])
+                               'Units must be %%g' % trace.stats['units'])
     grouped_imcs = group_imcs(imcs)
     # gather imc classes
     pgm_classes = get_pgm_classes('imc')
