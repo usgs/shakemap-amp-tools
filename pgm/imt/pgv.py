@@ -1,9 +1,6 @@
 # stdlib imports
 import warnings
 
-# third party imports
-from obspy.core.stream import Stream
-
 # local imports
 from pgm.exception import PGMException
 from pgm.gather import get_pgm_classes, group_imcs
@@ -26,7 +23,7 @@ def calculate_pgv(stream, imcs):
     for trace in stream:
         if trace.stats['units'] != 'cm/s':
             raise PGMException('Invalid units for PGV: %r. '
-            'Units must be cm/s' % trace.stats['units'])
+                               'Units must be cm/s' % trace.stats['units'])
     grouped_imcs = group_imcs(imcs)
     # gather imc classes
     pgm_classes = get_pgm_classes('imc')

@@ -63,19 +63,19 @@ def test_read_tables():
         dataframe_to_xml(df_mmimin, xmlfile)
 
         missing_data_file = os.path.join(datadir, 'missing_rows.xlsx')
-        df, reference = read_excel(missing_data_file)
+        df, _ = read_excel(missing_data_file)
         assert np.isnan(df['h1']['sa(0.3)']['CHPA'])
         xmlfile = os.path.join(tmpdir, 'missing_rows.xml')
         dataframe_to_xml(df, xmlfile)
 
         sm2xml_example = os.path.join(datadir, 'sm2xml_output.xlsx')
-        df, reference = read_excel(sm2xml_example)
+        df, _ = read_excel(sm2xml_example)
         np.testing.assert_almost_equal(
             df['hhz']['pga'].sum(), 150.82342541678645)
         xmlfile = os.path.join(tmpdir, 'sm2xml_output.xml')
         dataframe_to_xml(df, xmlfile)
 
-    except Exception as e:
+    except Exception:
         assert 1 == 2
     finally:
         shutil.rmtree(tmpdir)

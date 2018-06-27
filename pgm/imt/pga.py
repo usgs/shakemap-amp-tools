@@ -1,9 +1,6 @@
 # stdlib imports
 import warnings
 
-# third party imports
-from obspy.core.stream import Stream
-
 # local imports
 from pgm.exception import PGMException
 from pgm.gather import get_pgm_classes, group_imcs
@@ -26,7 +23,7 @@ def calculate_pga(stream, imcs):
     for trace in stream:
         if trace.stats['units'] != '%%g':
             raise PGMException('Invalid units for PGA: %r. '
-            'Units must be %%g' % trace.stats['units'])
+                               'Units must be %%g' % trace.stats['units'])
     # sort imcs
     grouped_imcs = group_imcs(imcs)
     # gather imc classes

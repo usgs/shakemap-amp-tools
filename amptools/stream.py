@@ -1,6 +1,5 @@
 # stdlib imports
 import warnings
-import re
 
 # third party imports
 import pandas as pd
@@ -223,8 +222,8 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
     dataframe = dataframe.astype(dtypes)
 
     # create a dictionary for pgm data.  Because it is difficult to set columns
-    # in a multiindex, we're creating dictionaries to create the channel columns
-    # separately.
+    # in a multiindex, we're creating dictionaries to create the channel
+    # columns separately.
     channel_dicts = {}
     for channel in channels:
         channel_dicts[channel] = {}

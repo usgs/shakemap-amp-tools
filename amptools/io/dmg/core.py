@@ -335,7 +335,7 @@ def _get_header_info(int_data, flt_data, lines, level):
         latitude = float(latitude_str[:-1])
         if latitude_str.upper().find('S') >= 0:
             latitude = -1 * latitude
-    except:
+    except Exception:
         warnings.warn('No latitude or invalid latitude format provided. '
                       'Setting to np.nan.', Warning)
         latitude = np.nan

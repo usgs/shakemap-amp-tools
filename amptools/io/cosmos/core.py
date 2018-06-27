@@ -399,7 +399,7 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
         try:
             hdr['starttime'] = datetime(
                 year, month, day, hour, minute)
-        except:
+        except Exception:
             raise AmptoolsException('Inadequate start time information.')
     else:
         second = second
@@ -407,7 +407,7 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
         try:
             hdr['starttime'] = datetime(
                 year, month, day, hour, minute, int(second), microsecond)
-        except:
+        except Exception:
             raise AmptoolsException('Inadequate start time information.')
     # Store delta and duration. Use them to calculate npts and sampling_rate
     delta = flt_data[33]
@@ -459,7 +459,7 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
             microsecond = int((second - int(second)) * 1e6)
             standard['process_time'] = datetime(
                 year, month, day, hour, minute, int(second), microsecond)
-        except:
+        except Exception:
             standard['process_time'] = ''
     else:
         standard['process_time'] = ''
