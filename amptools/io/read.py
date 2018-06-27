@@ -31,15 +31,14 @@ def read_data(filename, read_format=None):
     if read_format is None:
         read_format = _get_format(filename)
     else:
-        print('here')
         read_format = _validate_format(filename, read_format.lower())
     # Load reader and read file
     reader = 'amptools.io.' + read_format + '.core'
     reader_module = importlib.import_module(reader)
     read_name = 'read_' + read_format
     read_method = getattr(reader_module, read_name)
-    streams = read_method(filename)
-    return streams
+    stream = read_method(filename)
+    return stream
 
 
 def _get_format(filename):
@@ -68,7 +67,6 @@ def _get_format(filename):
         reader_module = importlib.import_module(reader)
         is_name = 'is_' + valid_format
         is_method = getattr(reader_module, is_name)
-        print('Testing method %s on file %s' % (valid_format, filename))
         if is_method(filename):
             formats += [valid_format]
     # Return the format

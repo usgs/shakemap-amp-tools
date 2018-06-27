@@ -17,7 +17,7 @@ import yaml
 # local imports
 from amptools.table import dataframe_to_xml
 from amptools.stream import streams_to_dataframe, group_channels, DEFAULT_IMTS
-from amptools.io.read import read_data
+from amptools.io.read import read_data, _get_format
 
 FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc', 'dmg', 'obspy']
 DEFAULT_DISTANCE = 1500
@@ -29,6 +29,8 @@ def get_config():
     config_file = os.path.join(os.path.expanduser('~'), CONFIG_FILE)
     if not os.path.isfile(config_file):
         config = {'sm2xml': {'imtlist': DEFAULT_IMTS}}
+        fmt = 'Missing config file %s, setting IMT list to %s.'
+        print(fmt % (config_file, DEFAULT_IMTS))
     else:
         config = yaml.load(open(config_file, 'rt'))
     return config
@@ -124,14 +126,19 @@ def main(args):
 
     # read all the data files, gather up a list of obspy Stream objects
     streams = []
+    first_file = ''
     for dfile in allfiles:
         if args.verbose:
             print('Parsing %s...' % dfile)
         try:
             stream = read_data(dfile)
             streams.append(stream)
+            if not len(first_file):
+                first_file = dfile
         except Exception as e:
-            print('Error reading file %s: "%s". Skipping.' % (dfile, str(e)))
+            if args.verbose:
+                print('Error reading file %s: "%s". Skipping.' %
+                      (dfile, str(e)))
             continue
 
     if args.coordinates:
@@ -190,7 +197,8 @@ def main(args):
 
     # Save peak info in spreadsheet form
     # we're forced here to have the index column, as much as we might not want it
-    outfile_excel = os.path.join(outdir, '%s_%s_dat.xlsx' % (format, eventid))
+    fformat = _get_format(first_file)
+    outfile_excel = os.path.join(outdir, '%s_%s_dat.xlsx' % (fformat, eventid))
     dataframe.to_excel(outfile_excel)
 
     # modify the spreadsheet to add a reference at the top and remove index column
@@ -199,7 +207,7 @@ def main(args):
     print('Wrote Excel file %s' % outfile_excel)
 
     # Write out the ShakeMap XML data format
-    xmlfile = os.path.join(outdir, '%s_%s_dat.xml' % (format, eventid))
+    xmlfile = os.path.join(outdir, '%s_%s_dat.xml' % (fformat, eventid))
     dataframe_to_xml(dataframe, xmlfile)
     print('Peak ground motions written to file %s.' % xmlfile)
 
@@ -211,9 +219,9 @@ This program looks for a file ~/.amptools/config.yml, which should be formatted
 thusly:
 
 sm2xml:
-  imtlist: [pga, pgv, sa(0.3), sa(1.0), sa(3.0)]
+  imtlist: [PGA, PGV, SA(0.3), SA(1.0), SA(3.0)]
 
-Where imtlist is the list of the desired intensity measure components. Valid
+Where imtlist is the list of the desired intensity measure types. Valid
 IMTs are currently:
  - PGA
  - PGV

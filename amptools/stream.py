@@ -306,9 +306,9 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
                     channel_dicts[channel][station_imt].append(np.nan)
             else:
                 for station_imt in imtlist:
-                    imt_value = station.pgms[station_imt][channel]
+                    imt_value = station.pgms[station_imt.upper()][channel]
                     channel_dicts[channel][station_imt].append(imt_value)
-                    osc = station.oscillators[station_imt]
+                    osc = station.oscillators[station_imt.upper()]
                     if station_imt.startswith('SA'):
                         spectral_streams.append(osc.select(channel=channel)[0])
 
