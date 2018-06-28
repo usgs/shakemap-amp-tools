@@ -11,6 +11,7 @@ setup(name='amptools',
       packages=['amptools',
                 'amptools.io',
                 'amptools.io.cwb',
+                'amptools.io.dmg',
                 'amptools.io.geonet',
                 'amptools.io.knet',
                 'amptools.io.cosmos',
@@ -26,5 +27,6 @@ setup(name='amptools',
       },
       scripts=['bin/amps2xml',
                'bin/ftpfetch',
-               'bin/sm2xml']
+               'bin/sm2xml',
+               'smconvert']
       )

@@ -28,20 +28,20 @@ If you already have a miniconda or anaconda Python 3.X environment:
 
  - `conda install numpy`
  - `conda install pandas`
- - `conda install openpyxl` 
+ - `conda install openpyxl`
  - `conda install lxml`
- - `pip install git+https://github.com/mhearne-usgs/shakemap-amp-tools.git`
+ - `pip install git+https://github.com/usgs/shakemap-amp-tools.git`
 
 If you do not have anaconda or miniconda, but have Python 3.X installed with pip:
  - `pip install numpy`
  - `pip install pandas`
- - `pip install openpyxl` 
+ - `pip install openpyxl`
  - `pip install lxml`
- - `pip install git+https://github.com/mhearne-usgs/shakemap-amp-tools.git`
+ - `pip install git+https://github.com/usgs/shakemap-amp-tools.git`
 
 ## Updating
 
- - `pip install --upgrade git+https://github.com/mhearne-usgs/shakemap-amp-tools.git`
+ - `pip install --upgrade git+https://github.com/usgs/shakemap-amp-tools.git`
 
 # Tools
 
@@ -120,7 +120,7 @@ A "complete" peak ground motion table would look like this:
     <td>National Seismic Service</td>
     <td>120.1</td>
     <td>4.5</td>
-    
+
     <td>0.5</td>
     <td>0.6</td>
     <td>0.7</td>
@@ -242,11 +242,3 @@ should be added to the setup.py script.
 
 
 <!-- You will not be able to see this text. -->
-
-
-
-
-
-  
-
-

@@ -2,6 +2,7 @@
 
 # stdlib imports
 import os.path
+import warnings
 
 # third party imports
 import numpy as np
@@ -22,9 +23,11 @@ def test_pgv():
         vtrace = trace.copy()
         vtrace.integrate()
         pgv_target[vtrace.stats['channel']] = np.abs(vtrace.max())
-    station_summary = StationSummary(stream_v2,
-            ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
-            ['pgv', 'sa1.0', 'saincorrect'])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        station_summary = StationSummary.from_stream(stream_v2,
+                ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
+                ['pgv', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGV']
     np.testing.assert_almost_equal(station_dict['H2'], pgv_target['H2'])
     np.testing.assert_almost_equal(station_dict['H1'], pgv_target['H1'])

@@ -2,6 +2,7 @@
 
 # stdlib imports
 import os.path
+import warnings
 
 # third party imports
 import numpy as np
@@ -22,10 +23,13 @@ def test_sa():
         vtrace = trace.copy()
         vtrace.integrate()
         sa_target[vtrace.stats['channel']] = np.abs(vtrace.max())
-    station_summary = StationSummary(stream_v2,
-                                     ['greater_of_two_horizontals',
-                                      'gmrotd50', 'channels'],
-                                     ['sa1.0', 'saincorrect'])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        station_summary = StationSummary.from_stream(stream_v2,
+                                         ['greater_of_two_horizontals',
+                                          'gmrotd50', 'channels'],
+                                         ['sa1.0', 'saincorrect'])
+    assert 'SA1.0' in station_summary.pgms
     #station_dict = station_summary.pgms['SA1.0']
     # TODO: test against real values
 

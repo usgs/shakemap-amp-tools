@@ -17,7 +17,7 @@ def test_greater_of_two_horizontals():
     datafile_v2 = os.path.join(homedir, '..', 'data', 'geonet',
                                '20161113_110259_WTMC_20.V2A')
     stream_v2 = read_geonet(datafile_v2)
-    station_summary = StationSummary(stream_v2,
+    station_summary = StationSummary.from_stream(stream_v2,
             ['greater_of_two_horizontals'], ['pga'])
     station_dict = station_summary.pgms['PGA']
     greater = station_dict['GREATER_OF_TWO_HORIZONTALS']

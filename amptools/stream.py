@@ -295,7 +295,7 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
                 pgv = np.abs(trace.max())
                 channel_dicts[channel]['pgv'].append(pgv)
         # get station summary and assign values
-        station = StationSummary(stream, ['channels'],
+        station = StationSummary.from_stream(stream, ['channels'],
                                  imtlist)
         spectral_streams = []
         tchannels = [t.stats.channel for t in stream]
