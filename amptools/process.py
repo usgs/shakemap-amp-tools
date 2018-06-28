@@ -43,6 +43,46 @@ def filter_detrend(trace, taper_type='cosine', taper_percentage=0.05,
         return trace
 
 
+def correct_baseline_mean(stream):
+    """
+    Performs a zero-order baseline correction by subtracting the mean from
+    the entire waveform. This is step 1 as found in the Rennolet et. al
+    paper (https://doi.org/10.1193/101916EQS175DP)
+
+    Args:
+        stream (obpsy.core.stream.Stream): Stream of raw waveform data.
+
+    Returns:
+        stream (obspy.core.stream.Stream): Stream of corrected waveform data.
+    """
+    for tr in stream:
+        tr.detrend(type='demean')
+    return stream
+
+
+def remove_clipped(stream, max_count=2000000):
+    """
+    Identify clipped waveforms having a count greater than the specified
+    max count. This will remove any clipped waveforms from the stream.
+    This is step 2 as found in the Rennolet et. al paper
+    (https://doi.org/10.1193/101916EQS175DP)
+
+    Args:
+        stream (obspy.core.stream.Stream): Stream of raw data.
+        max_count (int): Maximum count for clipping.
+
+    Returns:
+        stream (obspy.core.stream.Stream): Stream of raw data with clipped
+        waveforms removed
+    """
+    for tr in stream:
+        if tr.max() >= max_count:
+            stream.traces.remove(tr)
+            warnings.warn('Clipped trace was removed from the stream')
+            warnings.warn(tr.get_id())
+    return stream
+
+
 def check_max_amplitude(trace, min_amp=10e-9, max_amp=50):
         """
         Checks that the maximum amplitude of the trace is within a defined
