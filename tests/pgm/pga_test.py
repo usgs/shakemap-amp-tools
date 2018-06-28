@@ -2,6 +2,7 @@
 
 # stdlib imports
 import os.path
+import warnings
 
 # third party imports
 import numpy as np
@@ -17,9 +18,11 @@ def test_pga():
     datafile_v2 = os.path.join(homedir, '..', 'data', 'geonet',
                                '20161113_110259_WTMC_20.V2A')
     stream_v2 = read_geonet(datafile_v2)
-    station_summary = StationSummary(stream_v2,
-            ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
-            ['pga', 'sa1.0', 'saincorrect'])
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        station_summary = StationSummary.from_stream(stream_v2,
+                ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
+                ['pga', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGA']
     greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
     np.testing.assert_almost_equal(station_dict['H2'], 81.28979591836733)

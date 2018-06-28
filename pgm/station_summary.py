@@ -8,12 +8,12 @@ import numpy as np
 from obspy.core.stream import Stream
 from obspy.core.trace import Trace
 from obspy.signal.invsim import corn_freq_2_paz, simulate_seismometer
-import pandas as pd
 
 # local imports
 from pgm.imt.pga import calculate_pga
 from pgm.imt.pgv import calculate_pgv
 from pgm.imt.sa import calculate_sa
+from pgm.gather import get_pgm_classes
 
 
 GAL_TO_PCTG = 1 / (9.8)
@@ -24,7 +24,92 @@ class StationSummary(object):
     Class for returning pgm values for specific components.
     """
 
-    def __init__(self, stream, components, imts, damping=0.05):
+    def __init__(self):
+        self._station_code = None
+        self._components = None
+        self._imts = None
+        self._stream = None
+        self._oscillators = None
+        self._pgms = None
+
+    @property
+    def available_imcs(self):
+        """
+        Helper method for getting a list of components.
+
+        Returns:
+            list: List of available components (str).
+        """
+        return [key for key in get_pgm_classes('imc')]
+
+    @property
+    def available_imts(self):
+        """
+        Helper method for getting a list of measurement types.
+
+        Returns:
+            list: List of available measurement types (str).
+        """
+        return [key for key in get_pgm_classes('imt')]
+
+    @property
+    def components(self):
+        """
+        Helper method returning a list of requested/calculated components.
+
+        Returns:
+            list: List of requested/calculated components (str).
+        """
+        return self._components
+
+    @components.setter
+    def components(self, components):
+        """
+        Helper method to set the components attribute.
+
+        Args:
+            components (list): List of components (str).
+        """
+        self._components = list(components)
+
+    @classmethod
+    def from_pgms(cls, station_code, pgms):
+        """
+        Args:
+            station_code (str): Station code for the given pgms.
+            pgms (dictionary): Dictionary of pgms.
+
+        Note:
+            The pgm dictionary must be formated as imts with subdictionaries
+            containing imcs:
+                {
+                  'SA1.0': {
+                    'H2': 84.23215974982956,
+                    'H1': 135.9267934939141,
+                    'GREATER_OF_TWO_HORIZONTALS': 135.9267934939141,
+                    'Z': 27.436966897028416
+                  },
+                  ...
+                }
+            This should be the default format for significant ground motion
+            parametric data from COMCAT.
+        """
+        station = cls()
+        station.station_code = station_code
+        station.pgms = pgms
+        imts = [key for key in pgms]
+        components = []
+        for imt in pgms:
+            components += [imc for imc in pgms[imt]]
+        station.components = np.sort(components)
+        station.imts = np.sort(imts)
+        # stream should be set later with corrected a corrected stream
+        # this stream (in units of gal or 1 cm/s^2) can be used to
+        # calculate and set oscillators
+        return station
+
+    @classmethod
+    def from_stream(cls, stream, components, imts, damping=0.05):
         """
         Args:
             stream (obspy.core.stream.Stream): Strong motion timeseries
@@ -37,119 +122,19 @@ class StationSummary(object):
             Assumes a processed stream with units of gal (1 cm/s^2).
             No processing is done by this class.
         """
-        self.components = set(np.sort(components))
-        self.damping = damping
-        self.imts = set(np.sort(imts))
-        self.stream = stream
+        station = cls()
+        components = set(np.sort(components))
+        damping = damping
+        imts = set(np.sort(imts))
+        station.station_code = stream[0].stats['station']
+        station.stream = stream
         # Get oscillators
-        self.oscillators = self.generate_oscillators()
+        station.oscillators = station.generate_oscillators(imts, damping)
         # Gather pgm/imt for each
-        self.pgms = self.gather_pgms()
+        station.pgms = station.gather_pgms(components)
+        return station
 
-    def create_flatfile_rows(self):
-        """
-        Creates a dataframe table similar to a flatfile where each row
-        is a channel/component.
-
-        Returns:
-            pandas.DataFrame: Flatfile-like table.
-
-        Notes:
-            Assumes generate_oscillators and gather_pgms has already been
-            called for this class instance.
-            Headers:
-                - Record Sequence Number
-                - YEAR
-                - MODY
-                - HRMN
-                - Station Name
-                - Station ID  No.
-                - Station Latitude
-                - Station Longitude
-                - Channel
-                - All requested PGM values (one type per column)
-                ...
-        """
-        pgms = self.pgms.copy()
-        dataframe_dict = OrderedDict()
-        # Initialize dataframe headers
-        columns = ['Record Sequence Number', 'YEAR', 'MODY', 'HRMN',
-                   'Station Name', 'Station ID  No.', 'Station Latitude',
-                   'Station Longitude', 'Channel']
-        imt_keys = [val for val in pgms]
-        for imt_key in np.sort(imt_keys):
-            columns += [imt_key]
-        for col in columns:
-            dataframe_dict[col] = []
-
-        imc_keys = [val for val in pgms[imt_keys[0]]]
-        # Set metadata
-        stats = self.stream[0].stats
-        counter = 0
-        for imc in np.sort(imc_keys):
-            counter += 1
-            dataframe_dict['YEAR'] += [stats['starttime'].year]
-            # Format the date
-            dataframe_dict['Record Sequence Number'] += [counter]
-            month = '{:02d}'.format(stats['starttime'].month)
-            day = '{:02d}'.format(stats['starttime'].day)
-            dataframe_dict['MODY'] += [month + day]
-            hour = '{:02d}'.format(stats['starttime'].hour)
-            minute = '{:02d}'.format(stats['starttime'].minute)
-            dataframe_dict['HRMN'] += [hour + minute]
-            try:
-                station_str = stats['standard']['station_name']
-            except KeyError:
-                station_str = stats['name']
-            dataframe_dict['Station Name'] = [station_str]
-            dataframe_dict['Station ID  No.'] += [stats['station']]
-            try:
-                latitude = stats['coordinates']['latitude']
-            except KeyError:
-                latitude = stats['lat']
-            dataframe_dict['Station Latitude'] += [latitude]
-            try:
-                longitude = stats['coordinates']['longitude']
-            except KeyError:
-                longitude = stats['lon']
-            dataframe_dict['Station Longitude'] += [longitude]
-            dataframe_dict['Channel'] += [imc]
-            for imt_key in np.sort(imt_keys):
-                dataframe_dict[imt_key] += [pgms[imt_key][imc]]
-        # Create pandas dataframe
-        dataframe = pd.DataFrame(data=dataframe_dict)
-        return dataframe
-
-    def create_table(self):
-        """
-        Creates a dataframe table of IMC vs IMT.
-
-        Returns:
-            pandas.DataFrame: Table of IMC vs IMT.
-
-        Notes:
-            Assumes generate_oscillators and gather_pgms has already been
-            called for this class instance.
-        """
-        pgms = self.pgms.copy()
-        # Initialize dataframe headers
-        dataframe_dict = OrderedDict()
-        dataframe_dict[''] = []
-        imt_keys = np.sort([val for val in pgms])
-        imc_keys = np.sort([val for val in pgms[imt_keys[0]]])
-        for imc_key in imc_keys:
-            dataframe_dict[imc_key] = []
-        for imt_key in imt_keys:
-            dataframe_dict[''] += [imt_key]
-        # Create dataframe
-        for imc_key in imc_keys:
-            for imt_key in imt_keys:
-                dataframe_dict[imc_key] += [pgms[imt_key][imc_key]]
-        # Create pandas dataframe
-        dataframe = pd.DataFrame(data=dataframe_dict)
-        return dataframe
-
-    def gather_pgms(self):
+    def gather_pgms(self, components):
         """
         Gather pgms by getting components for each imt.
 
@@ -164,25 +149,31 @@ class StationSummary(object):
         for oscillator in self.oscillators:
             stream = self.oscillators[oscillator]
             if oscillator == 'PGA':
-                pga = calculate_pga(stream, self.components)
+                pga = calculate_pga(stream, components)
                 pgm_dict[oscillator] = pga
             elif oscillator == 'PGV':
-                pgv = calculate_pgv(stream, self.components)
+                pgv = calculate_pgv(stream, components)
                 pgm_dict[oscillator] = pgv
             elif oscillator.startswith('SA'):
-                sa = calculate_sa(stream, self.components)
+                sa = calculate_sa(stream, components)
                 pgm_dict[oscillator] = sa
+        components = []
+        for imt in pgm_dict:
+            components += [imc for imc in pgm_dict[imt]]
+        self.components = set(components)
         return pgm_dict
 
-    def generate_oscillators(self):
+    def generate_oscillators(self, imts, damping):
         """
         Create dictionary of requested imt and its coinciding oscillators.
 
         Returns:
             dictionary: dictionary of oscillators for each imt.
         """
+        if self.stream is None:
+            raise Exception('StationSummary.stream is not set.')
         oscillator_dict = OrderedDict()
-        for imt in self.imts:
+        for imt in imts:
             stream = self.stream.copy()
             if imt.upper() == 'PGA':
                 oscillator = self._get_acceleration(stream)
@@ -195,7 +186,7 @@ class StationSummary(object):
                     period = float(re.search('\d+\.*\d*', imt).group())
                     oscillator = self._get_spectral(period,
                                                     stream,
-                                                    damping=self.damping)
+                                                    damping=damping)
                     oscillator_dict[imt.upper()] = oscillator
                 except Exception:
                     fmt = "Invalid period for imt: %r. Skipping..."
@@ -203,7 +194,146 @@ class StationSummary(object):
             else:
                 fmt = "Invalid imt: %r. Skipping..."
                 warnings.warn(fmt % (imt), Warning)
+        self.imts = [key for key in oscillator_dict]
         return oscillator_dict
+
+    def get_pgm(self, imt, imc):
+        """
+        Get a value for a requested imt and imc from pgms dictionary.
+
+        Args:
+            imt (str): Intensity measurement type.
+            imc (str): Intensity measurement component.
+
+        Returns:
+            float: Peak ground motion value.
+        """
+        if self.pgms is None:
+            raise Exception('No pgms have been calculated.')
+        imt = imt.upper()
+        imc = imc.upper()
+        return self.pgms[imt][imc]
+
+    @property
+    def imts(self):
+        """
+        Helper method returning a list of requested/calculated measurement types.
+
+        Returns:
+            list: List of requested/calculated measurement types (str).
+        """
+        return self._imts
+
+    @imts.setter
+    def imts(self, imts):
+        """
+        Helper method to set the imts attribute.
+
+        Args:
+            imts (list): List of imts (str).
+        """
+        self._imts = list(imts)
+
+    @property
+    def oscillators(self):
+        """
+        Helper method returning a station's oscillators.
+
+        Returns:
+            dictionary: Stream for each imt.
+        """
+        return self._oscillators
+
+    @oscillators.setter
+    def oscillators(self, oscillators):
+        """
+        Helper method to set the oscillators attribute.
+
+        Args:
+            oscillators (dictionary): Stream for each imt.
+        """
+        if all(isinstance(x, Stream) for x in oscillators.values()):
+            self._oscillators = oscillators
+        else:
+            warnings.warn('Setting failed: dictionary does not contain '
+                'stream objects for each imt.', Warning)
+
+    @property
+    def pgms(self):
+        """
+        Helper method returning a station's pgms.
+
+        Returns:
+            dictionary: Pgms for each imt and imc.
+        """
+        return self._pgms
+
+    @pgms.setter
+    def pgms(self, pgms):
+        """
+        Helper method to set the pgms attribute.
+
+        Args:
+            pgms (list): Dictionary of pgms for each imt and imc.
+        """
+        self._pgms = pgms
+
+    @property
+    def station_code(self):
+        """
+        Helper method returning a station's station code.
+
+        Returns:
+            str: Station code for one station.
+        """
+        return self._station_code
+
+    @station_code.setter
+    def station_code(self, station_code):
+        """
+        Helper method to set the station code attribute.
+
+        Args:
+            station_code (str): Station code for one station.
+        """
+        if self.station_code is not None:
+            warnings.warn('Setting failed: the station code cannot be '
+                'changed. A new instance of StationSummary must be created. ',
+                Warning)
+        else:
+            self._station_code = station_code
+
+    @property
+    def stream(self):
+        """
+        Helper method returning a station's stream.
+
+        Returns:
+            obspy.core.stream.Stream: Stream for one station.
+        """
+        return self._stream
+
+    @stream.setter
+    def stream(self, stream):
+        """
+        Helper method to set the stream attribute.
+
+        Args:
+            stream (obspy.core.stream.Stream): Stream for one station.
+        """
+        if self.stream is not None:
+            warnings.warn('Setting failed: the stream object cannot be '
+                'changed. A new instance of StationSummary must be created. ',
+                Warning)
+        else:
+            if not isinstance(stream, Stream):
+                warnings.warn('Setting failed: not a stream object.',
+                    Warning)
+            elif stream[0].stats['station'].upper() != self.station_code.upper():
+                warnings.warn('Setting failed: stream station does not match '
+                    'StationSummary.station_code.', Warning)
+            else:
+                self._stream = stream
 
     def _get_acceleration(self, stream):
         """

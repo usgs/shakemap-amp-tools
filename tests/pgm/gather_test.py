@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# stdlib imports
+import warnings
+
 # local imports
 from pgm.gather import get_pgm_classes, group_imcs
 
@@ -22,7 +25,9 @@ def test_gather():
     imcs = ['rotd0', 'roti10', 'gmrotd22', 'gmroti10',
             'rotd0invalid', 'roti10invalid', 'gmrotd22invalid',
             'gmroti10invalid', 'greater_of_two_horizontals']
-    grouping = group_imcs(imcs)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        grouping = group_imcs(imcs)
     target_dict = {
         'rotd':[
             0.0

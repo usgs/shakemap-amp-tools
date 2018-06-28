@@ -59,7 +59,6 @@ def test_all():
     HAWA_dist = 80.1893
     HAWA_tr = read(os.path.join(datadir, 'HAWABHN.US..sac'))[0]
     HAWA_processed = process.process_all(HAWA_tr, event_time, HAWA_dist)
-
     # Load in the already calculated array form processing
     HAWA_array = np.genfromtxt(os.path.join(datadir,
                                             'HAWABHN.US..sac.acc.final.txt'),

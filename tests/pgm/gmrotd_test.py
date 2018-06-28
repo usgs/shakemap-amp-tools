@@ -14,7 +14,7 @@ def test_gmrotd():
     datafile_v2 = os.path.join(homedir, '..', 'data', 'geonet',
                                '20161113_110259_WTMC_20.V2A')
     stream_v2 = read_geonet(datafile_v2)
-    station_summary = StationSummary(stream_v2,
+    station_summary = StationSummary.from_stream(stream_v2,
                                      ['gmrotd50'], ['pga'])
     station_dict = station_summary.pgms['PGA']
 
