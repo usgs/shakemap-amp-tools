@@ -58,26 +58,26 @@ def read_cwb(filename, **kwargs):
     hdr = _get_header_info(f, data)
     f.close()
 
-    hdr_hhz = hdr.copy()
-    hdr_hhz['channel'] = 'HHZ'
-    hdr_hhz['standard']['horizontal_orientation'] = np.nan
+    hdr_z = hdr.copy()
+    hdr_z['channel'] = 'Z'
+    hdr_z['standard']['horizontal_orientation'] = np.nan
 
-    hdr_hhe = hdr.copy()
-    hdr_hhe['channel'] = 'HHE'
-    hdr_hhz['standard']['horizontal_orientation'] = np.nan
+    hdr_h1 = hdr.copy()
+    hdr_h1['channel'] = 'H1'
+    hdr_h1['standard']['horizontal_orientation'] = np.nan
 
-    hdr_hhn = hdr.copy()
-    hdr_hhn['channel'] = 'HHN'
-    hdr_hhz['standard']['horizontal_orientation'] = np.nan
+    hdr_h2 = hdr.copy()
+    hdr_h2['channel'] = 'H2'
+    hdr_h2['standard']['horizontal_orientation'] = np.nan
 
-    stats_hhz = Stats(hdr_hhz)
-    stats_hhe = Stats(hdr_hhe)
-    stats_hhn = Stats(hdr_hhn)
+    stats_z = Stats(hdr_z)
+    stats_h1 = Stats(hdr_h1)
+    stats_h2 = Stats(hdr_h2)
 
-    trace_hhz = Trace(data=data[:, 1], header=stats_hhz)
-    trace_hhn = Trace(data=data[:, 2], header=stats_hhn)
-    trace_hhe = Trace(data=data[:, 3], header=stats_hhe)
-    stream = Stream([trace_hhz, trace_hhn, trace_hhe])
+    trace_z = Trace(data=data[:, 1], header=stats_z)
+    trace_h1 = Trace(data=data[:, 2], header=stats_h1)
+    trace_h2 = Trace(data=data[:, 3], header=stats_h2)
+    stream = Stream([trace_z, trace_h1, trace_h2])
     return stream
 
 
@@ -114,9 +114,9 @@ def _get_header_info(file, data):
       - source (str): Network source description
       - source_format (str): Always cwb
     - format_specific
-        - dc_offset_hhz (float)
-        - dc_offset_hhe (float)
-        - dc_offset_hhn (float)
+        - dc_offset_z (float)
+        - dc_offset_h1 (float)
+        - dc_offset_h2 (float)
 
     Args:
         file (TextIOWrapper): File object containing data
@@ -150,11 +150,11 @@ def _get_header_info(file, data):
         if line.startswith('#InstrumentKind'):
             standard['instrument'] = line.split(':')[1].strip()
         if line.startswith('#AmplitudeMAX. U:'):
-            format_specific['dc_offset_hhz'] = float(line.split('~')[1])
+            format_specific['dc_offset_z'] = float(line.split('~')[1])
         if line.startswith('#AmplitudeMAX. N:'):
-            format_specific['dc_offset_hhn'] = float(line.split('~')[1])
+            format_specific['dc_offset_h1'] = float(line.split('~')[1])
         if line.startswith('#AmplitudeMAX. E:'):
-            format_specific['dc_offset_hhe'] = float(line.split('~')[1])
+            format_specific['dc_offset_h2'] = float(line.split('~')[1])
         if line.startswith('#Data'):
             break
 
@@ -194,12 +194,12 @@ def _get_header_info(file, data):
         standard['station_name'] = ''
     if 'instrument' not in standard:
         standard['instrument'] = ''
-    if 'dc_offset_hhz' not in format_specific:
-        format_specific['dc_offset_hhz'] = np.nan
-    if 'dc_offset_hhe' not in format_specific:
-        format_specific['dc_offset_hhe'] = np.nan
-    if 'dc_offset_hhn' not in format_specific:
-        format_specific['dc_offset_hhn'] = np.nan
+    if 'dc_offset_z' not in format_specific:
+        format_specific['dc_offset_z'] = np.nan
+    if 'dc_offset_h2' not in format_specific:
+        format_specific['dc_offset_h2'] = np.nan
+    if 'dc_offset_h1' not in format_specific:
+        format_specific['dc_offset_h1'] = np.nan
     # Set dictionary
     hdr['standard'] = standard
     hdr['coordinates'] = coordinates

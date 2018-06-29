@@ -39,7 +39,7 @@ def test():
         stream = read_cwb(datafile)
         streams.append(stream)
     df, _ = streams_to_dataframe(streams)
-    pgasum = df['HHE']['PGA'].sum()
+    pgasum = df['H2']['PGA'].sum()
     np.testing.assert_almost_equal(pgasum, 1.7209452756509136)
 
     # Test for channel grouping with three unique channels

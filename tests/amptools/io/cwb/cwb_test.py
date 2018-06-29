@@ -43,9 +43,9 @@ def test():
         assert stats.standard['instrument'] == 'FBA'
         assert stats.coordinates['latitude'] == 22.860
         assert stats.coordinates['longitude'] == 121.092
-        assert stats.format_specific['dc_offset_hhz'] == -1.017
-        assert stats.format_specific['dc_offset_hhn'] == -2.931
-        assert stats.format_specific['dc_offset_hhe'] == -2.811
+        assert stats.format_specific['dc_offset_z'] == -1.017
+        assert stats.format_specific['dc_offset_h1'] == -2.931
+        assert stats.format_specific['dc_offset_h2'] == -2.811
         defaulted = ['instrument_period', 'instrument_damping',
                      'process_time', 'corner_frequency']
         for default in defaulted:
@@ -88,9 +88,9 @@ def test():
     assert str(metadata['coordinates']['latitude']) == 'nan'
     assert metadata['standard']['station_name'] == ''
     assert metadata['standard']['instrument'] == ''
-    assert str(metadata['format_specific']['dc_offset_hhz']) == 'nan'
-    assert str(metadata['format_specific']['dc_offset_hhe']) == 'nan'
-    assert str(metadata['format_specific']['dc_offset_hhn']) == 'nan'
+    assert str(metadata['format_specific']['dc_offset_z']) == 'nan'
+    assert str(metadata['format_specific']['dc_offset_h2']) == 'nan'
+    assert str(metadata['format_specific']['dc_offset_h1']) == 'nan'
 
 
 if __name__ == '__main__':
