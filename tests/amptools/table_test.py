@@ -45,33 +45,33 @@ def test_read_tables():
     try:
         complete_file = os.path.join(datadir, 'complete_pgm.xlsx')
         df_complete, _ = read_excel(complete_file)
-        np.testing.assert_almost_equal(df_complete['h1']['pga'].sum(), 569.17)
+        np.testing.assert_almost_equal(df_complete['H1']['PGA'].sum(), 569.17)
         xmlfile = os.path.join(tmpdir, 'complete_pgm.xml')
         dataframe_to_xml(df_complete, xmlfile)
 
         pgamin_file = os.path.join(datadir, 'minimum_pga.xlsx')
         df_pgamin, _ = read_excel(pgamin_file)
-        np.testing.assert_almost_equal(df_pgamin['unk']['pga'].sum(), 569.17)
+        np.testing.assert_almost_equal(df_pgamin['UNK']['PGA'].sum(), 569.17)
         xmlfile = os.path.join(tmpdir, 'minimum_pga.xml')
         dataframe_to_xml(df_pgamin, xmlfile)
 
         mmimin_file = os.path.join(datadir, 'minimum_mmi.xlsx')
         df_mmimin, _ = read_excel(mmimin_file)
         np.testing.assert_almost_equal(
-            df_mmimin['intensity'].sum(), 45.199872273516036)
+            df_mmimin['INTENSITY'].sum(), 45.199872273516036)
         xmlfile = os.path.join(tmpdir, 'minimum_mmi.xml')
         dataframe_to_xml(df_mmimin, xmlfile)
 
         missing_data_file = os.path.join(datadir, 'missing_rows.xlsx')
         df, _ = read_excel(missing_data_file)
-        assert np.isnan(df['h1']['sa(0.3)']['CHPA'])
+        assert np.isnan(df['H1']['SA(0.3)']['CHPA'])
         xmlfile = os.path.join(tmpdir, 'missing_rows.xml')
         dataframe_to_xml(df, xmlfile)
 
         sm2xml_example = os.path.join(datadir, 'sm2xml_output.xlsx')
         df, _ = read_excel(sm2xml_example)
         np.testing.assert_almost_equal(
-            df['hhz']['pga'].sum(), 150.82342541678645)
+            df['HHZ']['PGA'].sum(), 150.82342541678645)
         xmlfile = os.path.join(tmpdir, 'sm2xml_output.xml')
         dataframe_to_xml(df, xmlfile)
 

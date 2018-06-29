@@ -67,18 +67,18 @@ def read_geonet(filename, **kwargs):
     channel2 = trace2.stats['channel']
     channel3 = trace3.stats['channel']
     if channel1 == channel2:
-        if channel1 == 'HHE':
-            trace2.stats['channel'] = 'HHN'
-        elif channel1 == 'HHN':
-            trace2.stats['channel'] = 'HHE'
+        if channel1 == 'H1':
+            trace2.stats['channel'] = 'H2'
+        elif channel1 == 'H2':
+            trace2.stats['channel'] = 'H1'
         else:
             raise Exception(
                 'Could not resolve duplicate channels in %s' % trace1.stats['station'])
     if channel2 == channel3:
-        if channel2 == 'HHE':
-            trace3.stats['channel'] = 'HHN'
-        elif channel2 == 'HHN':
-            trace3.stats['channel'] = 'HHE'
+        if channel2 == 'H2':
+            trace3.stats['channel'] = 'H1'
+        elif channel2 == 'H1':
+            trace3.stats['channel'] = 'H2'
         else:
             raise Exception(
                 'Could not resolve duplicate channels in %s' % trace1.stats['station'])
@@ -313,7 +313,7 @@ def _get_channel(component):
         component (str): String like "N28E".
 
     Returns:
-        str: Channel (HHE,HHN,HHZ)
+        str: Channel (H1,H2,Z)
     """
     start_direction = component[0]
     end_direction = component[-1]

@@ -76,9 +76,9 @@ def _clean_sheet(outfile_excel, dataframe):
     # create a new sheet and paste data into it
     sheet2 = wb.create_sheet(title='PeakGroundMotions')
     # put reference in
-    refcol = 'network'
-    if 'source' in dataframe.columns:
-        refcol = 'source'
+    refcol = 'NETWORK'
+    if 'SOURCE' in dataframe.columns:
+        refcol = 'SOURCE'
     sheet2.append(['Reference', dataframe[refcol].iloc[0]])
     for row in rows:
         sheet2.append(row)

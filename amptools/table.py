@@ -9,13 +9,13 @@ import numpy as np
 from lxml import etree
 from openpyxl import load_workbook, utils
 
-REQUIRED_COLUMNS = ['station', 'lat', 'lon', 'netid']
-CHANNEL_GROUPS = [['[a-z]{2}e', '[a-z]{2}n', '[a-z]{2}z'],
-                  ['h1', 'h2', 'z'],
-                  ['unk']]
-PGM_COLS = ['pga', 'pgv', 'psa03', 'psa10', 'psa30']
-OPTIONAL = ['name', 'distance', 'reference',
-            'intensity', 'source', 'loc', 'insttype', 'elev']
+REQUIRED_COLUMNS = ['STATION', 'LAT', 'LON', 'NETID']
+CHANNEL_GROUPS = [['[A-Z]{2}E', '[A-Z]{2}N', '[A-Z]{2}Z'],
+                  ['H1', 'H2', 'Z'],
+                  ['UNK']]
+PGM_COLS = ['PGA', 'PGV', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']
+OPTIONAL = ['NAME', 'DISTANCE', 'REFERENCE',
+            'INTENSITY', 'SOURCE', 'LOC', 'INSTTYPE', 'ELEV']
 
 
 def _move(cellstr, nrows, ncols):
@@ -130,12 +130,12 @@ def read_excel(excelfile):
             # if the name column is all blanks, it's filled with NaNs by
             # default, which causes problems later on.  Replace with
             # empty strings
-            df['name'] = df['name'].fillna('')
+            df['NAME'] = df['NAME'].fillna('')
         except pd.errors.ParserError:
             raise IndexError('Input file has invalid empty first data row.')
 
-        headers = df.columns.get_level_values(0).str.lower()
-        subheaders = df.columns.get_level_values(1).str.lower()
+        headers = df.columns.get_level_values(0).str.upper()
+        subheaders = df.columns.get_level_values(1).str.upper()
         df.columns = pd.MultiIndex.from_arrays([headers, subheaders])
         top_headers = df.columns.levels[0]
     else:
@@ -143,8 +143,8 @@ def read_excel(excelfile):
         top_headers = df.columns
 
     # make sure basic columns are present
-    if 'station' not in top_headers:
-        df['station'] = df.index
+    if 'STATION' not in top_headers:
+        df['STATION'] = df.index
         top_headers = df.columns.levels[0]
     if not set(REQUIRED_COLUMNS).issubset(set(top_headers)):
         fmt = 'Input Excel file must specify the following columns: %s.'
@@ -180,7 +180,7 @@ def read_excel(excelfile):
 
     # make sure the empty cells are all nans or floats
     found = False
-    if 'intensity' in top_headers:
+    if 'INTENSITY' in top_headers:
         found = True
     empty_cell = re.compile('\s+')
     for channel in channels:
@@ -246,9 +246,9 @@ def dataframe_to_xml(df, xmlfile, reference=None):
             tmprow.index = tmprow.index.droplevel(1)
 
         # assign required columns
-        stationcode = str(tmprow['station']).strip()
+        stationcode = str(tmprow['STATION']).strip()
 
-        netid = tmprow['netid'].strip()
+        netid = tmprow['NETID'].strip()
         if not stationcode.startswith(netid):
             stationcode = '%s.%s' % (netid, stationcode)
 
@@ -263,26 +263,26 @@ def dataframe_to_xml(df, xmlfile, reference=None):
         station = etree.SubElement(stationlist, 'station')
 
         station.attrib['code'] = stationcode
-        station.attrib['lat'] = '%.4f' % tmprow['lat']
-        station.attrib['lon'] = '%.4f' % tmprow['lon']
+        station.attrib['lat'] = '%.4f' % tmprow['LAT']
+        station.attrib['lon'] = '%.4f' % tmprow['LON']
 
         # assign optional columns
         if 'name' in tmprow:
-            station.attrib['name'] = tmprow['name'].strip()
+            station.attrib['name'] = tmprow['NAME'].strip()
         if 'netid' in tmprow:
-            station.attrib['netid'] = tmprow['netid'].strip()
+            station.attrib['netid'] = tmprow['NETID'].strip()
         if 'distance' in tmprow:
-            station.attrib['dist'] = '%.1f' % tmprow['distance']
+            station.attrib['dist'] = '%.1f' % tmprow['DISTANCE']
         if 'intensity' in tmprow:
-            station.attrib['intensity'] = '%.1f' % tmprow['intensity']
+            station.attrib['intensity'] = '%.1f' % tmprow['INTENSITY']
         if 'source' in tmprow:
-            station.attrib['source'] = tmprow['source'].strip()
+            station.attrib['source'] = tmprow['SOURCE'].strip()
         if 'loc' in tmprow:
-            station.attrib['loc'] = tmprow['loc'].strip()
+            station.attrib['loc'] = tmprow['LOC'].strip()
         if 'insttype' in tmprow:
-            station.attrib['insttype'] = tmprow['insttype'].strip()
+            station.attrib['insttype'] = tmprow['INSTTYPE'].strip()
         if 'elev' in tmprow:
-            station.attrib['elev'] = '%.1f' % tmprow['elev']
+            station.attrib['elev'] = '%.1f' % tmprow['ELEV']
 
         if 'imt' not in tmprow.index:
             # sort channels by N,E,Z or H1,H2,Z
@@ -315,8 +315,8 @@ def dataframe_to_xml(df, xmlfile, reference=None):
         else:
             # this file was created by a process that has imt/value columns
             # search the dataframe for all rows with this same station code
-            scode = tmprow['station']
-            station_rows = df[df['station'] == scode]
+            scode = tmprow['STATION']
+            station_rows = df[df['STATION'] == scode]
 
             # now we need to find all of the channels
             channels = station_rows['channel'].unique()
@@ -341,12 +341,12 @@ def dataframe_to_xml(df, xmlfile, reference=None):
 def _translate_imt(oldimt):
     # translate from psa03 to sa(0.3)
     if oldimt.upper() in ['PGA', 'PGV']:
-        newimt = oldimt.lower()
+        newimt = oldimt.upper()
     else:
         match = re.search(r'\d+', oldimt)
         if match is not None:
             period = float(match.group())
-            newimt = 'sa(%.1f)' % (period/10)
+            newimt = 'SA(%.1f)' % (period/10)
         else:
             newimt = ''
     return newimt

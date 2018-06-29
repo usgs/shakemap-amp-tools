@@ -125,14 +125,14 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
             in table.
     Returns:
         DataFrame: Pandas dataframe containing columns:
-            - station Station code.
-            - name Text description of station.
-            - location Two character location code.
-            - source Long form string containing source network.
-            - network Short network code.
-            - lat Station latitude
-            - lon Station longitude
-            - distance Epicentral distance (km) (if epicentral lat/lon provided)
+            - STATION Station code.
+            - NAME Text description of station.
+            - LOCATION Two character location code.
+            - SOURCE Long form string containing source network.
+            - NETWORK Short network code.
+            - LAT Station latitude
+            - LON Station longitude
+            - DISTANCE Epicentral distance (km) (if epicentral lat/lon provided)
             - HHE East-west channel (or H1) (multi-index with pgm columns):
                 - PGA Peak ground acceleration (%g).
                 - PGV Peak ground velocity (cm/s).
@@ -163,7 +163,7 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
             warnings.warn(fmt % (str(invalid)), Warning)
 
     # top level columns
-    columns = ['station', 'name', 'source', 'netid', 'lat', 'lon']
+    columns = ['STATION', 'NAME', 'SOURCE', 'NETID', 'LAT', 'LON']
 
     if lat is not None and lon is not None:
         columns.append('distance')
@@ -209,12 +209,12 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
     dataframe = pd.DataFrame(columns=dfcolumns)
 
     # make sure we set the data types of all of the columns
-    dtypes = {'station': str,
-              'name': str,
-              'source': str,
-              'netid': str,
-              'lat': np.float64,
-              'lon': np.float64}
+    dtypes = {'STATION': str,
+              'NAME': str,
+              'SOURCE': str,
+              'NETID': str,
+              'LAT': np.float64,
+              'LON': np.float64}
 
     if lat is not None:
         dtypes.update({'distance': np.float64})
@@ -234,33 +234,33 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
     spectral_streams = []
     for stream in streams:
         for key in meta_dict.keys():
-            if key == 'name':
+            if key == 'NAME':
                 try:
                     name_str = stream[0].stats['standard']['station_name']
                 except KeyError:
                     name_str = stream[0].stats['name']
                 meta_dict[key].append(name_str)
-            elif key == 'lat':
+            elif key == 'LAT':
                 try:
                     latitude = stream[0].stats['coordinates']['latitude']
                 except KeyError:
                     latitude = stream[0].stats['lat']
                 meta_dict[key].append(latitude)
-            elif key == 'lon':
+            elif key == 'LON':
                 try:
                     longitude = stream[0].stats['coordinates']['longitude']
                 except KeyError:
                     longitude = stream[0].stats['lon']
                 meta_dict[key].append(longitude)
-            elif key == 'station':
+            elif key == 'STATION':
                 meta_dict[key].append(stream[0].stats['station'])
-            elif key == 'source':
+            elif key == 'SOURCE':
                 try:
                     source = stream[0].stats.standard['source']
                 except Exception:
                     source = stream[0].stats['source']
                 meta_dict[key].append(source)
-            elif key == 'netid':
+            elif key == 'NETID':
                 meta_dict[key].append(stream[0].stats['network'])
             else:
                 pass
@@ -269,7 +269,7 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
             dist, _, _ = gps2dist_azimuth(lat, lon,
                                           latitude,
                                           longitude)
-            meta_dict['distance'].append(dist/1000)
+            meta_dict['DISTANCE'].append(dist/1000)
 
         spectral_traces = []
         # process acceleration and store velocity traces
@@ -293,7 +293,7 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
             elif trace.stats['units'] == 'vel':
                 # we only have a velocity channel
                 pgv = np.abs(trace.max())
-                channel_dicts[channel]['pgv'].append(pgv)
+                channel_dicts[channel]['PGV'].append(pgv)
         # get station summary and assign values
         station = StationSummary.from_stream(stream, ['channels'],
                                  imtlist)
