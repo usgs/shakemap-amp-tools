@@ -54,7 +54,7 @@ def test_dmg():
         assert stats['station'] == '89146'
         assert stats['delta'] == .005000
         assert stats['location'] == '--'
-        assert stats['network'] == '--'
+        assert stats['network'] == 'ZZ'
         dt = '%Y-%m-%dT%H:%M:%SZ'
         assert stats['starttime'].strftime(dt) == '2012-02-13T21:06:45Z'
         assert stats.coordinates['latitude'] == 40.941

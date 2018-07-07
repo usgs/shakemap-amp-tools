@@ -21,9 +21,9 @@ def test_spectral():
     stream_v2 = read_geonet(datafile_v2)
     df2, _ = streams_to_dataframe([stream_v2])
 
-    assert df2['H1']['SA(0.3)'].iloc[0]/323.8532 >= 0.95
-    assert df2['H1']['SA(1.0)'].iloc[0]/136.6972 >= 0.95
-    assert df2['H1']['SA(3.0)'].iloc[0]/17.9511 >= 0.95
+    assert df2['HN1']['SA(0.3)'].iloc[0]/323.8532 >= 0.95
+    assert df2['HN1']['SA(1.0)'].iloc[0]/136.6972 >= 0.95
+    assert df2['HN1']['SA(3.0)'].iloc[0]/17.9511 >= 0.95
 
     # Lat, Lon, Station, Channel, Accmax(%g), Velmax(cm/s), psa03 (%g), psa10 (%g), psa30 (%g),Abs pgamax (%g)
     # -42.619,173.054, WTMC, N28W,-112.3823,-101.655,323.8532,136.6972,17.9511,112.3823
@@ -39,7 +39,7 @@ def test():
         stream = read_cwb(datafile)
         streams.append(stream)
     df, _ = streams_to_dataframe(streams)
-    pgasum = df['H2']['PGA'].sum()
+    pgasum = df['BN2']['PGA'].sum()
     np.testing.assert_almost_equal(pgasum, 1.7209452756509136)
 
     # Test for channel grouping with three unique channels

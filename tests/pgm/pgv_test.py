@@ -26,12 +26,13 @@ def test_pgv():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         station_summary = StationSummary.from_stream(stream_v2,
-                ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
-                ['pgv', 'sa1.0', 'saincorrect'])
+                                                     ['channels', 'greater_of_two_horizontals',
+                                                         'gmrotd50'],
+                                                     ['pgv', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGV']
-    np.testing.assert_almost_equal(station_dict['H2'], pgv_target['H2'])
-    np.testing.assert_almost_equal(station_dict['H1'], pgv_target['H1'])
-    np.testing.assert_almost_equal(station_dict['Z'], pgv_target['Z'])
+    np.testing.assert_almost_equal(station_dict['HN2'], pgv_target['HN2'])
+    np.testing.assert_almost_equal(station_dict['HN1'], pgv_target['HN1'])
+    np.testing.assert_almost_equal(station_dict['HNZ'], pgv_target['HNZ'])
 
 
 if __name__ == '__main__':

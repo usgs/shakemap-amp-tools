@@ -8,6 +8,8 @@ from obspy.core.trace import Trace
 from obspy.core.trace import Stats
 from obspy.core.stream import Stream
 
+# local imports
+from amptools.io.seedname import get_channel_name
 
 DATE_FMT = '%Y/%m/%d-%H:%M:%S.%f'
 
@@ -59,15 +61,24 @@ def read_cwb(filename, **kwargs):
     f.close()
 
     hdr_z = hdr.copy()
-    hdr_z['channel'] = 'Z'
+    hdr_z['channel'] = get_channel_name(hdr['sampling_rate'],
+                                        is_acceleration=True,
+                                        is_vertical=True,
+                                        is_north=False)
     hdr_z['standard']['horizontal_orientation'] = np.nan
 
     hdr_h1 = hdr.copy()
-    hdr_h1['channel'] = 'H1'
+    hdr_h1['channel'] = get_channel_name(hdr['sampling_rate'],
+                                         is_acceleration=True,
+                                         is_vertical=False,
+                                         is_north=True)
     hdr_h1['standard']['horizontal_orientation'] = np.nan
 
     hdr_h2 = hdr.copy()
-    hdr_h2['channel'] = 'H2'
+    hdr_h2['channel'] = get_channel_name(hdr['sampling_rate'],
+                                         is_acceleration=True,
+                                         is_vertical=False,
+                                         is_north=False)
     hdr_h2['standard']['horizontal_orientation'] = np.nan
 
     stats_z = Stats(hdr_z)
@@ -85,7 +96,7 @@ def _get_header_info(file, data):
     """Return stats structure from various headers.
 
     Output is a dictionary like this:
-     - network (str): Always CWB
+     - network (str): Always TW
      - station (str)
      - channel (str)
      - location (str): Default is '--'
@@ -162,7 +173,7 @@ def _get_header_info(file, data):
     hdr['starttime'] = hdr['starttime'] - timedelta(seconds=GMT_OFFSET)
     nrows, _ = data.shape
     # Add some optional information to the header
-    hdr['network'] = 'CWB'
+    hdr['network'] = 'TW'
     hdr['delta'] = 1 / hdr['sampling_rate']
     hdr['calib'] = 1.0
     standard['units'] = 'acc'  # cm/s**2
@@ -187,7 +198,7 @@ def _get_header_info(file, data):
     standard['comments'] = ''
     standard['structure_type'] = ''
     standard['corner_frequency'] = np.nan
-    standard['source'] = 'Taiwan Strong Motion Instrumentation Program' + \
+    standard['source'] = 'Taiwan Strong Motion Instrumentation Program ' + \
         'via Central Weather Bureau'
     standard['source_format'] = 'cwb'
     if 'station_name' not in standard:

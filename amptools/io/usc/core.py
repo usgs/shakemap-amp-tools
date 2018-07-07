@@ -10,7 +10,7 @@ from obspy.core.stream import Stream
 
 # local imports
 from amptools.exception import AmptoolsException
-
+from amptools.io.seedname import get_channel_name
 
 VOLUMES = {
     'V1': {
@@ -157,7 +157,7 @@ def _get_header_info(int_data, flt_data, lines, volume):
     """Return stats structure from various headers.
 
     Output is a dictionary like this:
-     - network (str): Default is '--'. Determined using COSMOS_NETWORKS
+     - network (str): 'LA'
      - station (str)
      - channel (str): Determined using COSMOS_ORIENTATIONS
      - location (str): Default is '--'
@@ -201,41 +201,44 @@ def _get_header_info(int_data, flt_data, lines, volume):
     standard = {}
     format_specific = {}
     if volume == 'V1':
+        hdr['duration'] = flt_data[2]
+        hdr['npts'] = int_data[27]
+        hdr['sampling_rate'] = hdr['npts'] / hdr['duration']
+
         # Get required parameter number
         hdr['network'] = 'LA'
         hdr['station'] = int_data[8]
         horizontal_angle = int_data[26]
-        if horizontal_angle in USC_ORIENTATIONS or (horizontal_angle >= 0 and horizontal_angle <= 360):
+        if (horizontal_angle in USC_ORIENTATIONS or
+                (horizontal_angle >= 0 and horizontal_angle <= 360)):
             if horizontal_angle in USC_ORIENTATIONS:
                 channel = USC_ORIENTATIONS[horizontal_angle][1].upper()
                 if channel == 'UP' or channel == 'DOWN' or channel == 'VERT':
-                    channel = 'Z'
-            elif horizontal_angle >= 0 and horizontal_angle <= 360:
-                if horizontal_angle == 0 or horizontal_angle == 360:
-                    channel = 'N'
-                elif horizontal_angle == 90:
-                    channel = 'E'
-                elif horizontal_angle == 180:
-                    channel = 'S'
-                elif horizontal_angle == 270:
-                    channel = 'W'
-                elif (
-                    horizontal_angle > 315 or
-                    horizontal_angle < 45 or
-                    (horizontal_angle > 135 and horizontal_angle < 225)
-                ):
-                    channel = 'H1'
-                else:
-                    channel = 'H2'
+                    channel = get_channel_name(hdr['sampling_rate'],
+                                               is_acceleration=True,
+                                               is_vertical=True,
+                                               is_north=False)
+            elif (
+                horizontal_angle > 315 or
+                horizontal_angle < 45 or
+                (horizontal_angle > 135 and horizontal_angle < 225)
+            ):
+                channel = get_channel_name(hdr['sampling_rate'],
+                                           is_acceleration=True,
+                                           is_vertical=False,
+                                           is_north=True)
+            else:
+                channel = get_channel_name(hdr['sampling_rate'],
+                                           is_acceleration=True,
+                                           is_vertical=False,
+                                           is_north=False)
             horizontal_orientation = horizontal_angle
             hdr['channel'] = channel
         else:
-            warnings.warn("Missing channel orientation. Setting channel to "
-                          "file number. Setting horizontal_orientation to "
-                          "np.nan.", Warning)
-            horizontal_orientation = np.nan
-            # Recorder channel number
-            hdr['channel'] = int_data[0]
+            errstr = ('Not enough information to distinguish horizontal from '
+                      'vertical channels.')
+            raise AmptoolsException(errstr)
+
         hdr['location'] = '--'
         month = str(int_data[21])
         day = str(int_data[22])
@@ -244,9 +247,7 @@ def _get_header_info(int_data, flt_data, lines, volume):
         tstr = month + '/' + day + '/' + year + '_' + time
         starttime = datetime.strptime(tstr, '%m/%d/%Y_%H%M')
         hdr['starttime'] = starttime
-        hdr['duration'] = flt_data[2]
-        hdr['npts'] = int_data[27]
-        hdr['sampling_rate'] = hdr['npts'] / hdr['duration']
+
         # Get coordinates
         lat_deg = int_data[9]
         lat_min = int_data[10]

@@ -8,19 +8,21 @@ import numpy as np
 from amptools.io.usc.core import is_usc, read_usc
 from amptools.stream import group_channels
 
+
 def test_usc():
-    homedir = os.path.dirname(os.path.abspath(__file__)) #where is this script?
+    homedir = os.path.dirname(os.path.abspath(
+        __file__))  # where is this script?
     datadir = os.path.join(homedir, '..', '..', '..', 'data', 'usc')
 
     files = {
-            '017m30cc.y0a': (-.049, .086),
-            '017m30lw.e0a': (.046, .004),
-            '017m30lw.e0b': (.099, .004),
-            '017m30lw.e0c': (-.006, .025),
-            '017m30lw.s0a': (-.005, .014),
-            '017m30lw.s0b': (.066, -.029),
-            '017m30lw.s0c': (-.026, -.018)
-            }
+        '017m30cc.y0a': (-.049, .086),
+        '017m30lw.e0a': (.046, .004),
+        '017m30lw.e0b': (.099, .004),
+        '017m30lw.e0c': (-.006, .025),
+        '017m30lw.s0a': (-.005, .014),
+        '017m30lw.s0b': (.066, -.029),
+        '017m30lw.s0c': (-.026, -.018)
+    }
 
     streams = []
     for tfilename, accvals in files.items():
@@ -49,7 +51,7 @@ def test_usc():
     stats = meta_stream[0].stats
     assert stats['network'] == 'LA'
     assert stats['station'] == 57
-    assert stats['channel'] == 'N'
+    assert stats['channel'] == 'HN1'
     assert stats['location'] == '--'
     dt = '%Y-%m-%dT%H:%M:%SZ'
     assert stats['starttime'].strftime(dt) == '1994-01-17T12:30:00Z'

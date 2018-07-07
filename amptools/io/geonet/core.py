@@ -10,6 +10,9 @@ from obspy.core.stream import Stream
 from obspy.core.trace import Stats
 import numpy as np
 
+# local imports
+from amptools.io.seedname import get_channel_name
+
 TIMEFMT = '%Y-%m-%dT%H:%M:%S'
 NZCATWINDOW = 5 * 60  # number of seconds to search around in GeoNet EQ catalog
 
@@ -67,18 +70,18 @@ def read_geonet(filename, **kwargs):
     channel2 = trace2.stats['channel']
     channel3 = trace3.stats['channel']
     if channel1 == channel2:
-        if channel1 == 'H1':
-            trace2.stats['channel'] = 'H2'
-        elif channel1 == 'H2':
-            trace2.stats['channel'] = 'H1'
+        if channel1.endswith('1'):
+            trace2.stats['channel'] = trace2.stats['channel'][0:2]+'2'
+        elif channel1.endswith('2'):
+            trace2.stats['channel'] = trace2.stats['channel'][0:2]+'1'
         else:
             raise Exception(
                 'Could not resolve duplicate channels in %s' % trace1.stats['station'])
     if channel2 == channel3:
-        if channel2 == 'H2':
-            trace3.stats['channel'] = 'H1'
-        elif channel2 == 'H1':
-            trace3.stats['channel'] = 'H2'
+        if channel2.endswith('2'):
+            trace3.stats['channel'] = trace2.stats['channel'][0:2]+'1'
+        elif channel2endswith('1'):
+            trace3.stats['channel'] = trace2.stats['channel'][0:2]+'2'
         else:
             raise Exception(
                 'Could not resolve duplicate channels in %s' % trace1.stats['station'])
@@ -205,7 +208,7 @@ def _read_header(hdr_data, station, name, component, data_format, instrument, re
         component (str): Component direction (N18E, S72W, etc.)
     Returns:
         Dictionary containing fields:
-            - network "GNS"
+            - network "NZ"
             - station
             - channel H1,H2,or Z.
             - location
@@ -245,23 +248,41 @@ def _read_header(hdr_data, station, name, component, data_format, instrument, re
     standard['station_name'] = name
     if data_format == 'V1':
         hdr['sampling_rate'] = hdr_data[4, 0]
+        sampling_rate = hdr['sampling_rate']
         hdr['delta'] = 1 / hdr['sampling_rate']
     else:
         hdr['delta'] = hdr_data[6, 5]
         hdr['sampling_rate'] = 1 / hdr['delta']
+        # V2 files have been resampled, we need sensor rate for
+        # channel naming.
+        sampling_rate = 1/hdr_data[6, 4]
     hdr['calib'] = 1.0
     if data_format == 'V1':
         hdr['npts'] = int(hdr_data[3, 0])
     else:
         hdr['npts'] = int(hdr_data[3, 3])
-    hdr['network'] = 'GNS'
+    hdr['network'] = 'NZ'
     standard['units'] = 'acc'
-    standard['source'] = 'New Zealand Institute of Geological and Nuclear Science'
+    standard['source'] = ('New Zealand Institute of Geological and '
+                          'Nuclear Science')
     if component == 'Up':
-        hdr['channel'] = 'Z'
+        hdr['channel'] = get_channel_name(sampling_rate,
+                                          is_acceleration=True,
+                                          is_vertical=True,
+                                          is_north=False)
     else:
-        hdr['channel'], standard['horizontal_orientation'] = _get_channel(
-            component)
+        _, angle = _get_channel(component)
+        standard['horizontal_orientation'] = angle
+        if (angle > 315 or angle < 45) or (angle > 135 and angle < 225):
+            hdr['channel'] = get_channel_name(sampling_rate,
+                                              is_acceleration=True,
+                                              is_vertical=False,
+                                              is_north=True)
+        else:
+            hdr['channel'] = get_channel_name(sampling_rate,
+                                              is_acceleration=True,
+                                              is_vertical=False,
+                                              is_north=False)
 
     hdr['location'] = '--'
 
@@ -328,7 +349,9 @@ def _get_channel(component):
             comp_angle = 180 - angle
         else:
             comp_angle = 180 + angle
-    if comp_angle > 315 or comp_angle < 45 or comp_angle > 135 and comp_angle < 225:
+    c1 = comp_angle > 315 or comp_angle < 45
+    c2 = comp_angle > 135 and comp_angle < 225
+    if c1 or c2:
         channel = 'H1'
     else:
         channel = 'H2'

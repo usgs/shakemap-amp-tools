@@ -267,21 +267,21 @@ def dataframe_to_xml(df, xmlfile, reference=None):
         station.attrib['lon'] = '%.4f' % tmprow['LON']
 
         # assign optional columns
-        if 'name' in tmprow:
+        if 'NAME' in tmprow:
             station.attrib['name'] = tmprow['NAME'].strip()
-        if 'netid' in tmprow:
+        if 'NETID' in tmprow:
             station.attrib['netid'] = tmprow['NETID'].strip()
-        if 'distance' in tmprow:
+        if 'DISTANCE' in tmprow:
             station.attrib['dist'] = '%.1f' % tmprow['DISTANCE']
-        if 'intensity' in tmprow:
+        if 'INTENSITY' in tmprow:
             station.attrib['intensity'] = '%.1f' % tmprow['INTENSITY']
-        if 'source' in tmprow:
+        if 'SOURCE' in tmprow:
             station.attrib['source'] = tmprow['SOURCE'].strip()
-        if 'loc' in tmprow:
+        if 'LOC' in tmprow:
             station.attrib['loc'] = tmprow['LOC'].strip()
-        if 'insttype' in tmprow:
+        if 'INSTTYPE' in tmprow:
             station.attrib['insttype'] = tmprow['INSTTYPE'].strip()
-        if 'elev' in tmprow:
+        if 'ELEV' in tmprow:
             station.attrib['elev'] = '%.1f' % tmprow['ELEV']
 
         if 'imt' not in tmprow.index:
@@ -291,6 +291,12 @@ def dataframe_to_xml(df, xmlfile, reference=None):
             for channel in channels:
                 component = etree.SubElement(station, 'comp')
                 component.attrib['name'] = channel.upper()
+
+                # figure out if channel is horizontal or vertical
+                if channel[-1] in ['1', '2', 'E', 'N']:
+                    component.attrib['orientation'] = 'h'
+                else:
+                    component.attrib['orientation'] = 'z'
 
                 # create sub elements out of any of the PGMs
                 # this is extra confusing because we're trying to
