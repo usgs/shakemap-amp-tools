@@ -282,6 +282,7 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
             if units == 'acc':
                 # do some basic data processing - if this has already been
                 # done, it shouldn't hurt to repeat it.
+                #TODO Check if data was processed/use new process routine
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     stream[idx] = filter_detrend(trace, taper_type='cosine',

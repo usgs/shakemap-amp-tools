@@ -16,24 +16,12 @@ import yaml
 
 # local imports
 from amptools.table import dataframe_to_xml
-from amptools.stream import streams_to_dataframe, group_channels, DEFAULT_IMTS
+from amptools.stream import streams_to_dataframe, group_channels
 from amptools.io.read import read_data, _get_format
+from amptools.config import get_config
 
 FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc', 'dmg', 'obspy']
 DEFAULT_DISTANCE = 1500
-
-CONFIG_FILE = '.amptools/config.yml'
-
-
-def get_config():
-    config_file = os.path.join(os.path.expanduser('~'), CONFIG_FILE)
-    if not os.path.isfile(config_file):
-        config = {'sm2xml': {'imtlist': DEFAULT_IMTS}}
-        fmt = 'Missing config file %s, setting IMT list to %s.'
-        print(fmt % (config_file, DEFAULT_IMTS))
-    else:
-        config = yaml.load(open(config_file, 'rt'))
-    return config
 
 
 def _clean_sheet(outfile_excel, dataframe):
@@ -114,7 +102,6 @@ def main(args):
     indir = args.indir
     eventid = args.eventid
     outdir = args.outdir
-
     config = get_config()
 
     # make the output directory if it does not exist
