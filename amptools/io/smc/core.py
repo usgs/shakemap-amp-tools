@@ -8,6 +8,9 @@ from obspy.core.trace import Trace
 from obspy.core.stream import Stream
 import numpy as np
 
+# local imports
+from amptools.io.seedname import get_channel_name
+
 ASCII_HEADER_LINES = 11
 INTEGER_HEADER_LINES = 6
 FLOAT_HEADER_LINES = 10
@@ -216,7 +219,7 @@ def _get_header_info(filename, any_structure=False):
     # most of the time it seems has has USGS in it
     # sometimes it's something like JPL/USGS, CDOT/USGS, etc.
     # if it's got USGS in it, let's just say network=US, otherwise "--"
-    stats['network'] = '--'
+    stats['network'] = 'ZZ'
     if ascheader[7].find('USGS') > -1:
         stats['network'] = 'US'
 
@@ -257,19 +260,6 @@ def _get_header_info(filename, any_structure=False):
     standard['horizontal_orientation'] = np.nan
     if intheader[1, 5] != missing_data:
         standard['horizontal_orientation'] = intheader[1, 5]
-
-    # figure out the channel code
-    if format_specific['vertical_orientation'] in [0, 180]:
-        stats['channel'] = 'Z'
-    else:
-        ho = standard['horizontal_orientation']
-        quad1 = ho > 315 and ho <= 360
-        quad2 = ho > 0 and ho <= 45
-        quad3 = ho > 135 and ho <= 225
-        if quad1 or quad2 or quad3:
-            stats['channel'] = 'H1'
-        else:
-            stats['channel'] = 'H2'
 
     if intheader[1, 6] == missing_data:
         standard['instrument'] = ''
@@ -336,6 +326,28 @@ def _get_header_info(filename, any_structure=False):
     coordinates['elevation'] = 0
     if floatheader[2, 2] != missing_data:
         coordinates['elevation'] = floatheader[2, 2]
+
+    # figure out the channel code
+    if format_specific['vertical_orientation'] in [0, 180]:
+        stats['channel'] = get_channel_name(stats['sampling_rate'],
+                                            is_acceleration=True,
+                                            is_vertical=True,
+                                            is_north=False)
+    else:
+        ho = standard['horizontal_orientation']
+        quad1 = ho > 315 and ho <= 360
+        quad2 = ho > 0 and ho <= 45
+        quad3 = ho > 135 and ho <= 225
+        if quad1 or quad2 or quad3:
+            stats['channel'] = get_channel_name(stats['sampling_rate'],
+                                                is_acceleration=True,
+                                                is_vertical=False,
+                                                is_north=True)
+        else:
+            stats['channel'] = get_channel_name(stats['sampling_rate'],
+                                                is_acceleration=True,
+                                                is_vertical=False,
+                                                is_north=False)
 
     # we never get a two character location code
     stats['location'] = '--'

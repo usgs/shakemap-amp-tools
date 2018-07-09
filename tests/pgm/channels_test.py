@@ -18,11 +18,11 @@ def test_channels():
                                '20161113_110259_WTMC_20.V2A')
     stream_v2 = read_geonet(datafile_v2)
     station_summary = StationSummary.from_stream(stream_v2,
-            ['channels'], ['pga'])
+                                                 ['channels'], ['pga'])
     station_dict = station_summary.pgms['PGA']
-    np.testing.assert_almost_equal(station_dict['H2'], 81.28979591836733)
-    np.testing.assert_almost_equal(station_dict['H1'], 99.3173469387755)
-    np.testing.assert_almost_equal(station_dict['Z'], 183.89693877551022)
+    np.testing.assert_almost_equal(station_dict['HN2'], 81.28979591836733)
+    np.testing.assert_almost_equal(station_dict['HN1'], 99.3173469387755)
+    np.testing.assert_almost_equal(station_dict['HNZ'], 183.89693877551022)
 
 
 if __name__ == '__main__':

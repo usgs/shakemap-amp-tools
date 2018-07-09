@@ -11,6 +11,9 @@ from obspy.core.stream import Stream
 from obspy.core.trace import Stats
 import numpy as np
 
+# local imports
+from amptools.io.seedname import get_channel_name
+
 TEXT_HDR_ROWS = 17
 TIMEFMT = '%Y/%m/%d %H:%M:%S'
 COLS_PER_LINE = 8
@@ -85,11 +88,20 @@ def read_knet(filename):
     standard['units'] = 'acc'
 
     if lines[12].split()[1] == 'N-S':
-        hdr['channel'] = 'H1'
+        hdr['channel'] = get_channel_name(hdr['sampling_rate'],
+                                          is_acceleration=True,
+                                          is_vertical=False,
+                                          is_north=True)
     elif lines[12].split()[1] == 'E-W':
-        hdr['channel'] = 'H2'
+        hdr['channel'] = get_channel_name(hdr['sampling_rate'],
+                                          is_acceleration=True,
+                                          is_vertical=False,
+                                          is_north=False)
     elif lines[12].split()[1] == 'U-D':
-        hdr['channel'] = 'Z'
+        hdr['channel'] = get_channel_name(hdr['sampling_rate'],
+                                          is_acceleration=True,
+                                          is_vertical=True,
+                                          is_north=False)
     else:
         raise Exception('Could not parse direction %s' %
                         lines[12].split()[1])

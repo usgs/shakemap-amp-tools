@@ -153,7 +153,7 @@ def test_sm2xml():
     target_source = 'New Zealand Institute of Geological and Nuclear Science'
     for idx in range(3, len(columns['Unnamed: 2'])):
         assert columns['Unnamed: 2'][idx] == target_source
-    target_network = 'GNS'
+    target_network = 'NZ'
     for idx in range(3, len(columns['Unnamed: 3'])):
         assert columns['Unnamed: 3'][idx] == target_network
     target_latitudes = np.asarray([-41.38055556, -41.47666667,

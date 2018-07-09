@@ -14,6 +14,7 @@ from obspy.core.trace import Stats
 
 # local imports
 from amptools.exception import AmptoolsException
+from amptools.io.seedname import get_channel_name
 
 TEXT_HDR_ROWS = 14
 VALID_MARKERS = ['CORRECTED ACCELERATION',
@@ -342,48 +343,49 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
             source = SOURCES1[idx].decode(
                 'utf-8') + ', ' + SOURCES2[idx].decode('utf-8')
         else:
-            network = '--'
+            network = 'ZZ'
             source = ''
     hdr['network'] = network
     hdr['station'] = lines[4][28:34].strip()
     horizontal_angle = int_data[53]
+
+    # Store delta and duration. Use them to calculate npts and sampling_rate
+    delta = flt_data[33]
+    if delta != unknown:
+        hdr['delta'] = delta
+        hdr['sampling_rate'] = 1 / delta
+
     # Determine the angle based upon the cosmos table
     # Set horizontal angles other than N,S,E,W to H1 and H2
-    # Miswing angle results in the channel number
+    # Missing angle results in the channel number
     if horizontal_angle != unknown:
         if horizontal_angle in COSMOS_ORIENTATIONS:
             channel = COSMOS_ORIENTATIONS[horizontal_angle][1].upper()
             if channel == 'UP' or channel == 'DOWN' or channel == 'VERT':
-                channel = 'Z'
+                channel = get_channel_name(hdr['sampling_rate'],
+                                           is_acceleration=True,
+                                           is_vertical=True,
+                                           is_north=False)
         elif horizontal_angle >= 0 and horizontal_angle <= 360:
-            if horizontal_angle == 0 or horizontal_angle == 360:
-                channel = 'N'
-            elif horizontal_angle == 90:
-                channel = 'E'
-            elif horizontal_angle == 180:
-                channel = 'S'
-            elif horizontal_angle == 270:
-                channel = 'W'
-            elif (
+            if (
                 horizontal_angle > 315 or
                 horizontal_angle < 45 or
                 (horizontal_angle > 135 and horizontal_angle < 225)
             ):
-                channel = 'H1'
+                channel = get_channel_name(hdr['sampling_rate'],
+                                           is_acceleration=True,
+                                           is_vertical=False,
+                                           is_north=True)
             else:
-                channel = 'H2'
+                channel = get_channel_name(hdr['sampling_rate'],
+                                           is_acceleration=True,
+                                           is_vertical=False,
+                                           is_north=False)
         horizontal_orientation = horizontal_angle
     else:
-        warnings.warn('Missing channel orientation. Setting channel to '
-                      'channel number. Setting horizontal_orientation to '
-                      'np.nan.', Warning)
-        horizontal_orientation = np.nan
-        try:
-            # Recorder channel number
-            channel = int(lines[8][32:35])
-        except ValueError:
-            # Station channel number
-            channel = int_data[49]
+        errstr = ('Not enough information to distinguish horizontal from '
+                  'vertical channels.')
+        raise AmptoolsException(errstr)
     hdr['channel'] = channel
     location = '--'
     hdr['location'] = location
@@ -409,11 +411,7 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
                 year, month, day, hour, minute, int(second), microsecond)
         except Exception:
             raise AmptoolsException('Inadequate start time information.')
-    # Store delta and duration. Use them to calculate npts and sampling_rate
-    delta = flt_data[33]
-    if delta != unknown:
-        hdr['delta'] = delta
-        hdr['sampling_rate'] = 1 / delta
+
     duration = flt_data[34]
     if duration != unknown:
         hdr['duration'] = duration

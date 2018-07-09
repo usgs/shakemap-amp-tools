@@ -21,13 +21,14 @@ def test_pga():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         station_summary = StationSummary.from_stream(stream_v2,
-                ['channels', 'greater_of_two_horizontals', 'gmrotd50'],
-                ['pga', 'sa1.0', 'saincorrect'])
+                                                     ['channels', 'greater_of_two_horizontals',
+                                                         'gmrotd50'],
+                                                     ['pga', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGA']
     greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
-    np.testing.assert_almost_equal(station_dict['H2'], 81.28979591836733)
-    np.testing.assert_almost_equal(station_dict['H1'], 99.3173469387755)
-    np.testing.assert_almost_equal(station_dict['Z'], 183.89693877551022)
+    np.testing.assert_almost_equal(station_dict['HN2'], 81.28979591836733)
+    np.testing.assert_almost_equal(station_dict['HN1'], 99.3173469387755)
+    np.testing.assert_almost_equal(station_dict['HNZ'], 183.89693877551022)
     np.testing.assert_almost_equal(greater, 99.3173469387755)
 
 

@@ -15,6 +15,7 @@ import numpy as np
 # local imports
 from amptools.exception import AmptoolsException
 from amptools.io.usc.core import is_usc
+from amptools.io.seedname import get_channel_name
 
 V2_TEXT_HDR_ROWS = 25
 V2_INT_HDR_ROWS = 7
@@ -200,7 +201,7 @@ def _get_header_info(int_data, flt_data, lines, level):
     """Return stats structure from various headers.
 
     Output is a dictionary like this:
-     - network (str): Default is '--'. Determined using COSMOS_NETWORKS
+     - network (str): Default is 'ZZ'. Determined using COSMOS_NETWORKS
      - station (str)
      - channel (str)
      - location (str): Default is '--'
@@ -262,27 +263,38 @@ def _get_header_info(int_data, flt_data, lines, level):
         source = SOURCES1[idx].decode(
             'utf-8') + ', ' + SOURCES2[idx].decode('utf-8')
     else:
-        network = '--'
+        network = 'ZZ'
         source = ''
     hdr['network'] = network
     station_line = lines[5]
     station = station_line[12:17].strip()
     hdr['station'] = station
     angle = int_data[26]
+
+    hdr['delta'] = flt_data[60]
+    hdr['sampling_rate'] = 1 / hdr['delta']
+
     if angle == 500 or angle == 600 or (angle >= 0 and angle <= 360):
         if angle == 500 or angle == 600:
-            hdr['channel'] = 'Z'
+            hdr['channel'] = get_channel_name(hdr['sampling_rate'],
+                                              is_acceleration=True,
+                                              is_vertical=True,
+                                              is_north=False)
         elif angle > 315 or angle < 45 or (angle > 135 and angle < 225):
-            hdr['channel'] = 'H1'
+            hdr['channel'] = get_channel_name(hdr['sampling_rate'],
+                                              is_acceleration=True,
+                                              is_vertical=False,
+                                              is_north=True)
         else:
-            hdr['channel'] = 'H2'
+            hdr['channel'] = get_channel_name(hdr['sampling_rate'],
+                                              is_acceleration=True,
+                                              is_vertical=False,
+                                              is_north=False)
     else:
-        warnings.warn('Missing channel orientation. Setting channel to '
-                      'channel number. Setting horizontal_orientation to '
-                      'np.nan.', Warning)
-        angle = np.nan
-        # Recorder channel number
-        hdr['channel'] = int_data[0]
+        errstr = ('Not enough information to distinguish horizontal from '
+                  'vertical channels.')
+        raise AmptoolsException(errstr)
+
     hdr['location'] = '--'
     trigger_line = lines[4][35:77]
     starttime_message = "Start time must be specified with " + \
@@ -324,8 +336,7 @@ def _get_header_info(int_data, flt_data, lines, level):
                 raise AmptoolsException(starttime_message)
     else:
         raise AmptoolsException(starttime_message)
-    hdr['delta'] = flt_data[60]
-    hdr['sampling_rate'] = 1 / hdr['delta']
+
     hdr['npts'] = int_data[52]
 
     # Coordinates
