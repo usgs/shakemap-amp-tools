@@ -9,6 +9,12 @@ from obspy.signal.util import next_pow_2
 from obspy.signal.konnoohmachismoothing import konno_ohmachi_smoothing
 from scipy.optimize import curve_fit
 
+# local imports
+from amptools.config import get_config
+
+
+CONFIG = get_config()
+
 
 def filter_detrend(trace, taper_type='cosine', taper_percentage=0.05,
                    filter_type='highpass', filter_frequency=0.02,
@@ -32,6 +38,9 @@ def filter_detrend(trace, taper_type='cosine', taper_percentage=0.05,
 
         Returns:
             list : List of obspy.core.stream.Stream objects
+
+        Notes:
+            Depricated function. This will be removed.
         """
         trace.detrend('linear')
         trace.detrend('demean')
@@ -98,14 +107,15 @@ def check_max_amplitude(trace, min_amp=10e-9, max_amp=50):
         Returns:
             bool: True if trace passes the check. False otherwise.
         """
-
+        amplitude = {'min': min_amp, 'max': max_amp}
+        trace = _update_params(trace, 'amplitude', amplitude)
         if (abs(trace.max()) >= min_amp and abs(trace.max()) <= max_amp):
             return True
         else:
             return False
 
 
-def trim_total_window(trace, org_time, epi_dist, v_min=1.0):
+def trim_total_window(trace, org_time, epi_dist, vmin=1.0):
         """
         Trims a stream of traces to the window using the algorithm
         defined in the Rennolet data paper.
@@ -114,16 +124,17 @@ def trim_total_window(trace, org_time, epi_dist, v_min=1.0):
             stream (obspy.core.stream.Stream): Stream of strong motion data.
             org_time (UTCDateTime): Event origin time.
             epi_dist (float): Distance from event epicenter to station.
-            v_min (float): Minimum apparent velocity.
+            vmin (float): Minimum apparent velocity.
                 Default is 1.0 km/s.
 
         Returns:
             stream (obspy.core.stream.Stream) after windowing.
             If trim failure occurs: -1
         """
+        window = {'vmin': vmin}
+        trace = _update_params(trace, 'window', window)
 
-        end_time = org_time + max(120, epi_dist / v_min)
-
+        end_time = org_time + max(120, epi_dist / vmin)
         # Check to make sure that the trimming end time is after
         # the start time of our trace
         if (end_time <= trace.stats.starttime):
@@ -221,7 +232,7 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
             trace (obspy.core.trace.Trace): Trace of strong motion data.
             event_time (UTCDateTime): Event origin time.
             epi_dist (float): Distance from event epicenter to station.
-            ratio (float): Required signal-to-noise ratio.
+            ratio (float): Required signal-to-noise ratio. Default is 3.0
 
         Returns:
             list : List of floats representing corner frequencies.
@@ -261,40 +272,77 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
             if (sig_spec_smooth[idx] / noise_spec_smooth[idx] >= ratio):
                 corner_frequencies.append(freqs_signal[idx])
                 break
-
         # if we reached the end without finding two corner frequencies
         # inadequate S/N
         if len(corner_frequencies) != 2:
             return [-2, -2]
         else:
+            corners = {'get_dynamically': True,
+                    'ratio': ratio,
+                    'default_high_frequency': corner_frequencies[1],
+                    'default_low_frequency': corner_frequencies[0]}
+            trace = _update_params(trace, 'corners', corners)
             return corner_frequencies
 
 
-def filter_waveform_high_low(trace, high_pass_freq, low_pass_freq):
-        """
-        Returns the filtered waveform using the provided corner frequencies.
+def filter_waveform(trace, filter_type, freqmax=None, freqmin=None,
+        zerophase=False, corners=4):
+    """
+    Returns the filtered waveform using the provided corner frequencies.
 
-        Args:
-            trace (obspy.core.trace.Trace): Trace of strong motion data.
-            corners (list of floats): Corner frequencies.
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion data.
+        filter_type (str): Type of filter to be applied
+        freqmax (float): Maximum frequency corner. Default is None.
+        freqmin (float): Minimum frequency corner. Default is None.
+        zerophase (bool): Perform a zerophase filter. Default is False
+        corners (in): Number of corners.
 
-        Returns:
-            trace (obspy.core.trace.Trace): Filtered trace
-        """
+    Returns:
+        trace (obspy.core.trace.Trace): Filtered trace
+    """
+    filter_type = filter_type.lower()
+    two_freq = ['bandpass', 'bandstop']
+    low_freq = ['lowpass', 'lowpass_cheby_2', 'lowpass_fir']
+    high_freq = ['highpass']
 
+    if filter_type in two_freq:
+        trace.filter(filter_type, freqmin=freqmin, freqmax=freqmax,
+                corners=corners, zerophase=zerophase)
+        filter_params = {'type': filter_type, 'corners': corners,
+                         'zerophase': zerophase}
+    elif filter_type in low_freq:
         # Find the Nyquist frequency, which is half the sampling rate
         nyquist_freq = 0.5 * trace.stats.sampling_rate
-
-        trace.filter('highpass', freq=high_pass_freq, zerophase=True)
-
         # Only perform low pass frequency if corner is less than nyquist freq
-        if (low_pass_freq < nyquist_freq):
-            trace.filter('lowpass', freq=low_pass_freq, zerophase=True)
+        if (freqmax < nyquist_freq):
+            trace.filter(filter_type, freq=freqmax,
+                    corners=corners, zerophase=zerophase)
+            filter_params = {'type': filter_type, 'corners': corners,
+                         'zerophase': zerophase}
         else:
             warnings.warn('Low pass frequency is greater than or equal '
                           'to the Nyquist frequency. Low pass filter will '
                           'not be applied.')
-        return trace
+            filter_params = None
+    elif filter_type in high_freq:
+        trace.filter(filter_type, freq=freqmin,
+                corners=corners, zerophase=True)
+        filter_params = {'type': filter_type, 'corners': corners,
+                         'zerophase': zerophase}
+    else:
+        warnings.warn('Filter type not available %r. Available filters: '
+                '%r' % (filter_type, two_freq + low_freq + high_freq))
+        filter_params = None
+    try:
+        if filter_params is not None:
+            filters = trace.stats.processing_parameters['filters']
+            filters += [filter_params]
+            trace = _update_params(trace, 'filters', [filters])
+    except KeyError:
+        if filter_params is not None:
+            trace = _update_params(trace, 'filters', [filter_params])
+    return trace
 
 
 def poly_func(x, a, b, c, d, e):
@@ -305,45 +353,48 @@ def poly_func(x, a, b, c, d, e):
 
 
 def correct_baseline(trace):
-        """
-        Performs a baseline correction following the method of Ancheta
-        et al. (2013). This removes low-frequency, non-physical trends
-        that remain in the time series following filtering.
+    """
+    Performs a baseline correction following the method of Ancheta
+    et al. (2013). This removes low-frequency, non-physical trends
+    that remain in the time series following filtering.
 
-        Args:
-            trace (obspy.core.trace.Trace): Trace of strong motion data.
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion data.
 
-        Returns:
-            trace (obspy.core.trace.Trace): Baseline-corrected trace.
-        """
+    Returns:
+        trace (obspy.core.trace.Trace): Baseline-corrected trace.
+    """
 
-        # Make copies of the trace for our accleration data
-        orig_trace = trace.copy()
-        acc_trace = trace.copy()
+    # Make copies of the trace for our accleration data
+    orig_trace = trace.copy()
+    acc_trace = trace.copy()
 
-        # Integrate twice to get the displacement time series
-        disp_trace = (acc_trace.integrate()).integrate()
+    # Integrate twice to get the displacement time series
+    disp_trace = (acc_trace.integrate()).integrate()
 
-        # Fit a sixth order polynomial to displacement time series, requiring
-        # that the 1st and 0th order coefficients are zero
-        time_values = np.linspace(0, trace.stats.npts-1, trace.stats.npts)
-        poly_cofs = list(curve_fit(poly_func, time_values, disp_trace.data)[0])
-        poly_cofs += [0, 0]
+    # Fit a sixth order polynomial to displacement time series, requiring
+    # that the 1st and 0th order coefficients are zero
+    time_values = np.linspace(0, trace.stats.npts-1, trace.stats.npts)
+    poly_cofs = list(curve_fit(poly_func, time_values, disp_trace.data)[0])
+    poly_cofs += [0, 0]
 
-        # Construct a polynomial from the coefficients and compute
-        # the second derivative
-        polynomial = np.poly1d(poly_cofs)
-        polynomial_second_derivative = np.polyder(polynomial, 2)
+    # Construct a polynomial from the coefficients and compute
+    # the second derivative
+    polynomial = np.poly1d(poly_cofs)
+    polynomial_second_derivative = np.polyder(polynomial, 2)
 
-        # Subtract the second derivative of the polynomial from the
-        # acceleration trace
-        for i in range(orig_trace.stats.npts):
-            orig_trace.data[i] -= polynomial_second_derivative(i)
+    # Subtract the second derivative of the polynomial from the
+    # acceleration trace
+    for i in range(orig_trace.stats.npts):
+        orig_trace.data[i] -= polynomial_second_derivative(i)
+    trace = _update_params(trace, 'baseline_correct', True)
+    return trace
 
-        return trace
 
-
-def process_all(trace, event_time, epi_dist):
+def process(stream, amp_min, amp_max, window_vmin, taper_type,
+        taper_percentage, taper_side, get_corners, sn_ratio,
+        default_low_frequency, default_high_frequency, filters,
+        baseline_correct, event_time=None, epi_dist=None):
     """
     Processes an acceleration trace following the step-by-step process
     described in the Rennolet et al paper
@@ -360,71 +411,283 @@ def process_all(trace, event_time, epi_dist):
     10) Remove Zero Padding
     11) Correct Baseline
 
-    Steps 1-3 would likely be covered in a fetcher / request script
-    and Steps 13-14 in calculations of strong ground motion parameters.
+    This processing should be performed on data with physical units (acc,
+    vel, etc). Steps 1-3 should be performed in the reader or ftp fetcher.
+    Steps 13-14 should be done in calculations of strong ground
+    motion parameters.
 
-    Along with trace data, this function requires two pieces of metadata:
-    origin time of the event, and epicentral distance to the station.
+    Along with the stream, this function requires two pieces of metadata
+    (origin time of the event and epicentral distance to the station) to
+    complete all processing steps.
+
+    To process with defaults use process_config with the amptools default
+    config dictionary.
+
+    Args:
+        stream (obspy.core.stream.Stream): Stream for one station.
+        amp_min (float): Lower amplitude limit for step 4.
+        amp_max (float): Upper amplitude limit for step 4.
+        window_vmin (float): Minimum velocity for step 5.
+        taper_type (str): Type of taper for step 6.
+        taper_percentage (float): Maximum taper percentage for step 6.
+        taper_side (str): Sides to taper for step 6.
+        get_corners (bool): Whether to complete step 8 or use defaults.
+        sn_ratio (float): Signal to noise ratio.
+        default_low_frequency (float): Default minimum frequency used in
+                place of corners calculated from step 8.
+        default_high_frequency (float): Default maximum frequency used in
+                place of corners calculated from step 8.
+        filters (list): List of filters (dict) with type (str), corners (int),
+                and zerophase (bool) defined.
+        baseline_correct (bool): Whether or not to complete step 11.
+        event_time (UTCDateTime): Origin time of the event. Default is None.
+        epi_dist (float): Epicentral distance. Default is None.
+
+    Returns:
+        obspy.core.stream.Stream: Processed stream.
+    """
+    for idx, trace in enumerate(stream):
+        trace_copy = trace.copy()
+        # The stats need to be set even if the process checks fail
+        trace_copy = _update_params(trace_copy, 'amplitude', {'min': amp_min,
+                'max': amp_min})
+        trace_copy = _update_params(trace_copy, 'window',
+                {'vmin': window_vmin})
+        trace_copy = _update_params(trace_copy, 'taper', {'type': taper_type,
+                'side': taper_side, 'max_percentage': taper_percentage})
+        trace_copy = _update_params(trace_copy, 'corners',
+                {'get_dynamically': get_corners, 'sn_ratio': sn_ratio,
+                'default_low_frequency': default_low_frequency,
+                'default_high_frequency': default_high_frequency})
+        trace_copy = _update_params(trace_copy, 'filters', [])
+        trace_copy = _update_params(trace_copy, 'baseline_correct',
+                baseline_correct)
+        trace_copy.stats['passed_tests'] = True
+
+        # Step 4 - Check amplitude
+        if not check_max_amplitude(trace_copy, amp_min, amp_max):
+            trace_copy.stats['passed_tests'] = False
+            err_msg = ('Processing: Trace maximum amplitude is not '
+                    'within the acceptable range: %r to %r. Skipping '
+                    'processing for trace: %r' % (amp_min,
+                    amp_max, trace))
+            trace_copy = _update_comments(trace_copy, err_msg)
+            stream[idx] = trace_copy
+            continue
+
+        # Step 5 - Window signal
+        if event_time is not None and epi_dist is not None:
+            trace_trim = trim_total_window(trace_copy, event_time, epi_dist,
+                    vmin=window_vmin)
+            windowed = True
+            # Check if windowing failed
+            if (trace_trim == -1):
+                trace_copy.stats['passed_tests'] = False
+                err_msg = ('Processing: Invalid time windowing. The start '
+                        'time of the trace is after the calculated '
+                        'end time. Skipping procesing for trace: %r', trace)
+                trace_trim = _update_comments(trace_copy, err_msg)
+                stream[idx] = trace_copy
+                continue
+        else:
+            trace_copy.stats['passed_tests'] = False
+            err_msg = ('Processing: No windowing test performed. Missing '
+                    'event time and/or epicentral distance information to '
+                    'perform calculation.')
+            trace_copy = _update_comments(trace_copy, err_msg)
+            trace_copy = _update_params(trace_copy, 'window',
+                    {'vmin': window_vmin})
+            trace_trim = trace_copy
+            # Corners cannot be calculated dynamically without windowing
+            warnings.warn('Missing event information. Continuing processing '
+                    'without windowing. Default frequencies will be used for '
+                    'filtering.')
+            windowed = False
+
+        # Step 6 - Taper
+        trace_tap = taper(trace_trim, taper_type=taper_type,
+                max_percentage=taper_percentage, side='both')
+
+        # Step 7 - Zero pad
+        before_padding_endtime = trace_tap.stats.endtime
+        trace_pad = zero_pad(trace_tap)
+
+        # Step 8 - Corner frequencies
+        if get_corners and windowed:
+            corners = get_corner_frequencies(trace_pad, event_time,
+                    epi_dist, sn_ratio)
+            # Check if corner frequency calculation failed
+            if (corners == [-1, -1]):
+                warnings.warn('Not enough pre-event noise to calculate '
+                        'signal to noise ratio, using defaults.')
+                high_freq = default_high_frequency
+                low_freq = default_low_frequency
+                dynamic = False
+            elif (corners == [-2, -2]):
+                warnings.warn('Signal-to-noise ratio is not high enough '
+                        'to to find corner-frequencies, using defaults.')
+                high_freq = default_high_frequency
+                low_freq = default_low_frequency
+                dynamic = False
+            else:
+                low_freq = corners[0]
+                high_freq = corners[1]
+                dynamic = True
+        else:
+            high_freq = default_high_frequency
+            low_freq = default_low_frequency
+            dynamic = False
+
+        corner_params = {'get_dynamically': dynamic,
+                'default_high_frequency': high_freq,
+                'sn_ratio': sn_ratio,
+                'default_low_frequency': low_freq}
+        trace_pad = _update_params(trace_pad, 'corners', corner_params)
+
+        # Step 9 - Filter
+        trace_filt = trace_pad
+        for filter_dict in filters:
+            filter_type = filter_dict['type']
+            corners = filter_dict['corners']
+            zerophase = filter_dict['zerophase']
+            trace_filt = filter_waveform(trace_filt, filter_type,
+                                         high_freq, low_freq, zerophase,
+                                         corners)
+
+        # Step 10 - Remove zero pad
+        trace_filt.trim(endtime=before_padding_endtime)
+
+        # Step 11 - Correct baseline
+        if baseline_correct:
+            trace_cor = correct_baseline(trace_filt)
+        else:
+            trace_cor = _update_params(trace_filt, 'baseline_correct', False)
+        stream[idx] = trace_cor
+    return stream
+
+
+def process_config(stream, config=None, event_time=None, epi_dist=None):
+    """Implement the process method according to a config file.
+
+    Args:
+        stream (obspy.core.stream.Stream): Stream for one station.
+        config (dictionary): Config dictionary. Default is None.
+            When config is None, it will be set to the amptools config.
+        event_time (UTCDateTime): Origin time of the event. Default is None.
+        epi_dist (float): Epicentral distance. Default is None.
+
+    Notes:
+        This function looks for a config file ~/.amptools/config.yml, which
+        has a processing_parameters subdictionary which should be formatted
+        as follows:
+        processing_parameters:
+            amplitude:
+                min: <float>
+                max: <float>
+            window:
+                vmin: <float>
+            taper:
+                type: <str>
+                max_percentage:<float>
+                side: <str>
+            corners:
+                get_dynamically: <bool>
+                default_low_frequency: <float>
+                default_high_frequency: <float>
+            filters:
+                - type: <str>
+                  corners: <int>
+                  zerophase: <bool>
+                    ...
+            baseline_correct: <bool>
+        If no config file is available, the default config is used. Other
+        packages (such as strongmotion-database) that use amptools as a
+        dependency have the option of overriding the config dictionary.
+    """
+    if config is None:
+        config = CONFIG
+    # Set all float/int params in the correct format
+    params = config['processing_parameters']
+    amp_min = float(params['amplitude']['min'])
+    amp_max = float(params['amplitude']['max'])
+    window_vmin = float(params['window']['vmin'])
+    taper_type = params['taper']['type']
+    taper_percentage = float(params['taper']['max_percentage'])
+    taper_side = params['taper']['side']
+    get_corners = params['corners']['get_dynamically']
+    sn_ratio = params['corners']['sn_ratio']
+    default_low_frequency = float(params['corners']['default_low_frequency'])
+    default_high_frequency = float(params['corners']['default_high_frequency'])
+    filters = params['filters']
+    baseline_correct = params['baseline_correct']
+
+    corrected_stream = process(stream, amp_min, amp_max, window_vmin,
+            taper_type, taper_percentage, taper_side, get_corners, sn_ratio,
+            default_low_frequency, default_high_frequency, filters,
+            baseline_correct, event_time=event_time, epi_dist=epi_dist)
+    return corrected_stream
+
+
+def taper(trace, taper_type='hann', max_percentage=0.05, side='both'):
+    """
+    Taper a stream and record processing step.
 
     Args:
         trace (obspy.core.trace.Trace): Trace of strong motion data.
-        event_time (UTCDateTime): Origin time of the event.
-        epi_dist (float): Epicentral distance.
+        taper_type (str): Type of taper. Default is 'hann'.
+        max_percentage (float): Taper percentage at one end. Default is
+            5% (0.05).
+        side (str): Which side will be tapered. Default is 'both'.
 
     Returns:
-        trace (obspy.core.trace.Trace): Processed trace. If processing
-        fails, then the original trace is returned.
+        obspy.core.trace.Trace: Trace of tapered data.
     """
+    trace.taper(type=taper_type,
+            max_percentage=max_percentage, side=side)
+    taper_params = {
+            'type': taper_type,
+            'max_percentage': max_percentage,
+            'side': side
+    }
+    trace = _update_params(trace, 'taper', taper_params)
+    return trace
 
-    trace_copy = trace.copy()
-    trace_info = trace.stats.network + '_' + trace.stats.station + '_'
-    trace_info += trace.stats.channel + '_' + str(trace.stats.starttime)
 
-    # Step 4 - Check amplitude
-    if not check_max_amplitude(trace_copy):
-        warnings.warn('Trace maximum amplitude is not within the '
-                      'acceptable range. ' + trace_info)
-        return
+def _update_comments(trace, comment):
+    """
+    Helper function to update a trace's stats.
 
-    # Step 5 - Window signal
-    trace_trim = trim_total_window(trace_copy, event_time, epi_dist)
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion dataself.
+        comment (str): Comment to add to the trace's stats.
 
-    # Check if windowing failed
-    if (trace_trim == -1):
-        warnings.warn('Invalid time windowing. The start time of the trace '
-                      'is after the calculated end time. ' + trace_info)
-        return
+    Returns:
+        obspy.core.trace.Trace: Trace with updated stats.
+    """
+    if 'standard' not in trace.stats:
+        trace.stats['standard'] = {}
+        trace.stats.standard['comments'] = ''
+    if (isinstance(trace.stats.standard['comments'], str) and
+            trace.stats.standard['comments'] != ''):
+        trace.stats.standard['comments'] += ', ' + comment
+    else:
+        trace.stats.standard['comments'] = comment
+    return trace
 
-    # Step 6 - Taper
-    trace_tap = trace_trim.taper(max_percentage=0.05, side='both')
 
-    # Step 7 - Zero pad
-    before_padding_endtime = trace_tap.stats.endtime
-    trace_pad = zero_pad(trace_tap)
+def _update_params(trace, process_type, parameters):
+    """
+    Helper function to update a trace's processing_parameters.
 
-    # Step 8 - Corner frequencies
-    corners = get_corner_frequencies(trace_pad, event_time, epi_dist)
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion dataself.
+        process_type (str): Key for processing_parameters subdictionary.
+        parameters (dict or list): Parameters for the given key.
 
-    # Check if corner frequency calculation failed
-    if (corners == [-1, -1]):
-        warnings.warn('Not enough pre-event noise to calculate signal '
-                      'to noise ratio. ' + trace_info)
-        return
-    if (corners == [-2, -2]):
-        warnings.warn('Signal-to-noise ratio is not high enough to '
-                      'to find corner-frequencies. ' + trace_info)
-        return
-
-    high_freq = corners[0]
-    low_freq = corners[1]
-
-    # Step 9 - Filter
-    trace_filt = filter_waveform_high_low(trace_pad, high_freq, low_freq)
-
-    # Step 10 - Remove zero pad
-    trace_filt.trim(endtime=before_padding_endtime)
-
-    # Step 11 - Correct baseline
-    trace_cor = correct_baseline(trace_filt)
-
-    return trace_cor
+    Returns:
+        obspy.core.trace.Trace: Trace with updated processing_parameters.
+    """
+    if 'processing_parameters' not in trace.stats:
+        trace.stats['processing_parameters'] = {}
+    trace.stats['processing_parameters'][process_type] = parameters
+    return trace
