@@ -1,5 +1,5 @@
-import numpy as np
-
+from pgm.exception import PGMException
+from pgm.rotation import rotate_pick_method
 
 def calculate_gmrotd(stream, percentiles, **kwargs):
     """
@@ -22,30 +22,7 @@ def calculate_gmrotd(stream, percentiles, **kwargs):
     if len(osc1) != len(osc2):
         raise PGMException
 
-    # Create degree matrices
-    degrees = np.deg2rad(np.linspace(0, 90, 91))
-    shape = (len(osc1), 1)
-    degree_matrix = np.multiply(np.ones(shape), degrees).T
-    cos_matrix = np.cos(degree_matrix)
-    sin_matrix = np.sin(degree_matrix)
-
-    # Create timeseries matrix
-    osc1_matrix = np.multiply(np.ones((91, 1)), osc1)
-    osc2_matrix = np.multiply(np.ones((91, 1)), osc2)
-
-    # Calculate GMs
-    osc1_rot = osc1_matrix * cos_matrix + osc2_matrix * sin_matrix
-    osc2_rot = osc1_matrix * sin_matrix + osc2_matrix * cos_matrix
-    osc1_max = np.amax(osc1_rot, 1)
-    osc2_max = np.amax(osc2_rot, 1)
-    GMs = np.sqrt(osc1_max * osc2_max)
-
-    # Get percentiles
-    GM_percentiles = np.percentile(GMs, percentiles)
-    gmrotd_dict = {}
-    for idx, percent in enumerate(percentiles):
-        gmrotd_dict[percent] = GM_percentiles[idx]
-    return gmrotd_dict
+    return rotate_pick_method(osc1, osc2, percentiles, 'gm')
 
 
 def _get_horizontals(stream):
