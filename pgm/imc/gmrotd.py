@@ -22,7 +22,12 @@ def calculate_gmrotd(stream, percentiles, **kwargs):
     if len(osc1) != len(osc2):
         raise PGMException
 
-    return rotate_pick_method(osc1, osc2, percentiles, 'gm')
+    geo_means, gm_percentiles = rotate_pick_method(osc1, osc2, percentiles, 'gm')
+
+    gmrotd_dict = {}
+    for idx, percent in enumerate(percentiles):
+        gmrotd_dict[percent] = gm_percentiles[idx]
+    return gmrotd_dict
 
 
 def _get_horizontals(stream):

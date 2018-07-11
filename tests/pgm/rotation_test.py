@@ -17,7 +17,7 @@ def test_rotation():
     osc1 = read(os.path.join(datadir, 'ALCTENE.UW..sac'))[0]
     osc2 = read(os.path.join(datadir, 'ALCTENN.UW..sac'))[0]
 
-    rotate_pick_method(osc1, osc2, [50], 'gm')
+    print(rotate_pick_method(osc1, osc2, [50], 'gm'))
     rotate_pick_method(osc1, osc2, [50], 'am')
     rotate_pick_method(osc1, osc2, [50], 'max')
     rotate_pick_method(osc1, osc2, [50], 'foo')
