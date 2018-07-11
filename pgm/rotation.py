@@ -26,7 +26,7 @@ def rotate_pick_method(tr1, tr2, percentiles, method_pick):
         return maximums, np.percentile(maximums, percentiles)
 
     else:
-        warnings.warn('Not a valid method pick. Rotation will not be calculated.')
+        warnings.warn('Not a valid method pick, rotation not calculated.')
         return
 
 
