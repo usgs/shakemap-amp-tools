@@ -30,8 +30,7 @@ def test_rotation():
     # Get PGA and spectral accelerations
     st_PGA = station.oscillators['PGA']
     rot_st_PGA = rotate(st_PGA[0], st_PGA[1], combine=True)
-    maximums, max50 = (get_max(rot_st_PGA, 'max', percentiles=[50]))
-
+    max50 = (get_max(rot_st_PGA, 'max', percentiles=[50]))[1]
     np.testing.assert_allclose(max50, 4.122485, atol=0.01)
 
     # Test that GM, AM, and MAX work as expected with simple 1D datasets
@@ -55,11 +54,11 @@ def test_rotation():
     # Test arithmetic mean with 2D input
     osc1 = np.array([[0.0, 1.0], [2.0, 3.0]])
     osc2 = np.array([[4.0, 5.0], [6.0, 7.0]])
-    means, means50 = get_max(osc1, 'am', osc2)
+    means = get_max(osc1, 'am', osc2)[0]
     assert (means[0] == 3.0 and means[1] == 5.0)
 
     # Test greater of two horizontals
-    maxs, maxs50 = get_max(osc1, 'max', osc2)
+    maxs = get_max(osc1, 'max', osc2)[0]
     assert (maxs[0] == 5.0 and maxs[1] == 7.0)
 
 
