@@ -48,8 +48,8 @@ def test_rotation():
 
     # Test max for 1 1d Array
     osc1 = np.array([0.0, 1.0, 2.0])
-    max = get_max(osc1, 'max')
-    assert max == 2.0
+    max_val = get_max(osc1, 'max')
+    assert max_val == 2.0
 
     # Test arithmetic mean with 2D input
     osc1 = np.array([[0.0, 1.0], [2.0, 3.0]])

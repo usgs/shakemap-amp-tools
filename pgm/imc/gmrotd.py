@@ -24,7 +24,7 @@ def calculate_gmrotd(stream, percentiles, **kwargs):
         raise PGMException
 
     osc1_rot, osc2_rot = rotate(osc1, osc2, combine=False)
-    geo_means, gm_percentiles = get_max(osc1_rot, 'gm', osc2_rot, percentiles)
+    gm_percentiles = get_max(osc1_rot, 'gm', osc2_rot, percentiles)[1]
 
     gmrotd_dict = {}
     for idx, percent in enumerate(percentiles):

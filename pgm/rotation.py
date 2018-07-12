@@ -2,7 +2,7 @@ import numpy as np
 from pgm.exception import PGMException
 
 
-def get_max(tr1, pick_peak, tr2=None, percentiles=[50]):
+def get_max(tr1, pick_peak, tr2=None, percentiles=50):
     """
     Finds the maximum from traces and either picks the geometric mean,
     arithmetic mean, or maximum of the two. Tr1 and Tr2 can either be
