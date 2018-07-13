@@ -36,7 +36,6 @@ def test_stationsummary():
         final_code = stream_summary.station_code
         assert original_code == final_code
         original_oscillators = stream_summary.oscillators
-        stream_summary.oscillators = {'key': 'invalid type'}
         final_oscillators = stream_summary.oscillators
         assert original_oscillators == final_oscillators
         np.testing.assert_array_equal(np.sort(stream_summary.components),

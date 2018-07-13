@@ -19,19 +19,40 @@ def test_rotation():
     # Create a stream and station summary, convert from m/s^2 to cm/s^2 (GAL)
     osc1_data = np.genfromtxt(datadir + '/ALCTENE.UW..sac.acc.final.txt')
     osc2_data = np.genfromtxt(datadir + '/ALCTENN.UW..sac.acc.final.txt')
-
     osc1_data = osc1_data.T[1]*100
     osc2_data = osc2_data.T[1]*100
 
-    st = Stream([Trace(data=osc1_data), Trace(data=osc2_data)])
-    station = StationSummary.from_stream(st, ['channels'],
-                                         ['PGA', 'SA0.3', 'SA1.0', 'SA3.0'])
+    tr1 = Trace(data=osc1_data, header={'channel': 'H1', 'delta': 0.01,
+                                        'npts': 10400})
+    tr2 = Trace(data=osc2_data, header={'channel': 'H2', 'delta': 0.01,
+                                        'npts': 10400})
+    st = Stream([tr1, tr2])
+
+    imts = ['PGA', 'PGV', 'SA0.3', 'SA1.0', 'SA3.0']
+    station = StationSummary.from_stream(st, ['channels'], imts)
 
     # Get PGA and spectral accelerations
     st_PGA = station.oscillators['PGA']
+    pgv = station.oscillators['PGV']
+    st_SA10 = station.oscillators['SA1.0_ROT']
+    st_SA30 = station.oscillators['SA3.0_ROT']
+    st_SA03 = station.oscillators['SA0.3_ROT']
+
     rot_st_PGA = rotate(st_PGA[0], st_PGA[1], combine=True)
-    max50 = (get_max(rot_st_PGA, 'max', percentiles=[50]))[1]
-    np.testing.assert_allclose(max50, 4.122485, atol=0.01)
+    rot_PGV = rotate(pgv[0], pgv[1], combine=True)
+
+    max50_pgv = (get_max(rot_PGV, 'max', percentiles=[50]))[1]
+    max50_pga = (get_max(rot_st_PGA, 'max', percentiles=[50]))[1]
+    max50_SA10 = (get_max(st_SA10[0], 'max', percentiles=[50]))[1]
+    max50_SA03 = (get_max(st_SA03[0], 'max', percentiles=[50]))[1]
+    max50_SA30 = (get_max(st_SA30[0], 'max', percentiles=[50]))[1]
+
+    # Check the calculations
+    np.testing.assert_allclose(max50_pga, 4.12528265306, atol=0.1)
+    np.testing.assert_allclose(max50_SA10, 10.7362857143, atol=0.1)
+    np.testing.assert_allclose(max50_pgv, 6.239364, atol=0.1)
+    np.testing.assert_allclose(max50_SA03, 10.1434159021, atol=0.1)
+    np.testing.assert_allclose(max50_SA30, 1.12614169215, atol=0.1)
 
     # Test that GM, AM, and MAX work as expected with simple 1D datasets
     osc1 = np.asarray([0.0, 1.0, 2.0, 3.0])

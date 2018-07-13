@@ -5,27 +5,39 @@ from pgm.exception import PGMException
 def get_max(tr1, pick_peak, tr2=None, percentiles=50):
     """
     Finds the maximum from traces and either picks the geometric mean,
-    arithmetic mean, or maximum of the two. Tr1 and Tr2 can either be
-    1d traces, or a 2d rotated matrix. The axis along which to pick the
-    maximums is chosen by the dimensions of the input.
+    arithmetic mean, or maximum of the two. The two input can either be
+    1D traces, or 2D arrays.
+
+    For the 2D array case, the number of rows must be the number of traces,
+    and the numer of columns is the number of samples in the trace.
+    The following assumptions are made regarding the 2D array:
+        1) The rows in each matrix are the same component at different rotation
+           at different angles.
+        2) If tr2 is provided, the orientation of the trace in each row is
+           orthogonal to the analagous row in tr1
+        3) The traces that constitute tr1 and tr2 are both
+           horizontal components.
 
     Args:
-        tr1 (obspy.core.trace.Trace or 2D array): Trace 1, either 1d trace or
-            2d rotation matrix
-        tr2 (obspy.core.trace.Trace or 2D array): Trace 2, either 1d trace or
-            2d rotation matrix
+        tr1 (obspy.core.trace.Trace or 2D array): Trace 1, either 1D trace or
+            2D matrix of rotated components.
+        tr2 (obspy.core.trace.Trace or 2D array): Trace 2, either 1D trace or
+            2D matrix of rotated components.
+            Default is None.
         pick_peak (str): The choice for either geometric mean, arithmetic
             or maximum. The valid strings are:
                 - "gm" for geometric mean
                 - "am" for arithmetic mean
                 - "max" for maximum
+        percentiles (list): percentile(s) to return the requested values.
+            Default is 50.
 
     Returns:
         If 1D input:
             Returns a singular,  scalar value for the requested pick_peak.
         If 2D input:
             Returns a list of the maximum values, as well as the singular value
-            at the requested percentile
+            at the requested percentile.
     """
 
     # Check if valid trace dimensions were provided, and determine if we're
@@ -57,6 +69,8 @@ def get_max(tr1, pick_peak, tr2=None, percentiles=50):
 
     # Geometric mean
     if (pick_peak.lower() == 'gm'):
+        if tr2 is None:
+            raise PGMException('Two traces must be provided to find mean.')
         tr1_max = np.amax(tr1, axis)
         tr2_max = np.amax(tr2, axis)
         geo_means = np.sqrt(tr1_max * tr2_max)
@@ -68,6 +82,8 @@ def get_max(tr1, pick_peak, tr2=None, percentiles=50):
 
     # Arithmetic mean
     elif (pick_peak.lower() == 'am'):
+        if tr2 is None:
+            raise PGMException('Two traces must be provided to find mean.')
         tr1_max = np.amax(tr1, axis)
         tr2_max = np.amax(tr2, axis)
         arith_means = 0.5 * (tr1_max + tr2_max)
@@ -102,7 +118,7 @@ def get_max(tr1, pick_peak, tr2=None, percentiles=50):
         raise PGMException('Not a valid pick for the peak.')
 
 
-def rotate(tr1, tr2, combine=False):
+def rotate(tr1, tr2, combine=False, delta=1.0):
     """
     Rotates a trace through 180 degrees to obtain the
     data at each degree.
@@ -110,40 +126,43 @@ def rotate(tr1, tr2, combine=False):
     Args:
         tr1 (obspy.core.trace.Trace): Trace 1 of strong motion data.
         tr2 (obspy.core.trace.Trace): Trace 2 of strong motion data.
-        percentiles (list): Percentiles of the data that should be returned.
-        geo_mean (bool): Whether or not GMRotD should be calculated.
-        arith_mean (bool):
-        maximum (bool:
         combine (bool): Whether rotated traces should be combined.
+            Default is False.
+        delta (float): Delta degrees which will determine the number of rows
+            for the matrix of rotated components.
+            Default is 1.0
 
     Returns:
         numpy.ndarray: Array of data at each degree.
     """
+
     if combine:
-        degrees = np.deg2rad(np.linspace(0, 180, 181))
+        num_rows = int(180 * (1.0 / delta) + 1)
+        degrees = np.deg2rad(np.linspace(0, 180, num_rows))
         shape = (len(tr1), 1)
         degree_matrix = np.multiply(np.ones(shape), degrees).T
         cos_matrix = np.cos(degree_matrix)
         sin_matrix = np.sin(degree_matrix)
 
         # Create timeseries matrix
-        osc1_matrix = np.multiply(np.ones((181, 1)), tr1)
-        osc2_matrix = np.multiply(np.ones((181, 1)), tr2)
+        osc1_matrix = np.multiply(np.ones((num_rows, 1)), tr1)
+        osc2_matrix = np.multiply(np.ones((num_rows, 1)), tr2)
 
         # Calculate GMs
         rot = osc1_matrix * cos_matrix + osc2_matrix * sin_matrix
         return rot
 
     else:
-        degrees = np.deg2rad(np.linspace(0, 90, 91))
+        num_rows = int(90 * (1.0 / delta) + 1)
+        degrees = np.deg2rad(np.linspace(0, 90, num_rows))
         shape = (len(tr1), 1)
         degree_matrix = np.multiply(np.ones(shape), degrees).T
         cos_matrix = np.cos(degree_matrix)
         sin_matrix = np.sin(degree_matrix)
 
         # Create timeseries matrix
-        osc1_matrix = np.multiply(np.ones((91, 1)), tr1)
-        osc2_matrix = np.multiply(np.ones((91, 1)), tr2)
+        osc1_matrix = np.multiply(np.ones((num_rows, 1)), tr1)
+        osc2_matrix = np.multiply(np.ones((num_rows, 1)), tr2)
 
         # Calculate GMs with rotation
         osc1_rot = osc1_matrix * cos_matrix + osc2_matrix * sin_matrix

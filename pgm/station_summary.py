@@ -14,6 +14,7 @@ from pgm.imt.pga import calculate_pga
 from pgm.imt.pgv import calculate_pgv
 from pgm.imt.sa import calculate_sa
 from pgm.gather import get_pgm_classes
+from pgm.rotation import rotate
 
 
 GAL_TO_PCTG = 1 / (9.8)
@@ -129,7 +130,7 @@ class StationSummary(object):
         station.station_code = stream[0].stats['station']
         station.stream = stream
         # Get oscillators
-        station.oscillators = station.generate_oscillators(imts, damping)
+        station.generate_oscillators(imts, damping)
         # Gather pgm/imt for each
         station.pgms = station.gather_pgms(components)
         return station
@@ -147,16 +148,17 @@ class StationSummary(object):
         """
         pgm_dict = {}
         for oscillator in self.oscillators:
-            stream = self.oscillators[oscillator]
-            if oscillator == 'PGA':
-                pga = calculate_pga(stream, components)
-                pgm_dict[oscillator] = pga
-            elif oscillator == 'PGV':
-                pgv = calculate_pgv(stream, components)
-                pgm_dict[oscillator] = pgv
-            elif oscillator.startswith('SA'):
-                sa = calculate_sa(stream, components)
-                pgm_dict[oscillator] = sa
+            if oscillator.find('ROT') < 0:
+                stream = self.oscillators[oscillator]
+                if oscillator == 'PGA':
+                    pga = calculate_pga(stream, components)
+                    pgm_dict[oscillator] = pga
+                elif oscillator == 'PGV':
+                    pgv = calculate_pgv(stream, components)
+                    pgm_dict[oscillator] = pgv
+                elif oscillator.startswith('SA'):
+                    sa = calculate_sa(stream, components)
+                    pgm_dict[oscillator] = sa
         components = []
         for imt in pgm_dict:
             components += [imc for imc in pgm_dict[imt]]
@@ -187,15 +189,25 @@ class StationSummary(object):
                     oscillator = self._get_spectral(period,
                                                     stream,
                                                     damping=damping)
+                    sa_rot = self._get_spectral(period, stream, damping=damping,
+                            rotation='nongm')
+                    sa_gmrot = self._get_spectral(period, stream, damping=damping,
+                            rotation='gm')
                     oscillator_dict[imt.upper()] = oscillator
+                    oscillator_dict[imt.upper()+'_ROT'] = sa_rot
+                    oscillator_dict[imt.upper()+'_GMROT'] = sa_gmrot
                 except Exception:
                     fmt = "Invalid period for imt: %r. Skipping..."
                     warnings.warn(fmt % (imt), Warning)
             else:
                 fmt = "Invalid imt: %r. Skipping..."
                 warnings.warn(fmt % (imt), Warning)
-        self.imts = [key for key in oscillator_dict]
-        return oscillator_dict
+        imts = []
+        for key in oscillator_dict:
+            if key.find('ROT') < 0:
+                imts += [key]
+        self.imts = imts
+        self.oscillators = oscillator_dict
 
     def get_pgm(self, imt, imc):
         """
@@ -252,11 +264,7 @@ class StationSummary(object):
         Args:
             oscillators (dictionary): Stream for each imt.
         """
-        if all(isinstance(x, Stream) for x in oscillators.values()):
-            self._oscillators = oscillators
-        else:
-            warnings.warn('Setting failed: dictionary does not contain '
-                'stream objects for each imt.', Warning)
+        self._oscillators = oscillators
 
     @property
     def pgms(self):
@@ -354,7 +362,7 @@ class StationSummary(object):
             accel_stream.append(accel_trace)
         return accel_stream
 
-    def _get_spectral(self, period, stream, damping):
+    def _get_spectral(self, period, stream, damping, rotation=None):
         """
         Returns a stream of spectral response with units of %%g.
 
@@ -363,6 +371,8 @@ class StationSummary(object):
             stream (obspy.core.stream.Stream): Strong motion timeseries
                 for one station.
             damping (float): Damping of oscillator.
+            rotation (str): Wheter a rotation matrix should be return and the
+                specific type or rotation.
 
         Returns:
             obpsy.core.stream.Stream: stream of spectral response.
@@ -374,26 +384,67 @@ class StationSummary(object):
         paz_sa['sensitivity'] = omega
         paz_sa['zeros'] = []
         spect_stream = Stream()
-        for trace in stream:
-            samp_rate = trace.stats['sampling_rate']
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                dd = simulate_seismometer(trace.data, samp_rate,
-                                          paz_remove=None,
-                                          paz_simulate=paz_sa,
-                                          taper=True,
-                                          simulate_sensitivity=True,
-                                          taper_fraction=0.05)
 
-            period_str = 'T' + '{:04.2f}'.format(T)
-            stats_out = trace.stats.copy()
-            stats_out['period'] = period_str
-            self.period_str = period_str
-            spect_trace = Trace(dd, stats_out)
-            spect_trace.data = spect_trace.data * GAL_TO_PCTG
-            spect_trace.stats['units'] = '%%g'
-            spect_stream.append(spect_trace)
-        return spect_stream
+        horizontals = []
+        for trace in stream:
+            if trace.stats['channel'].upper().find('Z') < 0:
+                horizontals += [trace.copy()]
+        h1_stats = horizontals[0].stats
+
+        if rotation is None:
+            for trace in stream:
+                samp_rate = trace.stats['sampling_rate']
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    dd = simulate_seismometer(trace.data, samp_rate,
+                                              paz_remove=None,
+                                              paz_simulate=paz_sa,
+                                              taper=True,
+                                              simulate_sensitivity=True,
+                                              taper_fraction=0.05)
+                period_str = 'T' + '{:04.2f}'.format(T)
+                stats_out = trace.stats.copy()
+                stats_out['period'] = period_str
+                spect_trace = Trace(dd, stats_out)
+                spect_trace.data = spect_trace.data * GAL_TO_PCTG
+                spect_trace.stats['units'] = '%%g'
+                spect_stream.append(spect_trace)
+            return spect_stream
+        elif rotation.lower() == 'nongm':
+            if len(horizontals) != 2:
+                warnings.warn('Spectral amplitude rotation could not be performed.')
+                return
+            rot = [rotate(horizontals[0], horizontals[1], combine=True)]
+        elif rotation.lower() == 'gm':
+            if len(horizontals) != 2:
+                warnings.warn('Spectral amplitude rotation could not be performed.')
+                return
+            rot1, rot2 = rotate(horizontals[0], horizontals[1], combine=False)
+            rot = [rot1, rot2]
+        rotated = []
+        for rot_matrix in rot:
+            rotated_spectrals = np.zeros(rot_matrix.shape)
+            for idx, row in enumerate(rot_matrix):
+                samp_rate = h1_stats['sampling_rate']
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    dd = simulate_seismometer(row, samp_rate,
+                                              paz_remove=None,
+                                              paz_simulate=paz_sa,
+                                              taper=True,
+                                              simulate_sensitivity=True,
+                                              taper_fraction=0.05)
+
+                period_str = 'T' + '{:04.2f}'.format(T)
+                stats_out = h1_stats.copy()
+                stats_out['period'] = period_str
+                spect_trace = Trace(dd, stats_out)
+                spect_trace.data = spect_trace.data * GAL_TO_PCTG
+                spect_trace.stats['units'] = '%%g'
+                rotated_spectrals[idx] = spect_trace
+            rotated += [rotated_spectrals]
+        return rotated
+
 
     def _get_velocity(self, stream):
         """
