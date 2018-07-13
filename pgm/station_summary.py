@@ -5,6 +5,7 @@ import re
 
 # third party imports
 import numpy as np
+import scipy.constants as sp
 from obspy.core.stream import Stream
 from obspy.core.trace import Trace
 from obspy.signal.invsim import corn_freq_2_paz, simulate_seismometer
@@ -17,7 +18,7 @@ from pgm.gather import get_pgm_classes
 from pgm.rotation import rotate
 
 
-GAL_TO_PCTG = 1 / (9.8)
+GAL_TO_PCTG = 1 / sp.g
 
 
 class StationSummary(object):
@@ -130,7 +131,11 @@ class StationSummary(object):
         station.station_code = stream[0].stats['station']
         station.stream = stream
         # Get oscillators
-        station.generate_oscillators(imts, damping)
+        rot = False
+        for component in components:
+            if component.lower().find('rot'):
+                rot = True
+        station.generate_oscillators(imts, damping, rot)
         # Gather pgm/imt for each
         station.pgms = station.gather_pgms(components)
         return station
@@ -165,7 +170,7 @@ class StationSummary(object):
         self.components = set(components)
         return pgm_dict
 
-    def generate_oscillators(self, imts, damping):
+    def generate_oscillators(self, imts, damping, rotate=False):
         """
         Create dictionary of requested imt and its coinciding oscillators.
 
@@ -189,13 +194,14 @@ class StationSummary(object):
                     oscillator = self._get_spectral(period,
                                                     stream,
                                                     damping=damping)
-                    sa_rot = self._get_spectral(period, stream, damping=damping,
-                            rotation='nongm')
-                    sa_gmrot = self._get_spectral(period, stream, damping=damping,
-                            rotation='gm')
                     oscillator_dict[imt.upper()] = oscillator
-                    oscillator_dict[imt.upper()+'_ROT'] = sa_rot
-                    oscillator_dict[imt.upper()+'_GMROT'] = sa_gmrot
+                    if rotate == True:
+                        sa_rot = self._get_spectral(period, stream,
+                                damping=damping, rotation='nongm')
+                        sa_gmrot = self._get_spectral(period, stream,
+                                damping=damping, rotation='gm')
+                        oscillator_dict[imt.upper()+'_ROT'] = sa_rot
+                        oscillator_dict[imt.upper()+'_GMROT'] = sa_gmrot
                 except Exception:
                     fmt = "Invalid period for imt: %r. Skipping..."
                     warnings.warn(fmt % (imt), Warning)

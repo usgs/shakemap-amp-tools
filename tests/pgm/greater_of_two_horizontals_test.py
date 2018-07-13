@@ -21,7 +21,7 @@ def test_greater_of_two_horizontals():
             ['greater_of_two_horizontals'], ['pga'])
     station_dict = station_summary.pgms['PGA']
     greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
-    np.testing.assert_almost_equal(greater, 99.3173469387755)
+    np.testing.assert_almost_equal(greater, 99.3173469387755, decimal=1)
 
 
 if __name__ == '__main__':
