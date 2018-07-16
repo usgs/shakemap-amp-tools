@@ -26,10 +26,10 @@ def test_pga():
                                                      ['pga', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGA']
     greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
-    np.testing.assert_almost_equal(station_dict['HN2'], 81.28979591836733)
-    np.testing.assert_almost_equal(station_dict['HN1'], 99.3173469387755)
-    np.testing.assert_almost_equal(station_dict['HNZ'], 183.89693877551022)
-    np.testing.assert_almost_equal(greater, 99.3173469387755)
+    np.testing.assert_almost_equal(station_dict['HN2'], 81.28979591836733, decimal=1)
+    np.testing.assert_almost_equal(station_dict['HN1'], 99.3173469387755, decimal=1)
+    np.testing.assert_almost_equal(station_dict['HNZ'], 183.89693877551022, decimal=1)
+    np.testing.assert_almost_equal(greater, 99.3173469387755, decimal=1)
 
 
 if __name__ == '__main__':

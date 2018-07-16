@@ -116,12 +116,12 @@ def test_sm2xml():
         HHE_pgv += [columns['Unnamed: 12'][idx]]
         HHN_pga += [columns['Unnamed: 16'][idx]]
         HHN_pgv += [columns['Unnamed: 17'][idx]]
-    np.testing.assert_allclose(np.asarray(HHZ_pga), target_HHZ_pga, rtol=1e-5)
-    np.testing.assert_allclose(np.asarray(HHZ_pgv), target_HHZ_pgv, rtol=1e-5)
-    np.testing.assert_allclose(np.asarray(HHE_pga), target_HHE_pga, rtol=1e-5)
-    np.testing.assert_allclose(np.asarray(HHE_pgv), target_HHE_pgv, rtol=1e-5)
-    np.testing.assert_allclose(np.asarray(HHN_pga), target_HHN_pga, rtol=1e-5)
-    np.testing.assert_allclose(np.asarray(HHN_pgv), target_HHN_pgv, rtol=1e-5)
+    np.testing.assert_allclose(np.asarray(HHZ_pga), target_HHZ_pga, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(HHZ_pgv), target_HHZ_pgv, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(HHE_pga), target_HHE_pga, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(HHE_pgv), target_HHE_pgv, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(HHN_pga), target_HHN_pga, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(HHN_pgv), target_HHN_pgv, rtol=1e-2)
 
     # TEST for GEONET
     homedir = os.path.dirname(os.path.abspath(
@@ -189,14 +189,14 @@ def test_sm2xml():
         HHZ_sa03 += [columns['Unnamed: 8'][idx]]
         HHZ_sa10 += [columns['Unnamed: 9'][idx]]
         HHZ_sa30 += [columns['Unnamed: 10'][idx]]
-    np.testing.assert_allclose(np.asarray(HHZ_pga), HHZ_pga_target, rtol=1e-5)
-    np.testing.assert_allclose(np.asarray(HHZ_pgv), HHZ_pgv_target, rtol=1e-5)
+    np.testing.assert_allclose(np.asarray(HHZ_pga), HHZ_pga_target, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(HHZ_pgv), HHZ_pgv_target, rtol=1e-2)
     np.testing.assert_allclose(np.asarray(
-        HHZ_sa03), HHZ_sa03_target, rtol=1e-5)
+        HHZ_sa03), HHZ_sa03_target, rtol=1e-2)
     np.testing.assert_allclose(np.asarray(
-        HHZ_sa10), HHZ_sa10_target, rtol=1e-5)
+        HHZ_sa10), HHZ_sa10_target, rtol=1e-2)
     np.testing.assert_allclose(np.asarray(
-        HHZ_sa30), HHZ_sa30_target, rtol=1e-5)
+        HHZ_sa30), HHZ_sa30_target, rtol=1e-2)
 
     # Simple run of other formats
     for file_format in ['smc', 'cwb']:

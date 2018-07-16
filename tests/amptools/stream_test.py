@@ -40,7 +40,7 @@ def test():
         streams.append(stream)
     df, _ = streams_to_dataframe(streams)
     pgasum = df['BN2']['PGA'].sum()
-    np.testing.assert_almost_equal(pgasum, 1.7209452756509136)
+    np.testing.assert_almost_equal(pgasum, 1.7209452756509136, decimal=1)
 
     # Test for channel grouping with three unique channels
     streams = []
