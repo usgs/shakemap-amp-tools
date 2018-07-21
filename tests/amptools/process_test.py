@@ -40,10 +40,10 @@ def test_corner_freqs():
     GNW_dist = 46.7473
 
     corners_1 = process.get_corner_frequencies(ALCT_tr, event_time, ALCT_dist)
-    np.testing.assert_allclose(corners_1, [0.03662, 50.0], atol=0.001)
+    np.testing.assert_allclose(corners_1, [50.0, 0.030], atol=0.001)
 
     corners_2 = process.get_corner_frequencies(GNW_tr, event_time, GNW_dist)
-    np.testing.assert_allclose(corners_2, [0.03662, 25.0], atol=0.001)
+    np.testing.assert_allclose(corners_2, [25.0, 0.030], atol=0.001)
 
     event_time = UTCDateTime('2016-10-22T17:17:05')
     ALKI_tr = read(os.path.join(datadir, 'ALKIENE.UW..sac'))[0]
