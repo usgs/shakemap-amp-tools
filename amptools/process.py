@@ -92,7 +92,7 @@ def remove_clipped(stream, max_count=2000000):
     return stream
 
 
-def check_max_amplitude(trace, min_amp=10e-9, max_amp=50):
+def check_max_amplitude(trace, min_amp=10e-7, max_amp=5e3):
         """
         Checks that the maximum amplitude of the trace is within a defined
         range.
@@ -259,19 +259,24 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
 
         # loop through each frequency and calculate the signal to noise ratio
         # If S/N greater than ratio, found a corner frequency
-        # Loop once for finding low corner...
-        corner_frequencies = []
-        for i, freq in enumerate(freqs_signal):
-            if (sig_spec_smooth[i] / noise_spec_smooth[i] >= ratio):
-                corner_frequencies.append(freq)
-                break
 
-        # ...And once for finding high corner
+        corner_frequencies = []
+        found_high = False
         for i, freq in enumerate(freqs_noise):
             idx = len(freqs_signal)-i-1  # Looping backwards through freqs
-            if (sig_spec_smooth[idx] / noise_spec_smooth[idx] >= ratio):
-                corner_frequencies.append(freqs_signal[idx])
-                break
+            if found_high is False:
+                if (sig_spec_smooth[idx] / noise_spec_smooth[idx] >= ratio):
+                    corner_frequencies.append(freqs_signal[idx])
+                    found_high = True
+                else:
+                    continue
+            else:
+                if (sig_spec_smooth[idx] / noise_spec_smooth[idx] < ratio):
+                    corner_frequencies.append(freqs_signal[idx])
+                    break
+                else:
+                    continue
+
         # if we reached the end without finding two corner frequencies
         # inadequate S/N
         if len(corner_frequencies) != 2:
@@ -530,8 +535,8 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                 low_freq = default_low_frequency
                 dynamic = False
             else:
-                low_freq = corners[0]
-                high_freq = corners[1]
+                high_freq = corners[0]
+                low_freq = corners[1]
                 dynamic = True
         else:
             high_freq = default_high_frequency

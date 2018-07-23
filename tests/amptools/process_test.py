@@ -7,6 +7,7 @@ import numpy as np
 # third party imports
 from obspy.core.stream import read
 from obspy.core.utcdatetime import UTCDateTime
+from obspy import Trace
 from amptools import process
 
 homedir = os.path.dirname(os.path.abspath(__file__))
@@ -19,7 +20,7 @@ def test_amp_check_trim():
     # one is unedited with a standard maximum amplitude
     # the second has been multiplied so that it fails the amplitude check
     NOWS_tr = read(os.path.join(datadir, 'NOWSENR.sac'))[0]
-    NOWS_tr_mul = read(os.path.join(datadir, 'NOWSENR_mul.sac'))[0]
+    NOWS_tr_mul = Trace(data=NOWS_tr.data*10e9, header=NOWS_tr.stats)
 
     assert process.check_max_amplitude(NOWS_tr) is True
     assert process.check_max_amplitude(NOWS_tr_mul) is False
@@ -40,10 +41,10 @@ def test_corner_freqs():
     GNW_dist = 46.7473
 
     corners_1 = process.get_corner_frequencies(ALCT_tr, event_time, ALCT_dist)
-    np.testing.assert_allclose(corners_1, [0.03662, 50.0], atol=0.001)
+    np.testing.assert_allclose(corners_1, [50.0, 0.030], atol=0.001)
 
     corners_2 = process.get_corner_frequencies(GNW_tr, event_time, GNW_dist)
-    np.testing.assert_allclose(corners_2, [0.03662, 25.0], atol=0.001)
+    np.testing.assert_allclose(corners_2, [25.0, 0.030], atol=0.001)
 
     event_time = UTCDateTime('2016-10-22T17:17:05')
     ALKI_tr = read(os.path.join(datadir, 'ALKIENE.UW..sac'))[0]
