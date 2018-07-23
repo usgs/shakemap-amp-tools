@@ -92,7 +92,7 @@ def remove_clipped(stream, max_count=2000000):
     return stream
 
 
-def check_max_amplitude(trace, min_amp=10e-9, max_amp=50):
+def check_max_amplitude(trace, min_amp=10e-7, max_amp=5e3):
         """
         Checks that the maximum amplitude of the trace is within a defined
         range.
