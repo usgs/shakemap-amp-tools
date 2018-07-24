@@ -100,9 +100,9 @@ def check_max_amplitude(trace, min_amp=10e-7, max_amp=5e3):
         Args:
             trace (obspy.core.trace.Trace): Trace of strong motion data.
             min_amp (float): Minimum amplitude for the acceptable range.
-                Default is 10e-9.
+                Default is 10e-7.
             max_amp (float): Maximum amplitude for the acceptable range.
-                Default is 50.
+                Default is 5e3.
 
         Returns:
             bool: True if trace passes the check. False otherwise.
@@ -224,7 +224,8 @@ def fft_smooth(trace, nfft):
         return spec_smooth, freqs
 
 
-def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
+def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0, f_a=0.1,
+                           f_b = 5.0):
         """
         Returns the corner frequencies for a trace.
 
@@ -257,31 +258,48 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0):
         # remove the noise level from the spectrum of the signal window
         sig_spec_smooth -= noise_spec_smooth
 
-        # loop through each frequency and calculate the signal to noise ratio
-        # If S/N greater than ratio, found a corner frequency
-
+        # Loop through frequencies to find low corner and high corner
         corner_frequencies = []
-        found_high = False
-        for i, freq in enumerate(freqs_noise):
-            idx = len(freqs_signal)-i-1  # Looping backwards through freqs
-            if found_high is False:
-                if (sig_spec_smooth[idx] / noise_spec_smooth[idx] >= ratio):
-                    corner_frequencies.append(freqs_signal[idx])
-                    found_high = True
+        lows = []
+        highs = []
+        have_low = False
+        for idx, freq in enumerate(freqs_signal):
+            if have_low is False:
+                if (sig_spec_smooth[idx] / noise_spec_smooth[idx]) >= ratio:
+                    lows.append(freq)
+                    have_low = True
                 else:
                     continue
             else:
-                if (sig_spec_smooth[idx] / noise_spec_smooth[idx] < ratio):
-                    corner_frequencies.append(freqs_signal[idx])
-                    break
+                if (sig_spec_smooth[idx] / noise_spec_smooth[idx]) < ratio:
+                    highs.append(freq)
+                    have_low = False
                 else:
                     continue
 
-        # if we reached the end without finding two corner frequencies
-        # inadequate S/N
-        if len(corner_frequencies) != 2:
+        # If we find an extra low
+        if len(lows) > len(highs):
+            highs.append(max(freqs_signal))
+
+        valid_lows = []
+        valid_highs = []
+        for idx, val in enumerate(lows):
+            if (lows[idx] < f_a and highs[idx] > f_b):
+                valid_lows.append(val)
+                valid_highs.append(highs[idx])
+        assert len(valid_highs) == len(valid_lows)
+
+        # Check if we found any low/high pairs
+        if not valid_lows:
             return [-2, -2]
         else:
+            max_range = 0
+            max_idx = 0
+            for idx, val in enumerate(valid_lows):
+                if (valid_highs[idx] - valid_lows[idx]) > max_range:
+                    max_range = valid_highs[idx] - valid_lows[idx]
+                    max_idx = idx
+            corner_frequencies = [lows[max_idx], highs[max_idx]]
             corners = {'get_dynamically': True,
                     'ratio': ratio,
                     'default_high_frequency': corner_frequencies[1],
@@ -331,10 +349,15 @@ def filter_waveform(trace, filter_type, freqmax=None, freqmin=None,
                           'not be applied.')
             filter_params = None
     elif filter_type in high_freq:
-        trace.filter(filter_type, freq=freqmin,
-                corners=corners, zerophase=True)
-        filter_params = {'type': filter_type, 'corners': corners,
-                         'zerophase': zerophase}
+        if freqmin != 0.0:
+            trace.filter(filter_type, freq=freqmin,
+                    corners=corners, zerophase=True)
+            filter_params = {'type': filter_type, 'corners': corners,
+                             'zerophase': zerophase}
+        else:
+            warnings.warn('High pass frequency is equal to zero. High pass '
+                          'filter will not be applied')
+            filter_params = None
     else:
         warnings.warn('Filter type not available %r. Available filters: '
                 '%r' % (filter_type, two_freq + low_freq + high_freq))
@@ -398,8 +421,9 @@ def correct_baseline(trace):
 
 def process(stream, amp_min, amp_max, window_vmin, taper_type,
         taper_percentage, taper_side, get_corners, sn_ratio,
-        default_low_frequency, default_high_frequency, filters,
-        baseline_correct, event_time=None, epi_dist=None):
+        max_low_freq, min_high_freq, default_low_frequency,
+        default_high_frequency, filters, baseline_correct, event_time=None,
+        epi_dist=None):
     """
     Processes an acceleration trace following the step-by-step process
     described in the Rennolet et al paper
@@ -438,6 +462,8 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
         taper_side (str): Sides to taper for step 6.
         get_corners (bool): Whether to complete step 8 or use defaults.
         sn_ratio (float): Signal to noise ratio.
+        max_low_freq (float): Maxmium low corner frequency allowed.
+        min_high_freq (float): Minimum high corner frequency allowed.
         default_low_frequency (float): Default minimum frequency used in
                 place of corners calculated from step 8.
         default_high_frequency (float): Default maximum frequency used in
@@ -462,6 +488,7 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                 'side': taper_side, 'max_percentage': taper_percentage})
         trace_copy = _update_params(trace_copy, 'corners',
                 {'get_dynamically': get_corners, 'sn_ratio': sn_ratio,
+                'max_low_freq': max_low_freq, 'min_high_freq': min_high_freq,
                 'default_low_frequency': default_low_frequency,
                 'default_high_frequency': default_high_frequency})
         trace_copy = _update_params(trace_copy, 'filters', [])
@@ -520,7 +547,7 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
         # Step 8 - Corner frequencies
         if get_corners and windowed:
             corners = get_corner_frequencies(trace_pad, event_time,
-                    epi_dist, sn_ratio)
+                    epi_dist, sn_ratio, max_low_freq, min_high_freq)
             # Check if corner frequency calculation failed
             if (corners == [-1, -1]):
                 warnings.warn('Not enough pre-event noise to calculate '
@@ -535,8 +562,8 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                 low_freq = default_low_frequency
                 dynamic = False
             else:
-                high_freq = corners[0]
-                low_freq = corners[1]
+                low_freq = corners[0]
+                high_freq = corners[1]
                 dynamic = True
         else:
             high_freq = default_high_frequency
@@ -546,7 +573,9 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
         corner_params = {'get_dynamically': dynamic,
                 'default_high_frequency': high_freq,
                 'sn_ratio': sn_ratio,
-                'default_low_frequency': low_freq}
+                'default_low_frequency': low_freq,
+                'max_low_freq': max_low_freq,
+                'min_high_freq': min_high_freq}
         trace_pad = _update_params(trace_pad, 'corners', corner_params)
 
         # Step 9 - Filter
@@ -623,13 +652,16 @@ def process_config(stream, config=None, event_time=None, epi_dist=None):
     sn_ratio = params['corners']['sn_ratio']
     default_low_frequency = float(params['corners']['default_low_frequency'])
     default_high_frequency = float(params['corners']['default_high_frequency'])
+    max_low_freq = float(params['corners']['max_low_freq'])
+    min_high_freq = float(params['corners']['min_high_freq'])
     filters = params['filters']
     baseline_correct = params['baseline_correct']
 
     corrected_stream = process(stream, amp_min, amp_max, window_vmin,
             taper_type, taper_percentage, taper_side, get_corners, sn_ratio,
-            default_low_frequency, default_high_frequency, filters,
-            baseline_correct, event_time=event_time, epi_dist=epi_dist)
+            max_low_freq, min_high_freq, default_low_frequency,
+            default_high_frequency,filters, baseline_correct,
+            event_time=event_time, epi_dist=epi_dist)
     return corrected_stream
 
 
