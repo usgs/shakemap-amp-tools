@@ -281,25 +281,18 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0, f_a=0.1,
         if len(lows) > len(highs):
             highs.append(max(freqs_signal))
 
-        valid_lows = []
-        valid_highs = []
+        found_valid = False
         for idx, val in enumerate(lows):
             if (lows[idx] < f_a and highs[idx] > f_b):
-                valid_lows.append(val)
-                valid_highs.append(highs[idx])
-        assert len(valid_highs) == len(valid_lows)
+                low_corner = lows[idx]
+                high_corner = highs[idx]
+                found_valid = True
 
         # Check if we found any low/high pairs
-        if not valid_lows:
+        if not found_valid:
             return [-2, -2]
         else:
-            max_range = 0
-            max_idx = 0
-            for idx, val in enumerate(valid_lows):
-                if (valid_highs[idx] - valid_lows[idx]) > max_range:
-                    max_range = valid_highs[idx] - valid_lows[idx]
-                    max_idx = idx
-            corner_frequencies = [lows[max_idx], highs[max_idx]]
+            corner_frequencies = [low_corner, high_corner]
             corners = {'get_dynamically': True,
                     'ratio': ratio,
                     'default_high_frequency': corner_frequencies[1],
