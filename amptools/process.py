@@ -283,8 +283,8 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0, f_a=0.1,
 
         found_valid = False
         for idx, val in enumerate(lows):
-            if (lows[idx] < f_a and highs[idx] > f_b):
-                low_corner = lows[idx]
+            if (val < f_a and highs[idx] > f_b):
+                low_corner = val
                 high_corner = highs[idx]
                 found_valid = True
 
