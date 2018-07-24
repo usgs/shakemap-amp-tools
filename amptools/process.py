@@ -408,8 +408,8 @@ def correct_baseline(trace):
     # acceleration trace
     for i in range(orig_trace.stats.npts):
         orig_trace.data[i] -= polynomial_second_derivative(i)
-    trace = _update_params(trace, 'baseline_correct', True)
-    return trace
+    orig_trace = _update_params(orig_trace, 'baseline_correct', True)
+    return orig_trace
 
 
 def process(stream, amp_min, amp_max, window_vmin, taper_type,
