@@ -33,6 +33,7 @@ def test_amp_check_trim():
 
 
 def test_corner_freqs():
+
     event_time = UTCDateTime('2001-02-28T18:54:32')
     ALCT_tr = read(os.path.join(datadir, 'ALCTENE.UW..sac'))[0]
     ALCT_dist = 75.9559
@@ -41,10 +42,10 @@ def test_corner_freqs():
     GNW_dist = 46.7473
 
     corners_1 = process.get_corner_frequencies(ALCT_tr, event_time, ALCT_dist)
-    np.testing.assert_allclose(corners_1, [50.0, 0.030], atol=0.001)
+    np.testing.assert_allclose(corners_1, [0.036, 50.0], atol=0.001)
 
     corners_2 = process.get_corner_frequencies(GNW_tr, event_time, GNW_dist)
-    np.testing.assert_allclose(corners_2, [25.0, 0.030], atol=0.001)
+    np.testing.assert_allclose(corners_2, [0.036, 25.0], atol=0.001)
 
     event_time = UTCDateTime('2016-10-22T17:17:05')
     ALKI_tr = read(os.path.join(datadir, 'ALKIENE.UW..sac'))[0]
@@ -53,13 +54,25 @@ def test_corner_freqs():
     corners_3 = process.get_corner_frequencies(ALKI_tr, event_time, ALKI_dist)
     np.testing.assert_allclose(corners_3, [-2, -2], atol=0)
 
+    event_time = UTCDateTime('2015-12-30T07:39:29')
+    ALCT_tr = read(os.path.join(datadir, 'ALCTENR.sac'))[0]
+    ALCT_dist = 140.5437
+    corners_4 = process.get_corner_frequencies(ALCT_tr, event_time, ALCT_dist)
+    np.testing.assert_allclose(corners_4, [-2, -2], atol=0)
+
+    event_time = UTCDateTime('2015-12-30T07:39:29')
+    B022_tr = read(os.path.join(datadir, 'B022EHZ.sac'))[0]
+    B022_dist = 296.468
+    corners_5 = process.get_corner_frequencies(B022_tr, event_time, B022_dist)
+    np.testing.assert_allclose(corners_5, [-2, -2], atol=0)
+
 
 def test_all():
     config = {
     'processing_parameters': {
             'amplitude': {
-                    'min': 10e-9,
-                    'max': 50.0
+                    'min': 10e-7,
+                    'max': 5e3
             },
             'window': {
                     'vmin': 1.0
@@ -72,6 +85,8 @@ def test_all():
             'corners': {
                     'get_dynamically': True,
                     'sn_ratio': 3.0,
+                    'max_low_freq': 0.1,
+                    'min_high_freq': 5.0,
                     'default_low_frequency': 0.1,
                     'default_high_frequency': 20.0
             },
@@ -131,6 +146,7 @@ def test_all():
 
     # Test trace with invalid amplitudes
     NOWS_tr_mul = read(os.path.join(datadir, 'NOWSENR_mul.sac'))[0]
+    NOWS_tr_mul.data = NOWS_tr_mul.data * 100
     time = UTCDateTime('2001-02-14T22:03:58')
     dist = 50.05
     NOWS_processed = process.process_config([NOWS_tr_mul], config=config,
@@ -144,6 +160,7 @@ def test_all():
     ALKI_processed = process.process_config([ALKI_tr], config=config,
             event_time=event_time, epi_dist=ALKI_dist)[0]
     assert ALKI_processed.stats.processing_parameters.corners['default_low_frequency'] == 0.1
+    print(ALKI_processed.stats.processing_parameters.corners['default_high_frequency'])
     assert ALKI_processed.stats.processing_parameters.corners['default_high_frequency'] == 20.0
 
     # Test with invalid starttime
@@ -158,8 +175,8 @@ def test_all():
     config = {
         'processing_parameters': {
                 'amplitude': {
-                        'min': 10e-9,
-                        'max': 50.0
+                        'min': 10e-7,
+                        'max': 5e3
                 },
                 'window': {
                         'vmin': 1.0
@@ -172,6 +189,8 @@ def test_all():
                 'corners': {
                         'get_dynamically': False,
                         'sn_ratio': 3.0,
+                        'max_low_freq': 0.1,
+                        'min_high_freq': 5.0,
                         'default_low_frequency': 0.1,
                         'default_high_frequency': 20.0
                 },

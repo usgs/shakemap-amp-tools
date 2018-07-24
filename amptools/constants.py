@@ -3,8 +3,8 @@ CONFIG_FILE = '.amptools/config.yml'
 DEFAULT_CONFIG = {
         'processing_parameters': {
                 'amplitude': {
-                        'min': 10e-9,
-                        'max': 50.0
+                        'min': 10e-7,
+                        'max': 5e3
                 },
                 'window': {
                         'vmin': 1.0
@@ -17,6 +17,8 @@ DEFAULT_CONFIG = {
                 'corners': {
                         'get_dynamically': True,
                         'sn_ratio': 3.0,
+                        'max_low_freq': 0.1,
+                        'min_high_freq': 5.0,
                         'default_low_frequency': 0.1,
                         'default_high_frequency': 20.0
                 },
