@@ -49,7 +49,8 @@ def test():
     assert not success
 
     # test some kiknet files
-    datadir = os.path.join(homedir, '..', '..', '..', 'data', 'knet')
+    datadir = os.path.join(homedir, '..', '..', '..',
+                           'data', 'kiknet')
     kiknet_file1 = os.path.join(datadir, 'AICH040010061330.EW2')
     kiknet_file2 = os.path.join(datadir, 'AICH040010061330.NS2')
     kiknet_file3 = os.path.join(datadir, 'AICH040010061330.UD2')
