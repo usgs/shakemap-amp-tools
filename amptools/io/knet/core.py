@@ -87,17 +87,20 @@ def read_knet(filename):
     hdr['delta'] = 1 / hdr['sampling_rate']
     standard['units'] = 'acc'
 
-    if lines[12].split()[1] == 'N-S':
+    dir_string = lines[12].split()[1].strip()
+    # knet files have directions listed as N-S, E-W, or U-D,
+    # whereas in kiknet those directions are '4', '5', or '6'.
+    if dir_string in ['N-S', '4']:
         hdr['channel'] = get_channel_name(hdr['sampling_rate'],
                                           is_acceleration=True,
                                           is_vertical=False,
                                           is_north=True)
-    elif lines[12].split()[1] == 'E-W':
+    elif dir_string in ['E-W', '5']:
         hdr['channel'] = get_channel_name(hdr['sampling_rate'],
                                           is_acceleration=True,
                                           is_vertical=False,
                                           is_north=False)
-    elif lines[12].split()[1] == 'U-D':
+    elif dir_string in ['U-D', '6']:
         hdr['channel'] = get_channel_name(hdr['sampling_rate'],
                                           is_acceleration=True,
                                           is_vertical=True,
