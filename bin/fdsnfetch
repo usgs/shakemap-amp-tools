@@ -2,20 +2,28 @@
 
 import argparse
 import os
-from amptools.io.fdsn import request_raw_waveforms, remove_response
+import sys
+from amptools.io import fdsn
 from amptools.process import correct_baseline_mean, remove_clipped
+from obspy import read
 
 
 def main(args):
+
+    print(args.m)
+    print(args.f)
+    if args.m and args.f != 'SAC':
+        sys.exit('Exiting: Only SAC files currently support storing '
+                 'metadata.')
 
     networks = [str(net) for net in args.n.split()]
     stations = [str(stn) for stn in args.s.split()]
     channels = [str(chn) for chn in args.c.split()]
 
-    st = request_raw_waveforms(args.client, args.org_time,
-                               args.lat, args.lon, args.b, args.a,
-                               args.dmin, args.dmax, networks,
-                               stations, channels)
+    st, inv = fdsn.request_raw_waveforms(args.client, args.org_time,
+                                         args.lat, args.lon, args.b, args.a,
+                                         args.dmin, args.dmax, networks,
+                                         stations, channels)
 
     os.chdir(args.out)
     if not os.path.exists('raw'):
@@ -24,8 +32,20 @@ def main(args):
     print('Writing raw sac files to {0}/Raw'.format(args.out))
     for tr in st:
         trid = tr.get_id()
-        tr.write('raw/{0}-{1}.raw.mseed'.format(trid, tr.stats.starttime),
-                 format='MSEED')
+        tr.write('raw/{0}-{1}.'.format(trid, tr.stats.starttime) + args.f,
+                 format=args.f)
+
+    if args.m:
+        st_read = read('raw/*.SAC')
+        st_meta = fdsn.add_channel_metadata(st_read, inv)
+        if args.mag and args.dep:
+            st_meta = fdsn.add_event_metadata(st_meta, args.lat,
+                                              args.lon, args.mag,
+                                              args.dep)
+        for tr in st_meta:
+            trid = tr.get_id()
+            tr.write('raw/{0}-{1}.'.format(trid, tr.stats.starttime) + args.f,
+                     format=args.f)
 
     # Perform various levels of processing, as desired
     if args.r:
@@ -33,13 +53,23 @@ def main(args):
             os.mkdir('resp_cor')
         st_bas = correct_baseline_mean(st)
         st_unc = remove_clipped(st_bas)
-        st_res = remove_response(st_unc)
+        st_res = fdsn.remove_response(st_unc)
 
         for tr in st_res:
             trid = tr.get_id()
-            tr.write('resp_cor/{0}-{1}.bas.mseed'.format(trid,
-                                                         tr.stats.starttime),
-                     format='MSEED')
+            tr.write('resp_cor/{0}-{1}.'.format(trid, tr.stats.starttime) + args.f,
+                     format=args.f)
+
+            st_read = read('resp_cor/*.SAC')
+            st_meta = fdsn.add_channel_metadata(st_read, inv)
+            if args.mag and args.dep:
+                st_meta = fdsn.add_event_metadata(st_meta, args.lat,
+                                                  args.lon, args.mag,
+                                                  args.dep)
+            for tr in st_meta:
+                trid = tr.get_id()
+                tr.write('resp_cor/{0}-{1}.'.format(trid, tr.stats.starttime) + args.f,
+                         format=args.f)
 
 
 if __name__ == '__main__':
@@ -55,6 +85,10 @@ if __name__ == '__main__':
     parser.add_argument('lon', help='Event longitude', type=float)
 
     # Optional arguments
+    parser.add_argument('-mag', '-magnitude', help='Event magnitude',
+                        type=float)
+    parser.add_argument('-dep', '-depth', help='Event depth',
+                        type=float)
     parser.add_argument('-b', '-before_time', help='Time (s) before event',
                         default=120, type=float)
     parser.add_argument('-a', '-after_time', help='Time (s) after event',
@@ -69,8 +103,12 @@ if __name__ == '__main__':
                         default='*', type=str)
     parser.add_argument('-c', '-channels', help='Channels to request',
                         default='*', type=str)
-    parser.add_argument('-r', '-response,', help='Whether or not to deconvolve'
-                        'instrument response', default=True, type=bool)
+    parser.add_argument('-f', '-format,', help='Format type to save data',
+                        default='MSEED', type=str)
+    parser.add_argument('--m', action='store_true',
+                        help='Whether to attach channel metadata')
+    parser.add_argument('--r', action='store_true',
+                        help='Whether to denconvolve instrument response')
 
     pargs = parser.parse_args()
     main(pargs)

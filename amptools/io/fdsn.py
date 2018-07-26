@@ -35,6 +35,7 @@ def request_raw_waveforms(fdsn_client, org_time, lat, lon,
 
     Returns:
         stream (obspy.core.trace.Trace): Stream of requested, raw data.
+        inventory (obspy.core.inventory): Inventory object for the event.
     """
 
     # Initialize the client
@@ -72,6 +73,59 @@ def request_raw_waveforms(fdsn_client, org_time, lat, lon,
     # Perform the bulk data request
     print('Requesting waveforms for {0} channels.'.format(len(channels)))
     st = client.get_waveforms_bulk(bulk, attach_response=True)
+    return st, inventory
+
+
+def add_channel_metadata(st, inv):
+    """
+    Adds the channel metadata for each channel in the stream.
+
+    Args:
+        st (obspy.core.stream.Stream): Stream of requested data.
+        inv (obspy.core.inventory): Inventory object corresponding to
+            to the stream.
+
+    Returns:
+        st (obspy.core.stream.Stream): Stream with metadata added.
+    """
+    for tr in st:
+        time = tr.stats.starttime
+        id_string = tr.stats.network + '.' + tr.stats.station + '.'
+        id_string += tr.stats.location + '.' + tr.stats.channel
+        metadata = inv.get_channel_metadata(id_string, time)
+
+        print(metadata)
+
+        tr.stats.sac.stla = metadata['latitude']
+        tr.stats.sac.stlo = metadata['longitude']
+        tr.stats.sac.stel = metadata['elevation']
+        tr.stats.sac.cmpaz = metadata['azimuth']
+        tr.stats.sac.cmpinc = metadata['dip']
+        tr.stats.sac.lcalda = 1
+
+    return st
+
+
+def add_event_metadata(st, lat, lon, mag, dep):
+    """
+    Adds the event metadata to each file.
+
+    Args:
+        st (obspy.core.stream.Stream): Stream of requested data.
+        lat (float): Event latitude.
+        lon (float): Event longitude.
+        mag (float): Event magnitude.
+        dep (float): Event depth.
+
+    Returns:
+        st (obspy.core.stream.Stream): Stream with added event metadata.
+    """
+    for tr in st:
+        tr.stats.sac.evla = lat
+        tr.stats.sac.evlo = lon
+        tr.stats.sac.mag = mag
+        tr.stats.sac.evdp = dep
+
     return st
 
 

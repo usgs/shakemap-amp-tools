@@ -3,7 +3,6 @@
 import subprocess
 import os
 import glob
-import shutil
 
 
 def get_command_output(cmd):
@@ -41,23 +40,26 @@ def test_fdsnfetch():
 
     cmd = '%s %s' % (fdsnfetch, cmd_input)
     res, stdout, stderr = get_command_output(cmd)
-    print(res, stdout, stderr)
-
-    shutil.rmtree(datadir + '/raw')
-    shutil.rmtree(datadir + '/resp_cor')
 
     parameters = 'IRIS 2001-02-28T18:54:32 47.149 -122.7266667 -dmax 1.0'
-    parameters += ' -n UW -s ALCT -c EN*'
+    parameters += ' -mag 6.8 -dep 51.798'
+    parameters += ' -n UW -s ALCT -c EN* --m --r'
     cmd_input = '%s %s' % (datadir, parameters)
     cmd = '%s %s' % (fdsnfetch, cmd_input)
     res, stdout, stderr = get_command_output(cmd)
     print(res, stdout, stderr)
 
-    # Confirm that we got the three ALCT station as expected
+    parameters += ' -f SAC'
+    cmd_input = '%s %s' % (datadir, parameters)
+    cmd = '%s %s' % (fdsnfetch, cmd_input)
+    res, stdout, stderr = get_command_output(cmd)
+    print(res, stdout, stderr)
+
+    # Confirm that we got the six ALCT files as expected
     os.chdir(datadir)
     os.chdir('raw')
     ALCT_files = glob.glob('UW.ALCT*')
-    assert len(ALCT_files) == 3
+    assert len(ALCT_files) == 6
 
 
 if __name__ == '__main__':
