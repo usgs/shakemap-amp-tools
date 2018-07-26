@@ -38,33 +38,21 @@ def test_corner_freqs():
     ALCT_tr = read(os.path.join(datadir, 'ALCTENE.UW..sac'))[0]
     ALCT_dist = 75.9559
 
-    GNW_tr = read(os.path.join(datadir, 'GNWBHE.UW..sac'))[0]
-    GNW_dist = 46.7473
-
     corners_1 = process.get_corner_frequencies(ALCT_tr, event_time, ALCT_dist)
     np.testing.assert_allclose(corners_1, [0.036, 50.0], atol=0.001)
 
-    corners_2 = process.get_corner_frequencies(GNW_tr, event_time, GNW_dist)
-    np.testing.assert_allclose(corners_2, [0.036, 25.0], atol=0.001)
+    ALCT_tr.stats.starttime += 300
+    corners_2 = process.get_corner_frequencies(ALCT_tr, event_time, ALCT_dist)
+    assert corners_2 == [-1, -1]
 
     event_time = UTCDateTime('2016-10-22T17:17:05')
     ALKI_tr = read(os.path.join(datadir, 'ALKIENE.UW..sac'))[0]
     ALKI_dist = 37.87883
-
-    corners_3 = process.get_corner_frequencies(ALKI_tr, event_time, ALKI_dist)
-    np.testing.assert_allclose(corners_3, [-2, -2], atol=0)
-
-    event_time = UTCDateTime('2015-12-30T07:39:29')
-    ALCT_tr = read(os.path.join(datadir, 'ALCTENR.sac'))[0]
-    ALCT_dist = 140.5437
-    corners_4 = process.get_corner_frequencies(ALCT_tr, event_time, ALCT_dist)
-    np.testing.assert_allclose(corners_4, [-2, -2], atol=0)
-
-    event_time = UTCDateTime('2015-12-30T07:39:29')
-    B022_tr = read(os.path.join(datadir, 'B022EHZ.sac'))[0]
-    B022_dist = 296.468
-    corners_5 = process.get_corner_frequencies(B022_tr, event_time, B022_dist)
-    np.testing.assert_allclose(corners_5, [-2, -2], atol=0)
+    corners_3 = process.get_corner_frequencies(ALKI_tr, event_time, ALKI_dist,
+                                               ratio=100000.0)
+    assert corners_3 == [-2, -2]
+    corners_4 = process.get_corner_frequencies(ALKI_tr, event_time, ALKI_dist)
+    assert corners_4 == [-3, -3]
 
 
 def test_all():
@@ -127,7 +115,7 @@ def test_all():
     BRI_tr = read(os.path.join(datadir, 'BRIHN1.GS..sac'))[0]
     BRI_processed = process.process_config([BRI_tr], config=config,
             event_time=event_time, epi_dist=BRI_dist)[0]
-    assert BRI_processed.stats['passed_tests'] == True
+    assert BRI_processed.stats['passed_tests'] is True
 
     # Triggers the invalid low pass filtering warning
     event_time = UTCDateTime('2001-02-28T18:54:32')
@@ -135,13 +123,13 @@ def test_all():
     ALCT_tr = read(os.path.join(datadir, 'ALCTENE.UW..sac'))[0]
     ALCT_processed = process.process_config([ALCT_tr], config=config,
             event_time=event_time, epi_dist=ALCT_dist)[0]
-    assert ALCT_processed.stats['passed_tests'] == True
+    assert ALCT_processed.stats['passed_tests'] is True
 
     GNW_tr = read(os.path.join(datadir, 'GNWBHE.UW..sac'))[0]
     GNW_dist = 46.7473
     GNW_processed = process.process_config([GNW_tr], config=config,
             event_time=event_time, epi_dist=GNW_dist)[0]
-    assert GNW_processed.stats['passed_tests'] == True
+    assert GNW_processed.stats['passed_tests'] is True
 
 
     # Test trace with invalid amplitudes
@@ -151,7 +139,7 @@ def test_all():
     dist = 50.05
     NOWS_processed = process.process_config([NOWS_tr_mul], config=config,
             event_time=time, epi_dist=dist)[0]
-    assert NOWS_processed.stats['passed_tests'] == False
+    assert NOWS_processed.stats['passed_tests'] is False
 
     # Test trace with low S/N ratio
     event_time = UTCDateTime('2016-10-22T17:17:05')
@@ -160,14 +148,13 @@ def test_all():
     ALKI_processed = process.process_config([ALKI_tr], config=config,
             event_time=event_time, epi_dist=ALKI_dist)[0]
     assert ALKI_processed.stats.processing_parameters.corners['default_low_frequency'] == 0.1
-    print(ALKI_processed.stats.processing_parameters.corners['default_high_frequency'])
     assert ALKI_processed.stats.processing_parameters.corners['default_high_frequency'] == 20.0
 
     # Test with invalid starttime
     ALKI_tr.stats.starttime += 500
     ALKI_processed = process.process_config([ALKI_tr], config=config,
             event_time=event_time, epi_dist=ALKI_dist)[0]
-    assert ALKI_processed.stats['passed_tests'] == False
+    assert ALKI_processed.stats['passed_tests'] is False
 
     ALKI_split = process.split_signal_and_noise(ALKI_tr, event_time, ALKI_dist)
     assert ALKI_split == (-1, -1)
@@ -198,15 +185,15 @@ def test_all():
                         'type': 'highpass',
                         'corners': 4,
                         'zerophase': True
-                },{
+                }, {
                         'type': 'lowpass',
                         'corners': 4,
                         'zerophase': True
-                },{
+                }, {
                         'type': 'bandpass',
                         'corners': 4,
                         'zerophase': True
-                },{
+                }, {
                         'type': 'invalid',
                         'corners': 4,
                         'zerophase': True
@@ -218,9 +205,9 @@ def test_all():
         }
     }
     ALKI_processed = process.process_config([ALKI_tr], config=config)[0]
-    assert ALKI_processed.stats['passed_tests'] == False
+    assert ALKI_processed.stats['passed_tests'] is False
     ALKI_processed = process.process_config([ALKI_tr])[0]
-    assert ALKI_processed.stats['passed_tests'] == False
+    assert ALKI_processed.stats['passed_tests'] is False
 
 
 if __name__ == '__main__':

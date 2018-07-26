@@ -19,37 +19,37 @@ CONFIG = get_config()
 def filter_detrend(trace, taper_type='cosine', taper_percentage=0.05,
                    filter_type='highpass', filter_frequency=0.02,
                    filter_zerophase=True, filter_corners=4):
-        """
-        Read files from a directory and return stream objects.
+    """
+    Read files from a directory and return stream objects.
 
-        Args:
-            trace (obspy.core.trace.Trace): Trace of strong motion data.
-            taper_type (str): Type of taper used for processing.
-                Default is 'cosine'.
-            taper_percentage (float): Maximum taper percentage.
-                Default is 0.05.
-            filter_type (str): Type of filter used for processing.
-                Default is 'highpass'.
-            filter_frequency (float): Filter corner frequency.
-                Default is 0.02.
-            filter_zerophase (bool): If True, applies a forward and backward
-                filter. Results in a zero phase shift. Default is True.
-            filter_corners (int): Filter corners / order.
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion data.
+        taper_type (str): Type of taper used for processing.
+            Default is 'cosine'.
+        taper_percentage (float): Maximum taper percentage.
+            Default is 0.05.
+        filter_type (str): Type of filter used for processing.
+            Default is 'highpass'.
+        filter_frequency (float): Filter corner frequency.
+            Default is 0.02.
+        filter_zerophase (bool): If True, applies a forward and backward
+            filter. Results in a zero phase shift. Default is True.
+        filter_corners (int): Filter corners / order.
 
-        Returns:
-            list : List of obspy.core.stream.Stream objects
+    Returns:
+        list : List of obspy.core.stream.Stream objects
 
-        Notes:
-            Depricated function. This will be removed.
-        """
-        trace.detrend('linear')
-        trace.detrend('demean')
-        trace.taper(max_percentage=taper_percentage, type=taper_type)
-        trace.filter(filter_type, freq=filter_frequency,
-                     zerophase=filter_zerophase, corners=filter_corners)
-        trace.detrend('linear')
-        trace.detrend('demean')
-        return trace
+    Notes:
+        Depricated function. This will be removed.
+    """
+    trace.detrend('linear')
+    trace.detrend('demean')
+    trace.taper(max_percentage=taper_percentage, type=taper_type)
+    trace.filter(filter_type, freq=filter_frequency,
+                 zerophase=filter_zerophase, corners=filter_corners)
+    trace.detrend('linear')
+    trace.detrend('demean')
+    return trace
 
 
 def correct_baseline_mean(stream):
@@ -77,15 +77,17 @@ def remove_clipped(stream, max_count=2000000):
     (https://doi.org/10.1193/101916EQS175DP)
 
     Args:
-        stream (obspy.core.stream.Stream): Stream of raw data.
+        stream (obspy.core.stream.Stream): Stream of raw data in counts.
         max_count (int): Maximum count for clipping.
+            Default is 2 million.
 
     Returns:
         stream (obspy.core.stream.Stream): Stream of raw data with clipped
         waveforms removed
     """
     for tr in stream:
-        if tr.max() >= max_count:
+
+        if abs(tr.max()) >= max_count:
             stream.traces.remove(tr)
             warnings.warn('Clipped trace was removed from the stream')
             warnings.warn(tr.get_id())
@@ -93,230 +95,242 @@ def remove_clipped(stream, max_count=2000000):
 
 
 def check_max_amplitude(trace, min_amp=10e-7, max_amp=5e3):
-        """
-        Checks that the maximum amplitude of the trace is within a defined
-        range.
+    """
+    Checks that the maximum amplitude of the trace is within a defined
+    range.
 
-        Args:
-            trace (obspy.core.trace.Trace): Trace of strong motion data.
-            min_amp (float): Minimum amplitude for the acceptable range.
-                Default is 10e-7.
-            max_amp (float): Maximum amplitude for the acceptable range.
-                Default is 5e3.
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion data.
+        min_amp (float): Minimum amplitude for the acceptable range.
+            Default is 10e-7.
+        max_amp (float): Maximum amplitude for the acceptable range.
+            Default is 5e3.
 
-        Returns:
-            bool: True if trace passes the check. False otherwise.
-        """
-        amplitude = {'min': min_amp, 'max': max_amp}
-        trace = _update_params(trace, 'amplitude', amplitude)
-        if (abs(trace.max()) >= min_amp and abs(trace.max()) <= max_amp):
-            return True
-        else:
-            return False
+    Returns:
+        bool: True if trace passes the check. False otherwise.
+    """
+    amplitude = {'min': min_amp, 'max': max_amp}
+    trace = _update_params(trace, 'amplitude', amplitude)
+    if (abs(trace.max()) >= min_amp and abs(trace.max()) <= max_amp):
+        return True
+    else:
+        return False
 
 
 def trim_total_window(trace, org_time, epi_dist, vmin=1.0):
-        """
-        Trims a stream of traces to the window using the algorithm
-        defined in the Rennolet data paper.
+    """
+    Trims a trace to the window using the algorithm
+    defined in the Rennolet data paper.
 
-        Args:
-            stream (obspy.core.stream.Stream): Stream of strong motion data.
-            org_time (UTCDateTime): Event origin time.
-            epi_dist (float): Distance from event epicenter to station.
-            vmin (float): Minimum apparent velocity.
-                Default is 1.0 km/s.
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion data.
+        org_time (UTCDateTime): Event origin time.
+        epi_dist (float): Distance from event epicenter to station.
+        vmin (float): Minimum apparent velocity.
+            Default is 1.0 km/s.
 
-        Returns:
-            stream (obspy.core.stream.Stream) after windowing.
-            If trim failure occurs: -1
-        """
-        window = {'vmin': vmin}
-        trace = _update_params(trace, 'window', window)
+    Returns:
+        trace (obspy.core.trace.Trace) after windowing.
+        If trim failure occurs: -1
+    """
+    window = {'vmin': vmin}
+    trace = _update_params(trace, 'window', window)
 
-        end_time = org_time + max(120, epi_dist / vmin)
-        # Check to make sure that the trimming end time is after
-        # the start time of our trace
-        if (end_time <= trace.stats.starttime):
-            return -1
-        else:
-            trace.trim(endtime=end_time)
-            return trace
-
-
-def zero_pad(trace):
-        """
-        Pads zeros to the end of the time series to produce a time series
-        length of the nearest upper power of 2.
-
-        Args:
-            trace (obspy.core.trace.Trace): Trace of strong motion data.
-
-        Returns:
-            trace (obspy.core.trace.Trace): Trace after zero padding.
-        """
-
-        pad_npts = int(next_pow_2(trace.stats.npts)) - 1
-        pad_tim = trace.stats.starttime + pad_npts / trace.stats.sampling_rate
-        trace.trim(endtime=pad_tim, pad=True, fill_value=0)
+    end_time = org_time + max(120, epi_dist / vmin)
+    # Check to make sure that the trimming end time is after
+    # the start time of our trace
+    if (end_time <= trace.stats.starttime):
+        return -1
+    else:
+        trace.trim(endtime=end_time)
         return trace
 
 
 def split_signal_and_noise(trace, event_time, epi_dist):
-        """
-        Identifies the noise and signal windows for the waveform.
-        The noise window is defined from the start of the waveform through the
-        arrival time of a 7 km/s phase. The signal window is defned from the
-        arrival time of a 7 km/s phase through the end of the waveform.
+    """
+    Identifies the noise and signal windows for the waveform.
+    The noise window is defined from the start of the waveform through the
+    arrival time of a 7 km/s phase. The signal window is defned from the
+    arrival time of a 7 km/s phase through the end of the waveform.
 
-        Args:
-            trace (obspy.core.trace.Trace): Trace of strong motion data.
-            event_time (UTCDateTime): Event origin time.
-            epi_dist (float): Distance form event epicenter to station.
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion data.
+        event_time (UTCDateTime): Event origin time.
+        epi_dist (float): Distance form event epicenter to station.
 
-        Returns:
-            tuple of two traces:
-                1) Noise trace
-                2) Signal trace
-            If cannot separate noise/signal, returns -1.
-        """
+    Returns:
+        tuple of two traces:
+            1) Noise trace
+            2) Signal trace
+        If cannot separate noise from signal, returns -1.
+    """
 
-        # Calculate the arrival time of a 7 km/s phase
-        phase_arrival_time = event_time + epi_dist / 7.0
+    # Calculate the arrival time of a 7 km/s phase
+    phase_arrival_time = event_time + epi_dist / 7.0
 
-        # Check if the arrival time is before or after the trace window
-        if (phase_arrival_time <= trace.stats.starttime):
-            return (-1, -1)
-        elif (phase_arrival_time >= trace.stats.endtime):
-            return (-1, -1)
-        else:
-            orig_trace_1 = trace.copy()
-            orig_trace_2 = trace.copy()
+    # Check if the arrival time is before or after the trace window
+    if (phase_arrival_time <= trace.stats.starttime):
+        return (-1, -1)
+    elif (phase_arrival_time >= trace.stats.endtime):
+        return (-1, -1)
+    else:
+        orig_trace_1 = trace.copy()
+        orig_trace_2 = trace.copy()
 
-        noise_trace = orig_trace_1.trim(endtime=phase_arrival_time)
-        signal_trace = orig_trace_2.trim(starttime=phase_arrival_time)
-
-        return (signal_trace, noise_trace)
+    noise_trace = orig_trace_1.trim(endtime=phase_arrival_time)
+    signal_trace = orig_trace_2.trim(starttime=phase_arrival_time)
+    return (signal_trace, noise_trace)
 
 
 def fft_smooth(trace, nfft):
-        """
-        Pads a trace to the nearest upper power of 2, takes the FFT, and
-        smooths the ampltidue spectra following the algorithm of
-        Konno and Ohmachi.
+    """
+    Pads a trace to the nearest upper power of 2, takes the FFT, and
+    smooths the amplitude spectra following the algorithm of
+    Konno and Ohmachi.
 
-        Args:
-            trace (obspy.core.trace.Trace): Trace of strong motion data.
-            nfft (int): Number of data points for the fourier transform.
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion data.
+        nfft (int): Number of data points for the fourier transform.
 
-        Returns:
-            numpy.ndarray: Smoothed amplitude data.
-        """
+    Returns:
+        numpy.ndarray: Smoothed amplitude data and frequencies.
+    """
 
-        # Compute the FFT, normalizing by the number of data points
-        spec = abs(np.fft.rfft(trace.data, n=nfft)) / nfft
+    # Compute the FFT, normalizing by the number of data points
+    spec = abs(np.fft.rfft(trace.data, n=nfft)) / nfft
 
-        # Get the frequencies associated with the FFT
-        freqs = np.fft.rfftfreq(nfft, 1 / trace.stats.sampling_rate)
+    # Get the frequencies associated with the FFT
+    freqs = np.fft.rfftfreq(nfft, 1 / trace.stats.sampling_rate)
 
-        # Konno Omachi Smoothing using 20 for bandwidth parameter
-        spec_smooth = konno_ohmachi_smoothing(spec.astype(float), freqs, 20)
-        return spec_smooth, freqs
+    # Konno Omachi Smoothing using 20 for bandwidth parameter
+    spec_smooth = konno_ohmachi_smoothing(spec.astype(float), freqs, 20)
+    return spec_smooth, freqs
 
 
-def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0, f_a=0.1,
-                           f_b = 5.0):
-        """
-        Returns the corner frequencies for a trace.
+def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0,
+                           max_low_corner=0.1, min_high_corner=5.0,
+                           taper_type='hann', taper_percentage=0.05,
+                           taper_side='both'):
+    """
+    Returns the corner frequencies for a trace.
 
-        Args:
-            trace (obspy.core.trace.Trace): Trace of strong motion data.
-            event_time (UTCDateTime): Event origin time.
-            epi_dist (float): Distance from event epicenter to station.
-            ratio (float): Required signal-to-noise ratio. Default is 3.0
+    Args:
+        trace (obspy.core.trace.Trace): Trace of strong motion data.
+        event_time (UTCDateTime): Event origin time.
+        epi_dist (float): Distance from event epicenter to station.
+        ratio (float): Required signal-to-noise ratio.
+            Default is 3.0.
+        max_low_corner (float): Maxmimum low corner frequency allowed.
+            Default is 0.1.
+        min_high_corner(float): Minimum low corner frequency allowed.
+            Default is 5.0.
+        taper_type (str): Taper types allowed for filtering. Must be an Obspy
+            supported tapering method.
+            Default is 'hann' (Hanning taper).
+        taper_percentage (float): Decimal percentage of taper.
+            Default is 0.05 (5%).
+        taper_side (str): Speicfy which sides should be tapered. Either 'left',
+            'right', or 'both'.
+            Default is 'both'.
 
-        Returns:
-            list : List of floats representing corner frequencies.
-            Returns two -1 values if inadequate signal to noise ratio.
-        """
+    Returns:
+        list : List of floats representing corner frequencies.
+        Returns two -1 values if inadequate signal to noise ratio.
+    """
 
-        # Split the noise and signal into two separate traces
-        signal, noise = split_signal_and_noise(trace, event_time, epi_dist)
+    # Split the noise and signal into two separate traces
+    signal, noise = split_signal_and_noise(trace, event_time, epi_dist)
 
-        # Check if signal and noise splitting failed
-        if (signal == -1 and noise == -1):
-            return [-1, -1]
+    # Check if signal and noise splitting failed
+    if (signal == -1 and noise == -1):
+        return [-1, -1]
 
-        # find the number of points for the Fourier transform
-        nfft = max(next_pow_2(signal.stats.npts), next_pow_2(noise.stats.npts))
+    # Taper the noise and signal traces
+    noise = taper(noise, taper_type=taper_type,
+                  max_percentage=taper_percentage, side=taper_side)
 
-        # Transform to frequency domain and smooth spectra using
-        # konno-ohmachi smoothing
-        sig_spec_smooth, freqs_signal = fft_smooth(signal, nfft)
-        noise_spec_smooth, freqs_noise = fft_smooth(noise, nfft)
+    signal = taper(signal, taper_type=taper_type,
+                   max_percentage=taper_percentage, side=taper_side)
 
-        # remove the noise level from the spectrum of the signal window
-        sig_spec_smooth -= noise_spec_smooth
+    # Find the number of points for the Fourier transform
+    nfft = max(next_pow_2(signal.stats.npts), next_pow_2(noise.stats.npts))
 
-        # Loop through frequencies to find low corner and high corner
-        corner_frequencies = []
-        lows = []
-        highs = []
-        have_low = False
-        for idx, freq in enumerate(freqs_signal):
-            if have_low is False:
-                if (sig_spec_smooth[idx] / noise_spec_smooth[idx]) >= ratio:
-                    lows.append(freq)
-                    have_low = True
-                else:
-                    continue
+    # Transform to frequency domain and smooth spectra using
+    # konno-ohmachi smoothing
+    sig_spec_smooth, freqs_signal = fft_smooth(signal, nfft)
+    noise_spec_smooth, freqs_noise = fft_smooth(noise, nfft)
+
+    # remove the noise level from the spectrum of the signal window
+    sig_spec_smooth -= noise_spec_smooth
+
+    # Loop through frequencies to find low corner and high corner
+    corner_frequencies = []
+    lows = []
+    highs = []
+    have_low = False
+    for idx, freq in enumerate(freqs_signal):
+        if have_low is False:
+            if (sig_spec_smooth[idx] / noise_spec_smooth[idx]) >= ratio:
+                lows.append(freq)
+                have_low = True
             else:
-                if (sig_spec_smooth[idx] / noise_spec_smooth[idx]) < ratio:
-                    highs.append(freq)
-                    have_low = False
-                else:
-                    continue
-
-        # If we find an extra low
-        if len(lows) > len(highs):
-            highs.append(max(freqs_signal))
-
-        found_valid = False
-        for idx, val in enumerate(lows):
-            if (val < f_a and highs[idx] > f_b):
-                low_corner = val
-                high_corner = highs[idx]
-                found_valid = True
-
-        # Check if we found any low/high pairs
-        if not found_valid:
-            return [-2, -2]
+                continue
         else:
-            corner_frequencies = [low_corner, high_corner]
-            corners = {'get_dynamically': True,
-                    'ratio': ratio,
-                    'default_high_frequency': corner_frequencies[1],
-                    'default_low_frequency': corner_frequencies[0]}
-            trace = _update_params(trace, 'corners', corners)
-            return corner_frequencies
+            if (sig_spec_smooth[idx] / noise_spec_smooth[idx]) < ratio:
+                highs.append(freq)
+                have_low = False
+            else:
+                continue
+
+    # If we didn't find any corners
+    if not lows:
+        return [-2, -2]
+
+    # If we find an extra low, add another high for the maximum frequency
+    if len(lows) > len(highs):
+        highs.append(max(freqs_signal))
+
+    # Check if any of the low/high pairs are valid
+    found_valid = False
+    for idx, val in enumerate(lows):
+        if (val <= max_low_corner and highs[idx] > min_high_corner):
+            low_corner = val
+            high_corner = highs[idx]
+            found_valid = True
+
+    # Check if we found any valid pairs
+    if not found_valid:
+        return [-3, -3]
+    else:
+        corner_frequencies = [low_corner, high_corner]
+        corners = {'get_dynamically': True,
+                   'ratio': ratio,
+                   'high_corner': corner_frequencies[1],
+                   'low_corner': corner_frequencies[0]}
+        trace = _update_params(trace, 'corners', corners)
+        return corner_frequencies
 
 
 def filter_waveform(trace, filter_type, freqmax=None, freqmin=None,
-        zerophase=False, corners=4):
+                    zerophase=False, corners=4):
     """
     Returns the filtered waveform using the provided corner frequencies.
 
     Args:
         trace (obspy.core.trace.Trace): Trace of strong motion data.
-        filter_type (str): Type of filter to be applied
-        freqmax (float): Maximum frequency corner. Default is None.
-        freqmin (float): Minimum frequency corner. Default is None.
-        zerophase (bool): Perform a zerophase filter. Default is False
-        corners (in): Number of corners.
+        filter_type (str): Type of filter to be applied.
+        freqmax (float): Maximum frequency corner.
+            Default is None.
+        freqmin (float): Minimum frequency corner.
+            Default is None.
+        zerophase (bool): Whether to perform zerophase filtering.
+            Default is False.
+        corners (int): Number of corners (poles).
 
     Returns:
         trace (obspy.core.trace.Trace): Filtered trace
     """
+
     filter_type = filter_type.lower()
     two_freq = ['bandpass', 'bandstop']
     low_freq = ['lowpass', 'lowpass_cheby_2', 'lowpass_fir']
@@ -324,18 +338,17 @@ def filter_waveform(trace, filter_type, freqmax=None, freqmin=None,
 
     if filter_type in two_freq:
         trace.filter(filter_type, freqmin=freqmin, freqmax=freqmax,
-                corners=corners, zerophase=zerophase)
+                     corners=corners, zerophase=zerophase)
         filter_params = {'type': filter_type, 'corners': corners,
                          'zerophase': zerophase}
     elif filter_type in low_freq:
-        # Find the Nyquist frequency, which is half the sampling rate
-        nyquist_freq = 0.5 * trace.stats.sampling_rate
         # Only perform low pass frequency if corner is less than nyquist freq
+        nyquist_freq = 0.5 * trace.stats.sampling_rate
         if (freqmax < nyquist_freq):
             trace.filter(filter_type, freq=freqmax,
-                    corners=corners, zerophase=zerophase)
+                         corners=corners, zerophase=zerophase)
             filter_params = {'type': filter_type, 'corners': corners,
-                         'zerophase': zerophase}
+                             'zerophase': zerophase}
         else:
             warnings.warn('Low pass frequency is greater than or equal '
                           'to the Nyquist frequency. Low pass filter will '
@@ -344,7 +357,7 @@ def filter_waveform(trace, filter_type, freqmax=None, freqmin=None,
     elif filter_type in high_freq:
         if freqmin != 0.0:
             trace.filter(filter_type, freq=freqmin,
-                    corners=corners, zerophase=True)
+                         corners=corners, zerophase=True)
             filter_params = {'type': filter_type, 'corners': corners,
                              'zerophase': zerophase}
         else:
@@ -353,7 +366,7 @@ def filter_waveform(trace, filter_type, freqmax=None, freqmin=None,
             filter_params = None
     else:
         warnings.warn('Filter type not available %r. Available filters: '
-                '%r' % (filter_type, two_freq + low_freq + high_freq))
+                      '%r' % (filter_type, two_freq + low_freq + high_freq))
         filter_params = None
     try:
         if filter_params is not None:
@@ -413,10 +426,10 @@ def correct_baseline(trace):
 
 
 def process(stream, amp_min, amp_max, window_vmin, taper_type,
-        taper_percentage, taper_side, get_corners, sn_ratio,
-        max_low_freq, min_high_freq, default_low_frequency,
-        default_high_frequency, filters, baseline_correct, event_time=None,
-        epi_dist=None):
+            taper_percentage, taper_side, get_corners, sn_ratio,
+            max_low_freq, min_high_freq, default_low_frequency,
+            default_high_frequency, filters, baseline_correct, event_time=None,
+            epi_dist=None):
     """
     Processes an acceleration trace following the step-by-step process
     described in the Rennolet et al paper
@@ -424,19 +437,17 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
     This function completes
     Step 4 through Step 11 from the paper.
 
-    4) Check Amplitude
-    5) Window Signals
-    6) Taper Total Waveform
-    7) Zero-Pad Time Series
-    8) Identify Corner Frequencies for High- and Low-Pass Filtering
-    9) Filter Waveform
-    10) Remove Zero Padding
-    11) Correct Baseline
+    - Amplitude
+    - Windowing
+    - Identify corner frequencies for filtering
+        - Split signal and noise windows
+        - Taper, compute FFT, Konno Ohmachi smoothing
+        - Signal-to-noise ratio
+    - Filter
+    - Polynomial baseline correction
 
     This processing should be performed on data with physical units (acc,
-    vel, etc). Steps 1-3 should be performed in the reader or ftp fetcher.
-    Steps 13-14 should be done in calculations of strong ground
-    motion parameters.
+    vel, etc).
 
     Along with the stream, this function requires two pieces of metadata
     (origin time of the event and epicentral distance to the station) to
@@ -489,71 +500,72 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                 baseline_correct)
         trace_copy.stats['passed_tests'] = True
 
-        # Step 4 - Check amplitude
+        # Check amplitude
         if not check_max_amplitude(trace_copy, amp_min, amp_max):
             trace_copy.stats['passed_tests'] = False
             err_msg = ('Processing: Trace maximum amplitude is not '
-                    'within the acceptable range: %r to %r. Skipping '
-                    'processing for trace: %r' % (amp_min,
-                    amp_max, trace))
+                       'within the acceptable range: %r to %r. Skipping '
+                       'processing for trace: %r' % (amp_min,
+                                                     amp_max, trace))
             trace_copy = _update_comments(trace_copy, err_msg)
             stream[idx] = trace_copy
             continue
 
-        # Step 5 - Window signal
+        # Windowing
         if event_time is not None and epi_dist is not None:
             trace_trim = trim_total_window(trace_copy, event_time, epi_dist,
-                    vmin=window_vmin)
+                                           vmin=window_vmin)
             windowed = True
             # Check if windowing failed
             if (trace_trim == -1):
                 trace_copy.stats['passed_tests'] = False
                 err_msg = ('Processing: Invalid time windowing. The start '
-                        'time of the trace is after the calculated '
-                        'end time. Skipping procesing for trace: %r', trace)
+                           'time of the trace is after the calculated '
+                           'end time. Skipping procesing for trace: %r', trace)
                 trace_trim = _update_comments(trace_copy, err_msg)
                 stream[idx] = trace_copy
                 continue
         else:
             trace_copy.stats['passed_tests'] = False
             err_msg = ('Processing: No windowing test performed. Missing '
-                    'event time and/or epicentral distance information to '
-                    'perform calculation.')
+                       'event time and/or epicentral distance information to '
+                       'perform calculation.')
             trace_copy = _update_comments(trace_copy, err_msg)
             trace_copy = _update_params(trace_copy, 'window',
-                    {'vmin': window_vmin})
+                                        {'vmin': window_vmin})
             trace_trim = trace_copy
             # Corners cannot be calculated dynamically without windowing
             warnings.warn('Missing event information. Continuing processing '
-                    'without windowing. Default frequencies will be used for '
-                    'filtering.')
+                          'without windowing. Default frequencies will be '
+                          'used for filtering.')
             windowed = False
 
-        # Step 6 - Taper
-        trace_tap = taper(trace_trim, taper_type=taper_type,
-                max_percentage=taper_percentage, side='both')
-
-        # Step 7 - Zero pad
-        before_padding_endtime = trace_tap.stats.endtime
-        trace_pad = zero_pad(trace_tap)
-
-        # Step 8 - Corner frequencies
+        # Find corner frequencies
         if get_corners and windowed:
-            corners = get_corner_frequencies(trace_pad, event_time,
-                    epi_dist, sn_ratio, max_low_freq, min_high_freq)
-            # Check if corner frequency calculation failed
-            if (corners == [-1, -1]):
-                warnings.warn('Not enough pre-event noise to calculate '
-                        'signal to noise ratio, using defaults.')
-                high_freq = default_high_frequency
-                low_freq = default_low_frequency
+            corners = get_corner_frequencies(trace_trim, event_time,
+                    epi_dist, sn_ratio, max_low_freq, min_high_freq,
+                    taper_type, taper_percentage, taper_side)
+
+            if (corners[0] < 0 or corners[1] < 0):
+                trace_copy.stats['passed_tests'] = False
                 dynamic = False
-            elif (corners == [-2, -2]):
-                warnings.warn('Signal-to-noise ratio is not high enough '
-                        'to to find corner-frequencies, using defaults.')
-                high_freq = default_high_frequency
-                low_freq = default_low_frequency
-                dynamic = False
+                low_freq = -9999
+                high_freq = -9999
+
+                if corners == [-1, -1]:
+                    err_msg = ('Not enough pre-event noise to calculate '
+                               'signal to noise ratio. Skipping processing '
+                               'for trace: %r' % (trace))
+                elif corners == [-2, 2]:
+                    err_msg = ('Signal-to-noise ratio too low to find corner '
+                               'frequencies, skipping processing for '
+                               'trace: %r' % (trace))
+                else:
+                    err_msg = ('Did not find any corner frequencies within '
+                               'the valid bandwidth. Skipping processing for '
+                               'trace: %r' % (trace))
+                trace_copy = _update_comments(trace_copy, err_msg)
+
             else:
                 low_freq = corners[0]
                 high_freq = corners[1]
@@ -564,15 +576,23 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
             dynamic = False
 
         corner_params = {'get_dynamically': dynamic,
-                'default_high_frequency': high_freq,
-                'sn_ratio': sn_ratio,
-                'default_low_frequency': low_freq,
-                'max_low_freq': max_low_freq,
-                'min_high_freq': min_high_freq}
-        trace_pad = _update_params(trace_pad, 'corners', corner_params)
+                         'default_high_frequency': default_high_frequency,
+                         'sn_ratio': sn_ratio,
+                         'default_low_frequency': default_low_frequency,
+                         'max_low_freq': max_low_freq,
+                         'min_high_freq': min_high_freq,
+                         'low_corner': low_freq,
+                         'high_corner': high_freq}
 
-        # Step 9 - Filter
-        trace_filt = trace_pad
+        if trace_copy.stats['passed_tests'] is False:
+            trace_copy = _update_params(trace_copy, 'corners', corner_params)
+            stream[idx] = trace_copy
+            continue
+
+        trace_trim = _update_params(trace_trim, 'corners', corner_params)
+
+        # Filter
+        trace_filt = trace_trim
         for filter_dict in filters:
             filter_type = filter_dict['type']
             corners = filter_dict['corners']
@@ -581,10 +601,7 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                                          high_freq, low_freq, zerophase,
                                          corners)
 
-        # Step 10 - Remove zero pad
-        trace_filt.trim(endtime=before_padding_endtime)
-
-        # Step 11 - Correct baseline
+        # Correct baseline
         if baseline_correct:
             trace_cor = correct_baseline(trace_filt)
         else:
@@ -653,7 +670,7 @@ def process_config(stream, config=None, event_time=None, epi_dist=None):
     corrected_stream = process(stream, amp_min, amp_max, window_vmin,
             taper_type, taper_percentage, taper_side, get_corners, sn_ratio,
             max_low_freq, min_high_freq, default_low_frequency,
-            default_high_frequency,filters, baseline_correct,
+            default_high_frequency, filters, baseline_correct,
             event_time=event_time, epi_dist=epi_dist)
     return corrected_stream
 
@@ -673,7 +690,7 @@ def taper(trace, taper_type='hann', max_percentage=0.05, side='both'):
         obspy.core.trace.Trace: Trace of tapered data.
     """
     trace.taper(type=taper_type,
-            max_percentage=max_percentage, side=side)
+                max_percentage=max_percentage, side=side)
     taper_params = {
             'type': taper_type,
             'max_percentage': max_percentage,
