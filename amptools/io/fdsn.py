@@ -93,9 +93,6 @@ def add_channel_metadata(st, inv):
         id_string = tr.stats.network + '.' + tr.stats.station + '.'
         id_string += tr.stats.location + '.' + tr.stats.channel
         metadata = inv.get_channel_metadata(id_string, time)
-
-        print(metadata)
-
         tr.stats.sac.stla = metadata['latitude']
         tr.stats.sac.stlo = metadata['longitude']
         tr.stats.sac.stel = metadata['elevation']
