@@ -23,6 +23,8 @@ def main(args):
     os.chdir(args.out)
     if not os.path.exists('raw'):
         os.mkdir('raw')
+    if not os.path.exists('metadata'):
+        os.mkdir('metadata')
 
     # Write the raw files to the raw directory
     print('Writing raw files to {0}/Raw'.format(args.out))
@@ -57,7 +59,7 @@ def main(args):
             meta_dict[tr.stats.channel] = fdsn.clean_stats(stats)
 
         # Save the dictionary to a JSON file
-        with open(stn + '.json', 'w') as fp:
+        with open('metadata/' + stn + '.json', 'w') as fp:
             json.dump(meta_dict, fp)
 
 
