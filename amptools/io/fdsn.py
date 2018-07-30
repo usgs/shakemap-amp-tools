@@ -1,5 +1,10 @@
+import numpy as np
+from amptools.io.seedname import get_channel_name
 from obspy import UTCDateTime
 from obspy.clients.fdsn import Client
+from obspy.core.util.attribdict import AttribDict
+
+TIMEFMT = '%Y-%m-%dT%H:%M:%S'
 
 
 def request_raw_waveforms(fdsn_client, org_time, lat, lon,
@@ -38,7 +43,6 @@ def request_raw_waveforms(fdsn_client, org_time, lat, lon,
         inventory (obspy.core.inventory): Inventory object for the event.
     """
 
-    # Initialize the client
     client = Client(fdsn_client)
 
     # Time information
@@ -51,7 +55,7 @@ def request_raw_waveforms(fdsn_client, org_time, lat, lon,
     stations = ','.join(stations)
     channels = ','.join(channels)
 
-    # Get an inventory of all the stations for the event
+    # Get an inventory of all stations for the event
     inventory = client.get_stations(startbefore=t1, endafter=t2,
                                     latitude=lat, longitude=lon,
                                     minradius=dist_min, maxradius=dist_max,
@@ -76,54 +80,92 @@ def request_raw_waveforms(fdsn_client, org_time, lat, lon,
     return st, inventory
 
 
-def add_channel_metadata(st, inv):
+def add_channel_metadata(tr, inv, client):
     """
     Adds the channel metadata for each channel in the stream.
 
     Args:
-        st (obspy.core.stream.Stream): Stream of requested data.
+        tr (obspy.core.trace.Trace): Trace of requested data.
         inv (obspy.core.inventory): Inventory object corresponding to
             to the stream.
+        client (str): FDSN client indicator.
 
     Returns:
-        st (obspy.core.stream.Stream): Stream with metadata added.
+        trace (obspy.core.trace.Trace): Trace with metadata added.
     """
-    for tr in st:
-        time = tr.stats.starttime
-        id_string = tr.stats.network + '.' + tr.stats.station + '.'
-        id_string += tr.stats.location + '.' + tr.stats.channel
-        metadata = inv.get_channel_metadata(id_string, time)
-        tr.stats.sac.stla = metadata['latitude']
-        tr.stats.sac.stlo = metadata['longitude']
-        tr.stats.sac.stel = metadata['elevation']
-        tr.stats.sac.cmpaz = metadata['azimuth']
-        tr.stats.sac.cmpinc = metadata['dip']
-        tr.stats.sac.lcalda = 1
 
-    return st
+    time = tr.stats.starttime
+    id_string = tr.stats.network + '.' + tr.stats.station + '.'
+    id_string += tr.stats.location + '.' + tr.stats.channel
+
+    metadata = inv.get_channel_metadata(id_string, time)
+
+    coordinates = {'latitude': metadata['latitude'],
+                   'longitude': metadata['longitude'],
+                   'elevation': metadata['elevation']}
+
+    standard = {'horizontal_orientation': metadata['azimuth'],
+                'instrument_period': np.nan,
+                'instrument_damping': np.nan,
+                'process_level': 'V0',
+                'station_name': tr.stats.station,
+                'sensor_serial_number': '',
+                'instrument': '',
+                'comments': '',
+                'structure_type': '',
+                'corner_frequency': np.nan,
+                'units': 'raw',
+                'source': client,
+                'source_format': 'fdsn'}
+
+    tr.stats['coordinates'] = coordinates
+    tr.stats['standard'] = standard
+
+    if metadata['dip'] in [90, -90, 180, -180]:
+        tr.stats['channel'] = get_channel_name(tr.stats['sampling_rate'],
+                                               is_acceleration=True,
+                                               is_vertical=True,
+                                               is_north=False)
+    else:
+        ho = metadata['azimuth']
+        quad1 = ho > 315 and ho <= 360
+        quad2 = ho >= 0 and ho <= 45
+        quad3 = ho > 135 and ho <= 225
+        if quad1 or quad2 or quad3:
+            tr.stats['channel'] = get_channel_name(tr.stats['sampling_rate'],
+                                                   is_acceleration=True,
+                                                   is_vertical=False,
+                                                   is_north=True)
+        else:
+            tr.stats['channel'] = get_channel_name(tr.stats['sampling_rate'],
+                                                   is_acceleration=True,
+                                                   is_vertical=False,
+                                                   is_north=False)
+    return tr
 
 
-def add_event_metadata(st, lat, lon, mag, dep):
+def clean_stats(my_stats):
     """
-    Adds the event metadata to each file.
+    Function for making dictionary json serializable.
 
     Args:
-        st (obspy.core.stream.Stream): Stream of requested data.
-        lat (float): Event latitude.
-        lon (float): Event longitude.
-        mag (float): Event magnitude.
-        dep (float): Event depth.
+        stats (dict): Dictionary of stats.
 
     Returns:
-        st (obspy.core.stream.Stream): Stream with added event metadata.
+        dictionary: Dictionary of cleaned stats.
     """
-    for tr in st:
-        tr.stats.sac.evla = lat
-        tr.stats.sac.evlo = lon
-        tr.stats.sac.mag = mag
-        tr.stats.sac.evdp = dep
+    stats = dict()
+    for key, value in my_stats.items():
+        stats[key] = value
 
-    return st
+    for key, value in stats.items():
+        if isinstance(value, (dict, AttribDict)):
+            stats[key] = dict(clean_stats(value))
+        elif isinstance(value, UTCDateTime):
+            stats[key] = value.strftime(TIMEFMT)
+        elif isinstance(value, float) and np.isnan(value) or value == '':
+            stats[key] = 'null'
+    return stats
 
 
 def remove_response(stream, output='ACC'):

@@ -21,6 +21,7 @@ def get_command_output(cmd):
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE
                             )
+
     stdout, stderr = proc.communicate()
     retcode = proc.returncode
     if retcode == 0:
@@ -33,33 +34,21 @@ def get_command_output(cmd):
 def test_fdsnfetch():
     homedir = os.path.dirname(os.path.abspath(__file__))
     fdsnfetch = os.path.join(homedir, '..', '..', 'bin', 'fdsnfetch')
-
     datadir = os.path.join(homedir, '..', 'data', 'fdsnfetch')
-    parameters = 'IRIS 2001-02-28T18:54:32 47.149 -122.7266667 -dmax 0.1'
-    cmd_input = '%s %s' % (datadir, parameters)
-
-    cmd = '%s %s' % (fdsnfetch, cmd_input)
-    res, stdout, stderr = get_command_output(cmd)
 
     parameters = 'IRIS 2001-02-28T18:54:32 47.149 -122.7266667 -dmax 1.0'
-    parameters += ' -mag 6.8 -dep 51.798'
-    parameters += ' -n UW -s ALCT -c EN* --m --r'
+    parameters += ' -n UW -s ALCT -c EN* -r'
     cmd_input = '%s %s' % (datadir, parameters)
     cmd = '%s %s' % (fdsnfetch, cmd_input)
     res, stdout, stderr = get_command_output(cmd)
-    print(res, stdout, stderr)
+    print(stdout.decode('utf-8').strip())
+    print(stderr.decode('utf-8').strip())
 
-    parameters += ' -f SAC'
-    cmd_input = '%s %s' % (datadir, parameters)
-    cmd = '%s %s' % (fdsnfetch, cmd_input)
-    res, stdout, stderr = get_command_output(cmd)
-    print(res, stdout, stderr)
-
-    # Confirm that we got the six ALCT files as expected
+    # Confirm that we got the three ALCT files as expected
     os.chdir(datadir)
     os.chdir('raw')
     ALCT_files = glob.glob('UW.ALCT*')
-    assert len(ALCT_files) == 6
+    assert len(ALCT_files) == 3
 
 
 if __name__ == '__main__':
