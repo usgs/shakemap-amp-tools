@@ -1,3 +1,6 @@
+import warnings
+
+
 def get_channel_name(sample_rate, is_acceleration=True,
                      is_vertical=False, is_north=True):
     """Create a SEED compliant channel name.
@@ -17,6 +20,11 @@ def get_channel_name(sample_rate, is_acceleration=True,
     band = 'H'  # High Broad Band
     if sample_rate < 80 and sample_rate >= 10:
         band = 'B'
+
+    if sample_rate < 10 or sample_rate >= 80:
+        warnings.warn('This sampling rate is not currently supported by '
+                      'shakemap. The band code will be assigned to the '
+                      'default (H).')
 
     code = 'N'
     if not is_acceleration:

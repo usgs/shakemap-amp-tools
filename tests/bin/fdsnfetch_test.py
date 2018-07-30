@@ -2,8 +2,7 @@
 
 import subprocess
 import os
-import glob
-import shutil
+from amptools.io.fdsn import request_raw_waveforms
 
 
 def get_command_output(cmd):
@@ -22,6 +21,7 @@ def get_command_output(cmd):
                             stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE
                             )
+
     stdout, stderr = proc.communicate()
     retcode = proc.returncode
     if retcode == 0:
@@ -34,30 +34,22 @@ def get_command_output(cmd):
 def test_fdsnfetch():
     homedir = os.path.dirname(os.path.abspath(__file__))
     fdsnfetch = os.path.join(homedir, '..', '..', 'bin', 'fdsnfetch')
-
     datadir = os.path.join(homedir, '..', 'data', 'fdsnfetch')
-    parameters = 'IRIS 2001-02-28T18:54:32 47.149 -122.7266667 -dmax 0.1'
-    cmd_input = '%s %s' % (datadir, parameters)
-
-    cmd = '%s %s' % (fdsnfetch, cmd_input)
-    res, stdout, stderr = get_command_output(cmd)
-    print(res, stdout, stderr)
-
-    shutil.rmtree(datadir + '/raw')
-    shutil.rmtree(datadir + '/resp_cor')
 
     parameters = 'IRIS 2001-02-28T18:54:32 47.149 -122.7266667 -dmax 1.0'
-    parameters += ' -n UW -s ALCT -c EN*'
+    parameters += ' -n UW -s ALCT -c EN* -r'
     cmd_input = '%s %s' % (datadir, parameters)
     cmd = '%s %s' % (fdsnfetch, cmd_input)
     res, stdout, stderr = get_command_output(cmd)
-    print(res, stdout, stderr)
+    print(stdout.decode('utf-8').strip())
+    print(stderr.decode('utf-8').strip())
 
-    # Confirm that we got the three ALCT station as expected
-    os.chdir(datadir)
-    os.chdir('raw')
-    ALCT_files = glob.glob('UW.ALCT*')
-    assert len(ALCT_files) == 3
+    # Confirm that we got the three ALCT files as expected
+    st, inv = request_raw_waveforms('IRIS', '2001-02-28T18:54:32', 47.149,
+                                    -122.7266667, before_time=120,
+                                    after_time=120, dist_max=1.0,
+                                    stations=['ALCT'], channels=['EN*'])
+    assert len(st) == 3
 
 
 if __name__ == '__main__':
