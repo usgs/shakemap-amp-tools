@@ -2,7 +2,7 @@
 
 import subprocess
 import os
-import glob
+from amptools.io.fdsn import request_raw_waveforms
 
 
 def get_command_output(cmd):
@@ -45,10 +45,11 @@ def test_fdsnfetch():
     print(stderr.decode('utf-8').strip())
 
     # Confirm that we got the three ALCT files as expected
-    os.chdir(datadir)
-    os.chdir('raw')
-    ALCT_files = glob.glob('UW.ALCT*')
-    assert len(ALCT_files) == 3
+    st, inv = request_raw_waveforms('IRIS', '2001-02-28T18:54:32', 47.149,
+                                    -122.7266667, before_time=120,
+                                    after_time=120, dist_max=1.0,
+                                    stations=['ALCT'], channels=['EN*'])
+    assert len(st) == 3
 
 
 if __name__ == '__main__':
