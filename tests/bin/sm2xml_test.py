@@ -132,7 +132,7 @@ def test_sm2xml():
     tmpdir = tempfile.mkdtemp()
     target_file = os.path.join(tmpdir, 'geonet_' + eventid + '_dat.xml')
     try:
-        cmd = '%s %s %s %s' % (sm2xml, eventid, indir, tmpdir)
+        cmd = '%s %s %s %s -dd' % (sm2xml, eventid, indir, tmpdir)
         res, stdout, stderr = get_command_output(cmd)
         if not res:
             raise AssertionError(

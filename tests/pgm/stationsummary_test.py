@@ -18,14 +18,18 @@ def test_stationsummary():
     datafile = os.path.join(homedir, '..', 'data', 'geonet',
                             '20161113_110259_WTMC_20.V2A')
     target_imcs = np.sort(np.asarray(['GREATER_OF_TWO_HORIZONTALS',
-                                      'HN1', 'HN2', 'HNZ']))
+                                      'HN1', 'HN2', 'HNZ', 'ROTD50.0',
+                                      'ROTD100.0']))
     target_imts = np.sort(np.asarray(['SA1.0', 'PGA', 'PGV']))
     stream = read_geonet(datafile)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         stream_summary = StationSummary.from_stream(stream,
                                                     ['greater_of_two_horizontals',
-                                                     'channels', 'invalid'],
+                                                     'channels',
+                                                     'rotd50',
+                                                     'rotd100',
+                                                     'invalid'],
                                                     ['sa1.0', 'PGA', 'pgv', 'invalid'])
         original_stream = stream_summary.stream
         stream_summary.stream = []
@@ -46,36 +50,43 @@ def test_stationsummary():
                                        99.3173469387755, decimal=1)
         target_available = np.sort(np.asarray([
             'calculate_greater_of_two_horizontals', 'calculate_channels',
-            'calculate_gmrotd']))
+            'calculate_gmrotd', 'calculate_rotd']))
         imcs = stream_summary.available_imcs
         np.testing.assert_array_equal(np.sort(imcs), target_available)
         target_available = np.sort(np.asarray(['calculate_pga',
                                                'calculate_pgv',
-                                               'calculate_sa']))
+                                               'calculate_sa',
+                                               'calculate_arias']))
         imts = stream_summary.available_imts
         np.testing.assert_array_equal(np.sort(imts), target_available)
-
-    test_pgms = {'SA1.0':{
-                     'HNZ': 27.41836158024183,
-                     'HN1': 135.83462000177008,
-                     'GREATER_OF_TWO_HORIZONTALS': 135.83462000177008,
-                     'HN2': 84.17504097202713},
-                 'PGA': {
-                         'HNZ': 183.7722361866693,
-                         'HN1': 99.24999872535474,
-                         'GREATER_OF_TWO_HORIZONTALS': 99.24999872535474,
-                         'HN2': 81.23467239067368},
-                 'PGV': {'HNZ': 37.47740000000001,
-                         'HN1': 100.81460000000004,
-                         'GREATER_OF_TWO_HORIZONTALS': 100.81460000000004,
-                         'HN2': 68.4354}}
+    test_pgms = {
+        'PGV': {
+            'ROTD50.0': 81.55436750525355,
+            'GREATER_OF_TWO_HORIZONTALS': 100.81460000000004,
+            'HNZ': 37.47740000000001,
+            'HN1': 100.81460000000004,
+            'ROTD100.0': 114.24894584734818,
+            'HN2': 68.4354},
+        'PGA': {
+            'ROTD50.0': 91.40178541935455,
+            'GREATER_OF_TWO_HORIZONTALS': 99.24999872535474,
+            'HNZ': 183.7722361866693,
+            'HN1': 99.24999872535474,
+            'ROTD100.0': 100.73875535385548,
+            'HN2': 81.23467239067368},
+        'SA1.0': {
+            'ROTD50.0': 105.39210993086763,
+            'GREATER_OF_TWO_HORIZONTALS': 135.83462000177008,
+            'HNZ': 27.418361580241818,
+            'HN1': 135.83462000177008,
+            'ROTD100.0': 146.49522597669394,
+            'HN2': 84.17504097202712}
+    }
     datafile = os.path.join(homedir, '..', 'data', 'geonet',
                             '20161113_110313_THZ_20.V2A')
     invalid_stream = read_geonet(datafile)
     station_code = 'WTMC'
     pgm_summary = StationSummary.from_pgms(station_code, test_pgms)
-
-    # TODO: change to an almost equal assert
     assert pgm_summary.pgms == stream_summary.pgms
 
     # oscillators cannot be calculated without a stream
