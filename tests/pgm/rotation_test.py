@@ -29,7 +29,7 @@ def test_rotation():
     st = Stream([tr1, tr2])
 
     imts = ['PGA', 'PGV', 'SA0.3', 'SA1.0', 'SA3.0']
-    station = StationSummary.from_stream(st, ['channels', 'gmrotd'], imts)
+    station = StationSummary.from_stream(st, ['channels', 'rotd'], imts)
 
     # Get PGA and spectral accelerations
     st_PGA = station.oscillators['PGA']

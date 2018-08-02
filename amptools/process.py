@@ -556,7 +556,7 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                     err_msg = ('Not enough pre-event noise to calculate '
                                'signal to noise ratio. Skipping processing '
                                'for trace: %r' % (trace))
-                elif corners == [-2, 2]:
+                elif corners == [-2, -2]:
                     err_msg = ('Signal-to-noise ratio too low to find corner '
                                'frequencies, skipping processing for '
                                'trace: %r' % (trace))

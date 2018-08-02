@@ -231,34 +231,21 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
             channel_dicts[channel][subchannel] = []
 
     # loop over streams and extract data
-    spectral_streams = []
     for stream in streams:
         for key in meta_dict.keys():
             if key == 'NAME':
-                try:
-                    name_str = stream[0].stats['standard']['station_name']
-                except KeyError:
-                    name_str = stream[0].stats['name']
+                name_str = stream[0].stats['standard']['station_name']
                 meta_dict[key].append(name_str)
             elif key == 'LAT':
-                try:
-                    latitude = stream[0].stats['coordinates']['latitude']
-                except KeyError:
-                    latitude = stream[0].stats['lat']
+                latitude = stream[0].stats['coordinates']['latitude']
                 meta_dict[key].append(latitude)
             elif key == 'LON':
-                try:
-                    longitude = stream[0].stats['coordinates']['longitude']
-                except KeyError:
-                    longitude = stream[0].stats['lon']
+                longitude = stream[0].stats['coordinates']['longitude']
                 meta_dict[key].append(longitude)
             elif key == 'STATION':
                 meta_dict[key].append(stream[0].stats['station'])
             elif key == 'SOURCE':
-                try:
-                    source = stream[0].stats.standard['source']
-                except Exception:
-                    source = stream[0].stats['source']
+                source = stream[0].stats.standard['source']
                 meta_dict[key].append(source)
             elif key == 'NETID':
                 meta_dict[key].append(stream[0].stats['network'])
@@ -271,7 +258,6 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
                                           longitude)
             meta_dict['DISTANCE'].append(dist/1000)
 
-        spectral_traces = []
         # process acceleration and store velocity traces
         for idx, trace in enumerate(stream):
             channel = trace.stats['channel']
@@ -310,10 +296,7 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
                     channel_dicts[channel][station_imt].append(imt_value)
                     osc = station.oscillators[station_imt.upper()]
                     if station_imt.startswith('SA'):
-                        spectral_streams.append(osc.select(channel=channel)[0])
-
-        outstream = Stream(spectral_traces)
-        spectral_streams.append(outstream)
+                        spectral_streams.append(Stream(osc.select(channel=channel)[0]))
 
     # assign the non-channel specific stuff to dataframe
     for key, value in meta_dict.items():

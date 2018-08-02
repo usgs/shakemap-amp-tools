@@ -318,7 +318,7 @@ def _get_header_info(int_data, flt_data, lines, level):
             hdr['starttime'] = datetime(year, month, day, hour, minute,
                                         int(second), microsecond)
         except ValueError:
-            # Looking for full year on earthquake line
+            # Looking for full year in integer header
             try:
                 month = int(date[0][-2:])
                 day = int(date[1])
@@ -327,9 +327,7 @@ def _get_header_info(int_data, flt_data, lines, level):
                 minute = int(time[2])
                 second = float(time[3][:2])
                 microsecond = int((second - int(second)) * 1e6)
-                earthquake_year_line = lines[8]
-                date = earthquake_year_line.split(',')[1].split(':')[0].strip()
-                year = int(date.split(' ')[0])
+                year = int_data[23]
                 hdr['starttime'] = datetime(year, month, day, hour, minute,
                                             int(second), microsecond)
             except ValueError:

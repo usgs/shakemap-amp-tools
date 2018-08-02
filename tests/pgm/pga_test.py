@@ -21,9 +21,9 @@ def test_pga():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         station_summary = StationSummary.from_stream(stream_v2,
-                                                     ['channels', 'greater_of_two_horizontals',
-                                                         'gmrotd50'],
-                                                     ['pga', 'sa1.0', 'saincorrect'])
+                ['channels', 'greater_of_two_horizontals', 'gmrotd50',
+                'gmrotd100', 'gmrotd0'],
+                ['pga', 'sa1.0', 'saincorrect'])
     station_dict = station_summary.pgms['PGA']
     greater = station_dict['GREATER_OF_TWO_HORIZONTALS']
     np.testing.assert_almost_equal(station_dict['HN2'], 81.28979591836733, decimal=1)

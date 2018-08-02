@@ -1,26 +1,27 @@
-# local imports
+# third party imports
 from pgm.exception import PGMException
 from pgm.rotation import get_max, rotate
 
-
-def calculate_gmrotd(stream, percentiles, rotated=False, **kwargs):
+def calculate_rotd(stream, percentiles, rotated=False, **kwargs):
     """
-    Rotate two horizontal channels using the geometric mean.
+    Rotate two horizontal channels and combine to get the spectral response.
+
     Args:
-        stream (obspy.core.stream.Stream or list): stream of oscillators or
-            list of rotation matrices.
+        stream (obspy.core.stream.Stream): stream of oscillators.
         percentiles (list): list of percentiles (float).
             Example: [100, 50, 75] results in RotD100, RotD50, RotD75.
-        rotated (bool): Wheter the stream is a rotation matrix. Used by the
-                arias intensity calculation. Default is False.
+        rotated (bool): Wheter the stream is a rotation matrix. Used by
+                the arias intensity calculation. Default is False.
+
     Returns:
-        dictionary: Dictionary of geometric mean for each percentile.
+        dictionary: Dictionary of oienation indeendent nongeometric mean
+            measures for each percentile.
     """
     if rotated == True:
-        gm_percentiles = get_max(stream[0], 'gm', stream[1], percentiles)[1]
-        gmrotd_dict = {}
+        rot_percentiles = get_max(stream[0], 'max', percentiles=percentiles)[1]
+        rotd_dict = {}
         for idx, percent in enumerate(percentiles):
-            gmrotd_dict[percent] = gm_percentiles[idx]
+            rotd_dict[percent] = rot_percentiles[idx]
     else:
         horizontals = _get_horizontals(stream)
         if len(horizontals) > 2:
@@ -31,26 +32,28 @@ def calculate_gmrotd(stream, percentiles, rotated=False, **kwargs):
         if len(osc1) != len(osc2):
             raise PGMException('Horizontal channels have different lengths.')
 
-        osc1_rot, osc2_rot = rotate(osc1, osc2, combine=False)
-        gm_percentiles = get_max(osc1_rot, 'gm', osc2_rot, percentiles)[1]
+        rot = rotate(osc1, osc2, combine=True)
+        rot_percentiles = get_max(rot, 'max', None, percentiles)[1]
 
-        gmrotd_dict = {}
+        rotd_dict = {}
         for idx, percent in enumerate(percentiles):
-            gmrotd_dict[percent] = gm_percentiles[idx]
-    return gmrotd_dict
+            rotd_dict[percent] = rot_percentiles[idx]
+    return rotd_dict
 
 
 def _get_horizontals(stream):
     """
     Gets the two horizontal components
+
     Args:
         stream (obspy.core.stream.Stream): Strong motion timeseries
             for one station.
+
     Returns:
         list: list of horizontal channels (obspy.core.trac.Trace)
     """
     horizontal_channels = []
-    for _, trace in enumerate(stream):
+    for trace in stream:
         # Group all of the max values from traces without
         # Z in the channel name
         if 'Z' not in trace.stats['channel'].upper():
