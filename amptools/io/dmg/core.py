@@ -314,7 +314,7 @@ def _get_header_info(int_data, flt_data, lines, level):
             minute = int(time[2])
             second = float(time[3][:2])
             microsecond = int((second - int(second)) * 1e6)
-            year = 1994
+            year = int(date[2][:4])
             hdr['starttime'] = datetime(year, month, day, hour, minute,
                                         int(second), microsecond)
         except ValueError:
@@ -327,7 +327,7 @@ def _get_header_info(int_data, flt_data, lines, level):
                 minute = int(time[2])
                 second = float(time[3][:2])
                 microsecond = int((second - int(second)) * 1e6)
-                year = 1994
+                year = int(date[2][:4])
                 hdr['starttime'] = datetime(year, month, day, hour, minute,
                                             int(second), microsecond)
             except ValueError:
