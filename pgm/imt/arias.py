@@ -11,7 +11,7 @@ from pgm.gather import get_pgm_classes, group_imcs
 from pgm.rotation import rotate
 
 
-def calculate_arias(stream, imcs):
+def calculate_arias(stream, imcs, return_streams=False):
     """
     Calculate the peak ground acceleration.
     Args:
@@ -20,11 +20,17 @@ def calculate_arias(stream, imcs):
         imcs (list): list of imcs.
         osccillators (dictionary): Dictionary of oscillators. Used when
                 rotation imcs are requested. Default is None.
-        normalized (bool): Whether to return normalized.
+        return_streams (bool): Whether to return streams.
     Returns:
         dictionary: Dictionary of arias for different components.
     """
-    arias_stream = _calculate_channel_arias(stream)[0]
+    arias_streams = _calculate_channel_arias(stream)
+    arias_stream = arias_streams[0]
+    normalized_stream = arias_streams[1]
+
+    if return_streams:
+        return (arias_stream, normalized_stream)
+
     arias_dict = {}
     # sort imcs
     grouped_imcs = group_imcs(imcs)
