@@ -13,6 +13,7 @@ def test_dmg():
     datadir = os.path.join(homedir, '..', '..', '..', 'data', 'dmg')
     file1 = os.path.join(datadir, 'CE89146.V2')
     file2 = os.path.join(datadir, 'CIWLT.V2')
+    file3 = os.path.join(datadir, 'CE58667.V2')
 
     for filename in [file1, file2]:
         assert is_dmg(file1)
@@ -99,6 +100,11 @@ def test_dmg():
         assert stats.standard['sensor_serial_number'] == '4310'
         assert stats.standard['source'] == 'Southern California Seismic ' + \
             'Network, California Institute of Technology (Caltech)'
+
+
+    # test acceleration from the file
+    stream3 = read_dmg(filename)
+    assert len(stream3) == 3
 
     # Test for wrong format exception
     success = True

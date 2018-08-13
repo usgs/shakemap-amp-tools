@@ -42,10 +42,12 @@ def test_sm2xml():
     indir = os.path.join(homedir, '..', 'data', 'knet')
     sm2xml = os.path.join(homedir, '..', '..', 'bin', 'sm2xml')
     eventid = 'us2018abcd'
+    coords = [142.5, 41.0]
     tmpdir = tempfile.mkdtemp()
     target_file = os.path.join(tmpdir, 'knet_' + eventid + '_dat.xml')
     try:
-        cmd = '%s %s %s %s -d' % (sm2xml, eventid, indir, tmpdir)
+        cmd = '%s %s %s %s -c %s %s -d' % (sm2xml, eventid, indir,
+                tmpdir, coords[0], coords[1])
         res, stdout, stderr = get_command_output(cmd)
         if not res:
             raise AssertionError(
@@ -110,12 +112,12 @@ def test_sm2xml():
     HHN_pga = []
     HHN_pgv = []
     for idx in range(3, len(columns['Unnamed: 6'])):
-        HHZ_pga += [columns['Unnamed: 6'][idx]]
-        HHZ_pgv += [columns['Unnamed: 7'][idx]]
-        HHE_pga += [columns['Unnamed: 11'][idx]]
-        HHE_pgv += [columns['Unnamed: 12'][idx]]
-        HHN_pga += [columns['Unnamed: 16'][idx]]
-        HHN_pgv += [columns['Unnamed: 17'][idx]]
+        HHZ_pga += [columns['Unnamed: 7'][idx]]
+        HHZ_pgv += [columns['Unnamed: 8'][idx]]
+        HHE_pga += [columns['Unnamed: 12'][idx]]
+        HHE_pgv += [columns['Unnamed: 13'][idx]]
+        HHN_pga += [columns['Unnamed: 17'][idx]]
+        HHN_pgv += [columns['Unnamed: 18'][idx]]
     np.testing.assert_allclose(np.asarray(HHZ_pga), target_HHZ_pga, rtol=1e-2)
     np.testing.assert_allclose(np.asarray(HHZ_pgv), target_HHZ_pgv, rtol=1e-2)
     np.testing.assert_allclose(np.asarray(HHE_pga), target_HHE_pga, rtol=1e-2)

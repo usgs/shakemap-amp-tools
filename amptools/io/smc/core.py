@@ -2,6 +2,7 @@
 
 # stdlib imports
 from datetime import datetime
+import warnings
 
 # third party
 from obspy.core.trace import Trace
@@ -116,16 +117,19 @@ def read_smc(filename, **kwargs):
         kwargs (ref):
             any_structure (bool): Read data from any type of structure,
                 raise Exception if False and structure type is not free-field.
+            accept_flagged (bool): accept problem flagged data.
             Other arguments will be ignored.
     Returns:
         Stream: Obspy Stream containing one channel of acceleration data (cm/s**2).
     """
     any_structure = kwargs.get('any_structure', False)
+    accept_flagged = kwargs.get('accept_flagged', False)
+
     if not is_smc(filename):
         raise Exception('Not an SMC file.')
 
     stats, num_comments = _get_header_info(
-        filename, any_structure=any_structure)
+        filename, any_structure=any_structure, accept_flagged=accept_flagged)
 
     skip = ASCII_HEADER_LINES + INTEGER_HEADER_LINES + \
         num_comments + FLOAT_HEADER_LINES
@@ -148,7 +152,7 @@ def read_smc(filename, **kwargs):
     return stream
 
 
-def _get_header_info(filename, any_structure=False):
+def _get_header_info(filename, any_structure=False, accept_flagged=False):
     """Return stats structure from various headers.
 
     Output is a dictionary like this:
@@ -272,14 +276,18 @@ def _get_header_info(filename, any_structure=False):
     stats['npts'] = intheader[2, 0]
     problem_flag = intheader[2, 1]
     if problem_flag == 1:
-        fmt = 'Record found in file %s has a problem flag!'
-        raise Exception(fmt % filename)
+        if not accept_flagged:
+            fmt = 'Record found in file %s has a problem flag!'
+            raise Exception(fmt % filename)
+        else:
+            warnings.warn('Data contains a problem flag for network/station: '
+                    '%s/%s. See comments.' % (hdr['network'], hdr['station']))
     stype = intheader[2, 2]
     if stype == missing_data:
         stype = np.nan
+    fmt = 'Record found in file %s is not a free-field sensor!'
     standard['structure_type'] = STRUCTURES[stype]
     if standard['structure_type'] == 'building' and not any_structure:
-        fmt = 'Record found in file %s is not a free-field sensor!'
         raise Exception(fmt % filename)
 
     format_specific['building_floor'] = np.nan
@@ -292,15 +300,17 @@ def _get_header_info(filename, any_structure=False):
 
     format_specific['bridge_transducer_location'] = BRIDGE_LOCATIONS[0]
     if intheader[3, 2] != missing_data:
-        format_specific['bridge_transducer_location'] = intheader[3, 2]
+        bridge_number = intheader[3, 2]
+        format_specific['bridge_transducer_location'] = BRIDGE_LOCATIONS[bridge_number]
 
     format_specific['dam_transducer_location'] = DAM_LOCATIONS[0]
     if intheader[3, 3] != missing_data:
-        format_specific['dam_transducer_location'] = intheader[3, 3]
+        dam_number = intheader[3, 3]
+        format_specific['dam_transducer_location'] = DAM_LOCATIONS[dam_number]
 
     c1 = format_specific['bridge_transducer_location'].find('free field') == -1
     c2 = format_specific['dam_transducer_location'].find('free field') == -1
-    if c1 and c2 and not any_structure:
+    if (c1 or c2) and not any_structure:
         raise Exception(fmt % filename)
 
     format_specific['construction_type'] = CONSTRUCTION_TYPES[4]

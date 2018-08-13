@@ -13,7 +13,7 @@ from amptools.exception import AmptoolsException
 EXCLUDED = ['__pycache__']
 
 
-def read_data(filename, read_format=None):
+def read_data(filename, read_format=None, **kwargs):
     """
     Read strong motion data from a file.
 
@@ -37,7 +37,7 @@ def read_data(filename, read_format=None):
     reader_module = importlib.import_module(reader)
     read_name = 'read_' + read_format
     read_method = getattr(reader_module, read_name)
-    stream = read_method(filename)
+    stream = read_method(filename, **kwargs)
     return stream
 
 

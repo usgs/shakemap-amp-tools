@@ -5,6 +5,7 @@ import os
 
 # third party imports
 import numpy as np
+from amptools.exception import AmptoolsException
 from amptools.io.usc.core import is_usc, read_usc
 from amptools.stream import group_channels
 
@@ -73,7 +74,19 @@ def test_usc():
     assert stats.standard['source_format'] == 'usc'
     assert stats.standard['source'] == 'Los Angeles Basin Seismic Network, University of Southern California'
     assert stats.format_specific['fractional_unit'] == .100
-    # test exception
+
+    filename = os.path.join(datadir, '017m30bt.s0a')
+    assert is_usc(filename) == True
+
+    # test that volume 2 is not available yet
+    try:
+        read_usc(filename)
+        success = True
+    except AmptoolsException:
+        success = False
+    assert success == False
+
+    # test wrong format exception
     try:
         datadir = os.path.join(homedir, '..', '..', '..', 'data', 'smc')
         read_usc(os.path.join(datadir, '0111b.smc'))
@@ -81,6 +94,8 @@ def test_usc():
     except Exception:
         success = False
     assert success == False
+
+
 
 
 if __name__ == '__main__':

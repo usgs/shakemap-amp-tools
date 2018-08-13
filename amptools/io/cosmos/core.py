@@ -23,7 +23,7 @@ VALID_MARKERS = ['CORRECTED ACCELERATION',
 homedir = os.path.dirname(os.path.abspath(__file__))
 codedir = os.path.join(homedir, '..', 'fdsn_codes.csv')
 CODES, SOURCES1, SOURCES2 = np.genfromtxt(codedir, skip_header=1, usecols=(0, 1, 2),
-                                          unpack=True, dtype=bytes, delimiter=',')
+        encoding='latin-1', unpack=True, dtype=bytes, delimiter=',')
 CODES = CODES.astype(str)
 BUILDING_TYPES = {
     1: 'Small fiberglass shelter',
