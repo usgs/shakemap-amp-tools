@@ -60,31 +60,28 @@ def test_stationsummary():
         imts = stream_summary.available_imts
         np.testing.assert_array_equal(np.sort(imts), target_available)
     test_pgms = {
-            'PGA': {
-                    'HNZ': 183.77223618666929,
-                    'HN2': 81.23467239067368,
-                    'ROTD50.0': 91.401785419354553,
-                    'ROTD100.0': 100.73875535385548,
-                    'HN1': 99.249998725354743,
-                    'GREATER_OF_TWO_HORIZONTALS': 99.249998725354743
-                    },
-            'SA1.0': {
-                    'HNZ': 27.418361580241829,
-                    'HN2': 84.175040972027134,
-                    'ROTD50.0': 105.39210993086763,
-                    'ROTD100.0': 146.49522597669394,
-                    'HN1': 135.83462000177008,
-                    'GREATER_OF_TWO_HORIZONTALS': 135.83462000177008
-                    },
             'PGV': {
-                    'HNZ': 37.47740000000001,
-                    'HN2': 68.435400000000001,
-                    'ROTD50.0': 81.554367505253552,
                     'ROTD100.0': 114.24894584734818,
+                    'ROTD50.0': 81.55436750525355,
+                    'HNZ': 37.47740000000001,
                     'HN1': 100.81460000000004,
-                    'GREATER_OF_TWO_HORIZONTALS': 100.81460000000004
-                    }
-                }
+                    'HN2': 68.4354,
+                    'GREATER_OF_TWO_HORIZONTALS': 100.81460000000004},
+            'PGA': {
+                    'ROTD100.0': 100.73875535385548,
+                    'ROTD50.0': 91.40178541935455,
+                    'HNZ': 183.7722361866693,
+                    'HN1': 99.24999872535474,
+                    'HN2': 81.23467239067368,
+                    'GREATER_OF_TWO_HORIZONTALS': 99.24999872535474},
+            'SA1.0': {
+                    'ROTD100.0': 146.49522597669394,
+                    'ROTD50.0': 105.39210993086763,
+                    'HNZ': 27.418361580241818,
+                    'HN1': 135.83462000177008,
+                    'HN2': 84.17504097202712,
+                    'GREATER_OF_TWO_HORIZONTALS': 135.83462000177008}
+            }
     datafile = os.path.join(homedir, '..', 'data', 'geonet',
                             '20161113_110313_THZ_20.V2A')
     invalid_stream = read_geonet(datafile)

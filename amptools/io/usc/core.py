@@ -1,6 +1,5 @@
 # stdlib imports
 from datetime import datetime
-import warnings
 
 # third party imports
 import numpy as np
@@ -42,13 +41,22 @@ def is_usc(filename):
     # USC requires unique integer values
     # in column 73-74 on all text header lines
     # excluding the first file line
+
     try:
         f = open(filename, 'rt')
         first_line = f.readline()
-        if first_line.find('OF UNCORRECTED ACCELEROGRAM DATA OF') < 0:
+
+        if first_line.find('OF UNCORRECTED ACCELEROGRAM DATA OF') >= 0:
+            start = 0
+            stop = 12
+        elif first_line.find('CORRECTED ACCELEROGRAM') >= 0:
+            start = 1
+            stop = 13
+            line = f.readline()
+        else:
             return False
-        counter = 12
-        while counter > 0:
+        counter = stop
+        while counter > start:
             line = f.readline()
             try:
                 int(line[72:74])

@@ -30,7 +30,7 @@ V3_MARKER = 'RESPONSE AND FOURIER AMPLITUDE SPECTRA'
 homedir = os.path.dirname(os.path.abspath(__file__))
 codedir = os.path.join(homedir, '..', 'fdsn_codes.csv')
 CODES, SOURCES1, SOURCES2 = np.genfromtxt(codedir, skip_header=1, usecols=(0, 1, 2),
-                                          unpack=True, dtype=bytes, delimiter=',')
+        encoding='latin-1', unpack=True, dtype=bytes, delimiter=',')
 CODES = CODES.astype(str)
 
 UNITS = [
@@ -297,15 +297,13 @@ def _get_header_info(int_data, flt_data, lines, level):
 
     hdr['location'] = '--'
     trigger_line = lines[4][35:77]
-    starttime_message = "Start time must be specified with " + \
-        "full date on header line 5, columns 36=77 " + \
-        "(Example: 'Start time: 3/29/2014, 04:09:34.0 UTC')"
     if trigger_line.find('-') >= 0 or trigger_line.find('/') >= 0:
         if trigger_line.find('-') >= 0:
             delimeter = '-'
         elif trigger_line.find('/') >= 0:
             delimeter = '/'
         date = trigger_line.split(delimeter)
+        # look for dates
         try:
             month = int(date[0][-2:])
             day = int(date[1])
@@ -315,6 +313,10 @@ def _get_header_info(int_data, flt_data, lines, level):
             second = float(time[3][:2])
             microsecond = int((second - int(second)) * 1e6)
             year = int(date[2][:4])
+            if len(str(year)) < 4:
+                earthquake_line = lines[21]
+                print(re.search(r'\d{4}', earthquake_line))
+                year = re.search(r'\d{4}', earthquake_line)[0]
             hdr['starttime'] = datetime(year, month, day, hour, minute,
                                         int(second), microsecond)
         except ValueError:
@@ -331,9 +333,15 @@ def _get_header_info(int_data, flt_data, lines, level):
                 hdr['starttime'] = datetime(year, month, day, hour, minute,
                                             int(second), microsecond)
             except ValueError:
-                raise AmptoolsException(starttime_message)
+                warnings.warn('No start time provided on trigger line. '
+                        'This must be set manually for network/station: '
+                        '%s/%s.' % (hdr['network'], hdr['station']))
+                standard['comments'] = 'Missing start time.'
     else:
-        raise AmptoolsException(starttime_message)
+        warnings.warn('No start time provided on trigger line. '
+                'This must be set manually for network/station: '
+                '%s/%s.' % (hdr['network'], hdr['station']))
+        standard['comments'] = 'Missing start time.'
 
     hdr['npts'] = int_data[52]
 
@@ -385,7 +393,8 @@ def _get_header_info(int_data, flt_data, lines, level):
     else:
         standard['process_time'] = ''
     standard['process_level'] = level
-    standard['comments'] = ''
+    if 'comments' not in standard:
+        standard['comments'] = ''
     standard['structure_type'] = lines[7][46:80].strip()
     standard['instrument'] = station_line[39:47].strip()
     standard['sensor_serial_number'] = station_line[53:57].strip()

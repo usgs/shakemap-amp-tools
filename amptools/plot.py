@@ -63,7 +63,7 @@ def plot_arias(stream, axes=None, axis_index=None,
             raise Exception('No traces contained within the provided stream.')
 
         stream = get_acceleration(stream, units='m/s/s')
-        Ia, NIa = calculate_arias(stream, ['channels'], True)
+        Ia = calculate_arias(stream, ['channels'], True)[0]
 
         starttime = stream[0].stats.starttime
         if title is None:
@@ -143,7 +143,7 @@ def plot_durations(stream, durations, axes=None, axis_index=None,
             raise Exception('No traces contained within the provided stream.')
 
         stream = get_acceleration(stream, units='m/s/s')
-        Ia, NIa = calculate_arias(stream, ['channels'], True)
+        NIa = calculate_arias(stream, ['channels'], True)[1]
 
         starttime = stream[0].stats.starttime
         if title is None:
@@ -177,18 +177,18 @@ def plot_durations(stream, durations, axes=None, axis_index=None,
                 ax.set_xlabel(xlabel)
             if xlabel:
                 ax.set_ylabel(ylabel)
-            for i in range(len(durations)):
-                p1 = durations[i][0]
-                p2 = durations[i][1]
-                t1 = get_time_from_percent(trace.data, p1, dt)
-                t2 = get_time_from_percent(trace.data, p2, dt)
+            for i, duration in enumerate(durations):
+                first_percentile = duration[0]
+                second_percentile = duration[1]
+                t1 = get_time_from_percent(trace.data, first_percentile, dt)
+                t2 = get_time_from_percent(trace.data, second_percentile, dt)
                 height = (1/(len(durations)+1) * i) + 1/(len(durations)+1)
-                ax.plot(t1, p1, 'ok')
-                ax.plot(t2, p2, 'ok')
+                ax.plot(t1, first_percentile, 'ok')
+                ax.plot(t2, second_percentile, 'ok')
                 ax.annotate('', xy=(t1, height), xytext=(t2, height),
                             arrowprops=dict(arrowstyle='<->'))
-                label = '$D_{%i{-}%i}$' % (100 * durations[i][0],
-                                           100 * durations[i][1])
+                label = '$D_{%i{-}%i}$' % (100 * duration[0],
+                                           100 * duration[1])
                 ax.text(t2, height, label, style='italic',
                         horizontalalignment='left',
                         verticalalignment='center')

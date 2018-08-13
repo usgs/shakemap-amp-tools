@@ -166,7 +166,7 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
     columns = ['STATION', 'NAME', 'SOURCE', 'NETID', 'LAT', 'LON']
 
     if lat is not None and lon is not None:
-        columns.append('distance')
+        columns.append('DISTANCE')
 
     # Check for common events and group channels
     streams = group_channels(streams)
@@ -217,7 +217,7 @@ def streams_to_dataframe(streams, lat=None, lon=None, imtlist=None):
               'LON': np.float64}
 
     if lat is not None:
-        dtypes.update({'distance': np.float64})
+        dtypes.update({'DISTANCE': np.float64})
 
     dataframe = dataframe.astype(dtypes)
 

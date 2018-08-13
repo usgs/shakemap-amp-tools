@@ -22,7 +22,7 @@ def test_plot():
     assert len(axes) == 3
 
     # Multiplot arias
-    fig, axs = matplotlib.pyplot.subplots(len(streams), 3, figsize=(15,10))
+    axs = matplotlib.pyplot.subplots(len(streams), 3, figsize=(15,10))[1]
     axs = axs.flatten()
     idx = 0
     for stream in streams:
@@ -38,7 +38,7 @@ def test_plot():
     assert len(axes) == 3
 
     # Multiplot durations
-    fig, axs = matplotlib.pyplot.subplots(len(streams), 3, figsize=(15,10))
+    axs = matplotlib.pyplot.subplots(len(streams), 3, figsize=(15,10))[1]
     axs = axs.flatten()
     idx = 0
     for stream in streams:
@@ -49,7 +49,7 @@ def test_plot():
     # Moveout plots
     epicenter_lat = 24.14
     epicenter_lon = 121.69
-    fig, ax = plot_moveout(streams, epicenter_lat, epicenter_lon, 'BN1',
+    plot_moveout(streams, epicenter_lat, epicenter_lon, 'BN1',
             cmap='nipy_spectral_r', figsize=(15, 10), minfontsize=16,
             normalize=True, scale=10)
 

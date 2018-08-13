@@ -45,6 +45,14 @@ def test_smc():
     newstreams = group_channels(streams)
     assert len(newstreams) == 1
 
+    filename = os.path.join(datadir, '891018_1.sma-1.0444a.smc')
+    try:
+        stream = read_smc(filename)
+        success = True
+    except Exception:
+        success = False
+    assert success == False
+
 
 if __name__ == '__main__':
     test_smc()
