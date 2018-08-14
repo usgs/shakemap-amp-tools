@@ -91,8 +91,10 @@ def read_dmg(filename, **kwargs):
     if not is_dmg(filename):
         raise Exception('Not a DMG file format.')
 
-    # Check for type
+    # Check for units and location
     units = kwargs.get('units', 'acc')
+    location  = kwargs.get('location', '')
+
     if units not in UNITS:
         raise Exception('Not a valid choice of units.')
 
@@ -115,10 +117,11 @@ def read_dmg(filename, **kwargs):
     trace_list = []
     while line_offset < line_count:
         if reader == 'V2':
-            traces, line_offset = _read_volume_two(filename, line_offset)
+            traces, line_offset = _read_volume_two(filename, line_offset,
+                    location=location)
             trace_list += traces
         else:
-            line_offset = line_count
+            raise AmptoolsException('Not a supported volume.')
 
     stream = Stream([])
     for trace in trace_list:
@@ -127,7 +130,7 @@ def read_dmg(filename, **kwargs):
     return stream
 
 
-def _read_volume_two(filename, line_offset):
+def _read_volume_two(filename, line_offset, location=''):
     """Read channel data from DMG text file.
 
     Args:
@@ -156,7 +159,7 @@ def _read_volume_two(filename, line_offset):
     # according to the powers that defined the Network.Station.Channel.Location
     # "standard", Location is a two character field.  Most data providers,
     # including csmip/dmg here, don't always provide this.  We'll flag it as "--".
-    hdr = _get_header_info(int_data, flt_data, lines, 'V2')
+    hdr = _get_header_info(int_data, flt_data, lines, 'V2', location=location)
 
     traces = []
     # read acceleration data
@@ -197,7 +200,7 @@ def _read_volume_two(filename, line_offset):
     return (traces, new_offset)
 
 
-def _get_header_info(int_data, flt_data, lines, level):
+def _get_header_info(int_data, flt_data, lines, level, location=''):
     """Return stats structure from various headers.
 
     Output is a dictionary like this:
@@ -294,8 +297,10 @@ def _get_header_info(int_data, flt_data, lines, level):
         errstr = ('Not enough information to distinguish horizontal from '
                   'vertical channels.')
         raise AmptoolsException(errstr)
-
-    hdr['location'] = '--'
+    if location == '':
+        hdr['location'] = '--'
+    else:
+        hdr['location'] = location
     trigger_line = lines[4][35:77]
     if trigger_line.find('-') >= 0 or trigger_line.find('/') >= 0:
         if trigger_line.find('-') >= 0:

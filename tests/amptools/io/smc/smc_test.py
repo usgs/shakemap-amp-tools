@@ -42,6 +42,11 @@ def test_smc():
         # append to list of streams, so we can make sure these group together
         streams.append(stream)
 
+    # test location override
+    stream = read_smc(filename, location='test')
+    for trace in stream:
+        assert trace.stats.location == 'test'
+
     newstreams = group_channels(streams)
     assert len(newstreams) == 1
 

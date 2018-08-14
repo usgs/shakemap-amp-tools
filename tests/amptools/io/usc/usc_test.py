@@ -45,13 +45,19 @@ def test_usc():
 
         # append to list of streams, so we can make sure these group together
         streams.append(stream)
+
+    # test location override
+    stream = read_usc(filename, location='test')
+    for trace in stream:
+        assert trace.stats.location == 'test'
+
     newstreams = group_channels(streams)
     assert len(newstreams) == 3
 
     meta_stream = read_usc(os.path.join(datadir, '017m30cc.y0a'))
     stats = meta_stream[0].stats
     assert stats['network'] == 'LA'
-    assert stats['station'] == 57
+    assert stats['station'] == '57'
     assert stats['channel'] == 'HN1'
     assert stats['location'] == '--'
     dt = '%Y-%m-%dT%H:%M:%SZ'

@@ -128,7 +128,7 @@ def test_sm2xml():
     # TEST for GEONET
     homedir = os.path.dirname(os.path.abspath(
         __file__))  # where is this script?
-    indir = os.path.join(homedir, '..', 'data', 'geonet')
+    indir = os.path.join(homedir, '..', 'data', 'sm2xml')
     sm2xml = os.path.join(homedir, '..', '..', 'bin', 'sm2xml')
     eventid = 'us2018abcd'
     tmpdir = tempfile.mkdtemp()

@@ -118,18 +118,22 @@ def read_smc(filename, **kwargs):
             any_structure (bool): Read data from any type of structure,
                 raise Exception if False and structure type is not free-field.
             accept_flagged (bool): accept problem flagged data.
+            set_location (str): Two character code for location.
             Other arguments will be ignored.
     Returns:
         Stream: Obspy Stream containing one channel of acceleration data (cm/s**2).
     """
     any_structure = kwargs.get('any_structure', False)
     accept_flagged = kwargs.get('accept_flagged', False)
+    location = kwargs.get('location', '')
+
 
     if not is_smc(filename):
         raise Exception('Not an SMC file.')
 
-    stats, num_comments = _get_header_info(
-        filename, any_structure=any_structure, accept_flagged=accept_flagged)
+    stats, num_comments = _get_header_info(filename,
+            any_structure=any_structure, accept_flagged=accept_flagged,
+            location=location)
 
     skip = ASCII_HEADER_LINES + INTEGER_HEADER_LINES + \
         num_comments + FLOAT_HEADER_LINES
@@ -152,14 +156,17 @@ def read_smc(filename, **kwargs):
     return stream
 
 
-def _get_header_info(filename, any_structure=False, accept_flagged=False):
+def _get_header_info(filename, any_structure=False, accept_flagged=False,
+        location=''):
     """Return stats structure from various headers.
 
     Output is a dictionary like this:
      - network
      - station
      - channel
-     - location
+     - location (str): Set to floor the sensor is located on. If not a
+            multi-sensor array, default is '--'. Can be set manually by
+            the user.
      - starttime
      - sampling_rate
      - npts
@@ -254,6 +261,19 @@ def _get_header_info(filename, any_structure=False, accept_flagged=False):
     standard['sensor_serial_number'] = ''
     if intheader[1, 3] != missing_data:
         standard['sensor_serial_number'] = intheader[1, 3]
+
+    # we never get a two character location code so floor location is used
+    if location == '':
+        location = intheader.flatten()[24]
+        if location != missing_data:
+            location = str(location)
+            if len(location) < 2:
+                location = location.zfill(2)
+            stats['location'] = location
+        else:
+            stats['location'] = '--'
+    else:
+        stats['location'] = location
 
     # second line is information about number of channels, orientations
     # we care about orientations
@@ -358,9 +378,6 @@ def _get_header_info(filename, any_structure=False, accept_flagged=False):
                                                 is_acceleration=True,
                                                 is_vertical=False,
                                                 is_north=False)
-
-    # we never get a two character location code
-    stats['location'] = '--'
 
     sensor_frequency = floatheader[4, 1]
     standard['instrument_period'] = 1/sensor_frequency

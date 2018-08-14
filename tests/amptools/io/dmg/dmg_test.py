@@ -4,6 +4,8 @@
 import os.path
 import tempfile
 
+# local imports
+from amptools.exception import AmptoolsException
 from amptools.io.dmg.core import is_dmg, read_dmg
 
 
@@ -132,7 +134,12 @@ def test_dmg():
     with open(tmp.name, 'w') as f:
         f.write(no_stream)
     f = open(tmp.name, 'rt')
-    read_dmg(tmp.name)
+    try:
+        read_dmg(tmp.name)
+        success = True
+    except AmptoolsException:
+        success = False
+    assert success == False
     tmp.close()
 
     no_stream = """UNCORRECTED ACCELEROGRAM DATA"""
@@ -140,8 +147,18 @@ def test_dmg():
     with open(tmp.name, 'w') as f:
         f.write(no_stream)
     f = open(tmp.name, 'rt')
-    read_dmg(tmp.name)
+    try:
+        read_dmg(tmp.name)
+        success = True
+    except AmptoolsException:
+        success = False
+    assert success == False
     tmp.close()
+
+    # test location override
+    stream = read_dmg(filename, location='test')
+    for trace in stream:
+        assert trace.stats.location == 'test'
 
 
 if __name__ == '__main__':
