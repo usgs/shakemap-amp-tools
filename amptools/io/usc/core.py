@@ -80,18 +80,21 @@ def read_usc(filename, **kwargs):
     if not is_usc(filename):
         raise Exception('%s is not a valid USC file' % filename)
 
+    # Check for Location
+    location = kwargs.get('location', '')
+
     f = open(filename, 'rt')
     first_line = f.readline()
     f.close()
 
     if first_line.find('OF UNCORRECTED ACCELEROGRAM DATA OF') >= 0:
-        stream = read_volume_one(filename)
+        stream = read_volume_one(filename, location=location)
     else:
         raise AmptoolsException('Not a supported volume.')
     return stream
 
 
-def read_volume_one(filename):
+def read_volume_one(filename, location=''):
     """Read channel data from USC volume 1 text file.
 
     Args:
@@ -107,7 +110,8 @@ def read_volume_one(filename):
     line_offset = 0
     stream = Stream([])
     while line_offset < line_count:
-        trace, line_offset = _read_channel(filename, line_offset, volume)
+        trace, line_offset = _read_channel(filename, line_offset, volume,
+                location=location)
         # store the trace if the station type is in the valid_station_types list
         # or store the trace if there is no valid_station_types list
         if trace is not None:
@@ -116,7 +120,7 @@ def read_volume_one(filename):
     return stream
 
 
-def _read_channel(filename, line_offset, volume):
+def _read_channel(filename, line_offset, volume, location=''):
     """Read channel data from USC V1 text file.
 
     Args:
@@ -146,7 +150,7 @@ def _read_channel(filename, line_offset, volume):
     flt_data = np.genfromtxt(filename, skip_header=skiprows,
                              max_rows=volume['FLT_HDR_ROWS'], dtype=np.float64,
                              delimiter=volume['FLT_FMT']).flatten()
-    hdr = _get_header_info(int_data, flt_data, lines, 'V1')
+    hdr = _get_header_info(int_data, flt_data, lines, 'V1', location=location)
     skiprows += volume['FLT_HDR_ROWS']
     # read in the data
     nrows = int(np.floor(hdr['npts'] * 2 / 10))
@@ -161,7 +165,7 @@ def _read_channel(filename, line_offset, volume):
     return (trace, new_offset)
 
 
-def _get_header_info(int_data, flt_data, lines, volume):
+def _get_header_info(int_data, flt_data, lines, volume, location=''):
     """Return stats structure from various headers.
 
     Output is a dictionary like this:
@@ -215,7 +219,7 @@ def _get_header_info(int_data, flt_data, lines, volume):
 
         # Get required parameter number
         hdr['network'] = 'LA'
-        hdr['station'] = int_data[8]
+        hdr['station'] = str(int_data[8])
         horizontal_angle = int_data[26]
         if (horizontal_angle in USC_ORIENTATIONS or
                 (horizontal_angle >= 0 and horizontal_angle <= 360)):
@@ -247,7 +251,10 @@ def _get_header_info(int_data, flt_data, lines, volume):
                       'vertical channels.')
             raise AmptoolsException(errstr)
 
-        hdr['location'] = '--'
+        if location == '':
+            hdr['location'] = '--'
+        else:
+            hdr['location'] = location
         month = str(int_data[21])
         day = str(int_data[22])
         year = str(int_data[23])

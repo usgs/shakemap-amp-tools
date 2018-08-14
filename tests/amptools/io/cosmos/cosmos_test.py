@@ -22,7 +22,7 @@ def test_cosmos():
     stats = stream1[0].stats
     assert stats['station'] == 'J2236'
     assert stats['delta'] == .005000
-    assert stats['location'] == '--'
+    assert stats['location'] == '02'
     assert stats['network'] == 'CE'
     dt = '%Y-%m-%dT%H:%M:%SZ'
     assert stats['starttime'].strftime(dt) == '2005-06-16T20:53:04Z'
@@ -89,6 +89,10 @@ def test_cosmos():
     building_code = 10
     stream3 = read_cosmos(one_channel, valid_station_types=[building_code])
     assert stream3.count() == 1
+
+    # Test location overrride
+    stream = read_cosmos(one_channel, location='test')
+    assert stream[0].stats.location == 'test'
 
 
 

@@ -186,6 +186,8 @@ def read_cosmos(filename, **kwargs):
     """
     # get list of valid stations
     valid_station_types = kwargs.get('valid_station_types', None)
+    # get list of valid stations
+    location = kwargs.get('location', '')
 
     # count the number of lines in the file
     with open(filename) as f:
@@ -195,7 +197,8 @@ def read_cosmos(filename, **kwargs):
     line_offset = 0
     stream = Stream([])
     while line_offset < line_count:
-        trace, line_offset = _read_channel(filename, line_offset)
+        trace, line_offset = _read_channel(filename, line_offset,
+                location=location)
         # store the trace if the station type is in the valid_station_types list
         # or store the trace if there is no valid_station_types list
         if valid_station_types is not None:
@@ -207,7 +210,7 @@ def read_cosmos(filename, **kwargs):
     return stream
 
 
-def _read_channel(filename, line_offset):
+def _read_channel(filename, line_offset, location=''):
     """Read channel data from COSMOS V1/V2 text file.
 
     Args:
@@ -239,7 +242,8 @@ def _read_channel(filename, line_offset):
     # according to the powers that defined the Network.Station.Channel.Location
     # "standard", Location is a two character field.  Most data providers,
     # including cosmos here, don't provide this.  We'll flag it as "--".
-    hdr = _get_header_info(int_data, flt_data, lines, cmt_data)
+    hdr = _get_header_info(int_data, flt_data, lines,
+            cmt_data, location=location)
 
     # read in the data
     nrows, data = _read_lines(skiprows, filename)
@@ -252,14 +256,15 @@ def _read_channel(filename, line_offset):
     return (trace, new_offset)
 
 
-def _get_header_info(int_data, flt_data, lines, cmt_data):
+def _get_header_info(int_data, flt_data, lines, cmt_data, location=''):
     """Return stats structure from various headers.
 
     Output is a dictionary like this:
      - network (str): Default is '--'. Determined using COSMOS_NETWORKS
      - station (str)
      - channel (str): Determined using COSMOS_ORIENTATIONS
-     - location (str): Default is '--'
+     - location (str): Set to location index of sensor site at station.
+            If not a multi-site array, default is '--'.
      - starttime (datetime)
      - duration (float)
      - sampling_rate (float)
@@ -387,8 +392,14 @@ def _get_header_info(int_data, flt_data, lines, cmt_data):
                   'vertical channels.')
         raise AmptoolsException(errstr)
     hdr['channel'] = channel
-    location = '--'
-    hdr['location'] = location
+    if location == '':
+        location = int_data[55]
+        location = str(_check_assign(location, unknown, '--'))
+        if len(location) < 2:
+            location = location.zfill(2)
+        hdr['location'] = location
+    else:
+        hdr['location'] = location
     year = int_data[39]
     month = int_data[41]
     day = int_data[42]

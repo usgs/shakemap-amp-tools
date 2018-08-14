@@ -52,6 +52,15 @@ def group_channels(streams):
         starttime = trace1.stats['starttime']
         endtime = trace1.stats['endtime']
         channel = trace1.stats['channel']
+        location = trace1.stats['location']
+        if 'units' in trace1.stats.standard:
+            units = trace1.stats.standard['units']
+        else:
+            units = ''
+        if 'process_level' in trace1.stats.standard:
+            process_level = trace1.stats.standard['process_level']
+        else:
+            process_level = ''
         data = np.asarray(trace1.data)
         for idx2, trace2 in enumerate(trace_list):
             if idx1 != idx2 and idx1 not in duplicate_list:
@@ -61,19 +70,33 @@ def group_channels(streams):
                     same_data = ((data == np.asarray(trace2.data)).all())
                 except AttributeError:
                     same_data = (data == np.asarray(trace2.data))
+                if 'units' in trace2.stats.standard:
+                    units2 = trace2.stats.standard['units']
+                else:
+                    units2 = ''
+                if 'process_level' in trace2.stats.standard:
+                    process_level2 = trace2.stats.standard['process_level']
+                else:
+                    process_level2 = ''
                 if (
                     network == trace2.stats['network'] and
                     station == trace2.stats['station'] and
                     starttime == trace2.stats['starttime'] and
                     endtime == trace2.stats['endtime'] and
                     channel == trace2.stats['channel'] and
+                    location == trace2.stats['location'] and
+                    units == units2 and
+                    process_level == process_level2 and
                     same_data
                 ):
                     duplicate = True
                 elif (
                     network == trace2.stats['network'] and
                     station == trace2.stats['station'] and
-                    starttime == trace2.stats['starttime']
+                    starttime == trace2.stats['starttime'] and
+                    location == trace2.stats['location'] and
+                    units == units2 and
+                    process_level == process_level2
                 ):
                     event_match = True
                 if duplicate:
