@@ -5,6 +5,7 @@ import numpy as np
 import warnings
 
 # third party imports
+from obspy.core.stream import Stream
 from obspy.signal.util import next_pow_2
 from obspy.signal.konnoohmachismoothing import konno_ohmachi_smoothing
 from scipy.optimize import curve_fit
@@ -305,8 +306,8 @@ def get_corner_frequencies(trace, event_time, epi_dist, ratio=3.0,
         corner_frequencies = [low_corner, high_corner]
         corners = {'get_dynamically': True,
                    'ratio': ratio,
-                   'high_corner': corner_frequencies[1],
-                   'low_corner': corner_frequencies[0]}
+                   'default_high_frequency': corner_frequencies[1],
+                   'default_low_frequency': corner_frequencies[0]}
         trace = _update_params(trace, 'corners', corners)
         return corner_frequencies
 
@@ -372,10 +373,10 @@ def filter_waveform(trace, filter_type, freqmax=None, freqmin=None,
         if filter_params is not None:
             filters = trace.stats.processing_parameters['filters']
             filters += [filter_params]
-            trace = _update_params(trace, 'filters', [filters])
+            trace = _update_params(trace, 'filters', filters)
     except KeyError:
         if filter_params is not None:
-            trace = _update_params(trace, 'filters', [filter_params])
+            trace = _update_params(trace, 'filters', filter_params)
     return trace
 
 
@@ -481,7 +482,17 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
     Returns:
         obspy.core.stream.Stream: Processed stream.
     """
-    for idx, trace in enumerate(stream):
+    horizontals = []
+    for trace in stream:
+        if trace.stats['channel'].upper().find('Z') < 0:
+            horizontals += [trace.stats['channel']]
+    horizontal_corners = {}
+    low_freqs = []
+    high_freqs = []
+
+    processed_streams = Stream()
+
+    for trace in stream:
         trace_copy = trace.copy()
         # The stats need to be set even if the process checks fail
         trace_copy = _update_params(trace_copy, 'amplitude', {'min': amp_min,
@@ -508,7 +519,7 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                        'processing for trace: %r' % (amp_min,
                                                      amp_max, trace))
             trace_copy = _update_comments(trace_copy, err_msg)
-            stream[idx] = trace_copy
+            processed_streams.append(trace_copy)
             continue
 
         # Windowing
@@ -523,7 +534,7 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                            'time of the trace is after the calculated '
                            'end time. Skipping procesing for trace: %r', trace)
                 trace_trim = _update_comments(trace_copy, err_msg)
-                stream[idx] = trace_copy
+                processed_streams.append(trace_copy)
                 continue
         else:
             trace_copy.stats['passed_tests'] = False
@@ -545,12 +556,11 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
             corners = get_corner_frequencies(trace_trim, event_time,
                     epi_dist, sn_ratio, max_low_freq, min_high_freq,
                     taper_type, taper_percentage, taper_side)
-
             if (corners[0] < 0 or corners[1] < 0):
-                trace_copy.stats['passed_tests'] = False
+                trace_trim.stats['passed_tests'] = False
                 dynamic = False
-                low_freq = -9999
-                high_freq = -9999
+                high_freq = default_high_frequency
+                low_freq = default_low_frequency
 
                 if corners == [-1, -1]:
                     err_msg = ('Not enough pre-event noise to calculate '
@@ -564,7 +574,7 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                     err_msg = ('Did not find any corner frequencies within '
                                'the valid bandwidth. Skipping processing for '
                                'trace: %r' % (trace))
-                trace_copy = _update_comments(trace_copy, err_msg)
+                trace_trim = _update_comments(trace_trim, err_msg)
 
             else:
                 low_freq = corners[0]
@@ -576,38 +586,73 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
             dynamic = False
 
         corner_params = {'get_dynamically': dynamic,
-                         'default_high_frequency': default_high_frequency,
+                         'default_high_frequency': high_freq,
                          'sn_ratio': sn_ratio,
-                         'default_low_frequency': default_low_frequency,
+                         'default_low_frequency': low_freq,
                          'max_low_freq': max_low_freq,
-                         'min_high_freq': min_high_freq,
-                         'low_corner': low_freq,
-                         'high_corner': high_freq}
+                         'min_high_freq': min_high_freq}
 
-        if trace_copy.stats['passed_tests'] is False:
-            trace_copy = _update_params(trace_copy, 'corners', corner_params)
-            stream[idx] = trace_copy
-            continue
-
-        trace_trim = _update_params(trace_trim, 'corners', corner_params)
-
-        # Filter
-        trace_filt = trace_trim
-        for filter_dict in filters:
-            filter_type = filter_dict['type']
-            corners = filter_dict['corners']
-            zerophase = filter_dict['zerophase']
-            trace_filt = filter_waveform(trace_filt, filter_type,
-                                         high_freq, low_freq, zerophase,
-                                         corners)
-
-        # Correct baseline
-        if baseline_correct:
-            trace_cor = correct_baseline(trace_filt)
+        channel = trace.stats.channel
+        if channel in horizontals:
+            low_freqs += [low_freq]
+            high_freqs += [high_freq]
+            horizontal_corners[channel] = {}
+            horizontal_corners[channel]['corner_params'] = corner_params
+            horizontal_corners[channel]['trace'] = trace_trim.copy()
         else:
-            trace_cor = _update_params(trace_filt, 'baseline_correct', False)
-        stream[idx] = trace_cor
-    return stream
+            if trace_trim.stats['passed_tests'] is False:
+                trace_trim = _update_params(trace_trim, 'corners', corner_params)
+                processed_streams.append(trace_trim)
+                continue
+
+            trace_trim = _update_params(trace_trim, 'corners', corner_params)
+
+            # Filter
+            trace_filt = trace_trim
+            for filter_dict in filters:
+                filter_type = filter_dict['type']
+                corners = filter_dict['corners']
+                zerophase = filter_dict['zerophase']
+                trace_filt = filter_waveform(trace_filt, filter_type,
+                                             high_freq, low_freq, zerophase,
+                                             corners)
+            # Correct baseline
+            if baseline_correct:
+                trace_cor = correct_baseline(trace_filt)
+            else:
+                trace_cor = _update_params(trace_filt, 'baseline_correct', False)
+            processed_streams.append(trace_cor)
+
+    if len(low_freqs) > 0:
+        low_horizontal = np.sort(low_freqs)[0]
+        high_horizontal = np.sort(high_freqs)[-1]
+        for channel in horizontal_corners:
+            params = horizontal_corners[channel]['corner_params']
+            params['default_high_frequency'] = high_horizontal
+            params['default_low_frequency'] = low_horizontal
+            trace = horizontal_corners[channel]['trace']
+
+            if trace.stats['passed_tests'] is False:
+                trace = _update_params(trace, 'corners', params)
+                processed_streams.append(trace)
+                continue
+            trace_trim = _update_params(trace, 'corners', params)
+            # Filter
+            trace_filt = trace_trim
+            for filter_dict in filters:
+                filter_type = filter_dict['type']
+                corners = filter_dict['corners']
+                zerophase = filter_dict['zerophase']
+                trace_filt = filter_waveform(trace_filt, filter_type,
+                                             high_freq, low_freq, zerophase,
+                                             corners)
+            # Correct baseline
+            if baseline_correct:
+                trace_cor = correct_baseline(trace_filt)
+            else:
+                trace_cor = _update_params(trace_filt, 'baseline_correct', False)
+            processed_streams.append(trace_cor)
+    return processed_streams
 
 
 def process_config(stream, config=None, event_time=None, epi_dist=None):

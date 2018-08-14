@@ -8,6 +8,8 @@ import numpy as np
 from obspy.core.stream import read
 from obspy.core.utcdatetime import UTCDateTime
 from obspy import Trace
+
+# local imports
 from amptools import process
 
 homedir = os.path.dirname(os.path.abspath(__file__))
@@ -209,8 +211,76 @@ def test_all():
     ALKI_processed = process.process_config([ALKI_tr])[0]
     assert ALKI_processed.stats['passed_tests'] is False
 
+def test_horizontal_frequencies():
+    config = {
+    'processing_parameters': {
+            'amplitude': {
+                    'min': 10e-7,
+                    'max': 5e3
+            },
+            'window': {
+                    'vmin': 1.0
+            },
+            'taper': {
+                    'type': 'hann',
+                    'max_percentage': 0.05,
+                    'side': 'both'
+            },
+            'corners': {
+                    'get_dynamically': True,
+                    'sn_ratio': 3.0,
+                    'max_low_freq': 0.1,
+                    'min_high_freq': 5.0,
+                    'default_low_frequency': 0.1,
+                    'default_high_frequency': 20.0
+            },
+            'filters': [{
+                    'type': 'highpass',
+                    'corners': 4,
+                    'zerophase': True
+            },{
+                    'type': 'lowpass',
+                    'corners': 4,
+                    'zerophase': True
+            }],
+            'baseline_correct': True,
+    },
+    'sm2xml': {
+            'imtlist': ['PGA', 'PGV', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']
+    }
+    }
+    event_time = UTCDateTime('2001-02-28T18:54:32')
+    ALCT_tr1 = read(os.path.join(datadir, 'ALCTENE.UW..sac'))[0]
+    ALCT_tr2 = read(os.path.join(datadir, 'ALCTENN.UW..sac'))[0]
+    stream = [ALCT_tr1, ALCT_tr2]
+
+    ALCT_dist = 75.9559
+    processed = process.process_config(stream, config=config,
+            event_time=event_time, epi_dist=ALCT_dist)
+    for trace in processed:
+        corners = trace.stats.processing_parameters.corners
+        assert corners['default_high_frequency'] == 50
+        assert corners['default_low_frequency'] == 0.018310546875
+        filters = trace.stats.processing_parameters.filters
+        assert filters == config['processing_parameters']['filters']
+
+    stream[0].stats.channel = 'Z'
+    processed = process.process_config(stream, config=config,
+            event_time=event_time, epi_dist=ALCT_dist)
+    corners1 = processed[0].stats.processing_parameters.corners
+    high1 = corners1['default_high_frequency']
+    low1 = corners1['default_low_frequency']
+    assert high1 == 50.0
+    assert low1 == 0.03662109375
+    corners2 = processed[1].stats.processing_parameters.corners
+    high2 = corners2['default_high_frequency']
+    low2 = corners2['default_low_frequency']
+    assert high2 == 48.199462890625
+    assert low2 == 0.018310546875
+
 
 if __name__ == '__main__':
     test_amp_check_trim()
     test_corner_freqs()
     test_all()
+    test_horizontal_frequencies()
