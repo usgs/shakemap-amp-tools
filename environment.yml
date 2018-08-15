@@ -7,7 +7,7 @@ dependencies:
 - jupyter
 - lxml
 - matplotlib
-- numpy
+- numpy>=1.14
 - obspy
 - pandas
 - pytest

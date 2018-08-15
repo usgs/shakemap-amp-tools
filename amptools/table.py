@@ -19,7 +19,7 @@ OPTIONAL = ['NAME', 'DISTANCE', 'REFERENCE',
 
 
 def _move(cellstr, nrows, ncols):
-    """Internal method for getting new cell coordinate by adding rows/columns to cell coordinate.
+    """Internal method for adding rows/columns to cell coordinate.
 
     'A1' moved by 1 row, 1 column => 'B2'
 
@@ -54,21 +54,22 @@ def read_excel(excelfile):
         DataFrame: Multi-indexed dataframe as described below.
         str or None: Reference string or None.
 
-     - "station" String containing UNIQUE identifying station information.
-     - "lat" Latitude where peak ground motion observations were made.
-     - "lon" Longitude where peak ground motion observations were made.
-     - "netid" (usually) two letter code indicating the source network.
+     - "STATION" String containing UNIQUE identifying station information.
+     - "LAT" Latitude where peak ground motion observations were made.
+     - "LON" Longitude where peak ground motion observations were made.
+     - "NETID" (usually) two letter code indicating the source network.
 
     Optional columns include:
-     - "name" String describing area where peak ground motions were observed.
-     - "source" String describing (usu. long form) source of peak ground motion data.
-     - "distance" Distance from epicenter to station location, in units of km.
-     - "loc" Two character location code.
-     - "insttype" Instrument type, str.
-     - "elev" Station elevation, in meters.
+     - "NAME" String describing area where peak ground motions were observed.
+     - "SOURCE" String describing (usu. long form) source of peak ground
+       motion data.
+     - "DISTANCE" Distance from epicenter to station location, in units of km.
+     - "LOC" Two character location code.
+     - "INSTTYPE" Instrument type, str.
+     - "ELEV" Station elevation, in meters.
 
     And then at least one of the following columns:
-     - "intensity" MMI value (1-10).
+     - "INTENSITY" MMI value (1-10).
 
         AND/OR
       a grouped set of per-channel peak ground motion columns, like this:
@@ -80,11 +81,11 @@ def read_excel(excelfile):
       -------------------------------------------------------------------------------
 
       The peak ground motion columns can be any of the following:
-      - "pga" Peak ground acceleration in units of %g.
-      - "pgv" Peak ground velocity in units of cm/sec.
-      - "psa03" Peak spectral acceleration at 0.3 seconds, in units of %g.
-      - "psa10" Peak spectral acceleration at 1.0 seconds, in units of %g.
-      - "psa30" Peak spectral acceleration at 3.0 seconds, in units of %g.
+      - "PGA" Peak ground acceleration in units of %g.
+      - "PGV" Peak ground velocity in units of cm/sec.
+      - "PSA03" Peak spectral acceleration at 0.3 seconds, in units of %g.
+      - "PSA10" Peak spectral acceleration at 1.0 seconds, in units of %g.
+      - "PSA30" Peak spectral acceleration at 3.0 seconds, in units of %g.
 
     Valid "channel" columns are {H1,H2,Z} or {XXN,XXE,XXZ}, where 'XX' is any
     two-letter combination, usually adhering to the following standard:
@@ -194,7 +195,8 @@ def read_excel(excelfile):
         df[channel] = channel_df
 
     if not found:
-        fmt = 'File must contain at least one of the following data columns: %s'
+        fmt = ('File must contain at least one of the following '
+               'data columns: %s')
         tpl = (str(PGM_COLS + ['intensity']))
         raise KeyError(fmt % tpl)
 
@@ -206,20 +208,21 @@ def dataframe_to_xml(df, xmlfile, reference=None):
 
     This method accepts either a dataframe from read_excel, or
     one with this structure:
-     - station: Station code (REQUIRED)
-     - channel: Channel (HHE,HHN, etc.) (REQUIRED)
-     - imt: Intensity measure type (pga,pgv, etc.) (REQUIRED)
-     - value: IMT value. (REQUIRED)
-     - lat: Station latitude. (REQUIRED)
-     - lon: Station longitude. (REQUIRED)
-     - netid: Station contributing network. (REQUIRED)
-     - flag: String quality flag, meaningful to contributing networks,
+     - STATION: Station code (REQUIRED)
+     - CHANNEL: Channel (HHE,HHN, etc.) (REQUIRED)
+     - IMT: Intensity measure type (pga,pgv, etc.) (REQUIRED)
+     - VALUE: IMT value. (REQUIRED)
+     - LAT: Station latitude. (REQUIRED)
+     - LON: Station longitude. (REQUIRED)
+     - NETID: Station contributing network. (REQUIRED)
+     - FLAG: String quality flag, meaningful to contributing networks,
              but ShakeMap ignores any station with a non-zero value. (REQUIRED)
-     - elev: Elevation of station (m). (OPTIONAL)
-     - name: String describing station. (OPTIONAL)
-     - distance: Distance (km) from station to origin. (OPTIONAL)
-     - loc: Description of location (i.e., "5 km south of Wellington") (OPTIONAL)
-     - insttype: Instrument type (FBA, etc.) (OPTIONAL)
+     - ELEV: Elevation of station (m). (OPTIONAL)
+     - NAME: String describing station. (OPTIONAL)
+     - DISTANCE: Distance (km) from station to origin. (OPTIONAL)
+     - LOC: Description of location (i.e., "5 km south of Wellington")
+            (OPTIONAL)
+     - INSTTYPE: Instrument type (FBA, etc.) (OPTIONAL)
 
     Args:
         df (DataFrame): Pandas dataframe, as described in read_excel.
