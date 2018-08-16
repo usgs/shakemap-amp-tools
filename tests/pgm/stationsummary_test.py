@@ -77,9 +77,9 @@ def test_stationsummary():
             'SA1.0': {
                     'ROTD100.0': 146.49522597669394,
                     'ROTD50.0': 105.39210993086763,
-                    'HNZ': 27.41836158024183,
+                    'HNZ': 27.418361580241818,
                     'HN1': 135.83462000177008,
-                    'HN2': 84.17504097202713,
+                    'HN2': 84.17504097202712,
                     'GREATER_OF_TWO_HORIZONTALS': 135.83462000177008}
             }
     datafile = os.path.join(homedir, '..', 'data', 'geonet',
