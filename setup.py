@@ -27,5 +27,6 @@ setup(name='amptools',
       },
       scripts=['bin/amps2xml',
                'bin/ftpfetch',
-               'bin/sm2xml']
+               'bin/sm2xml',
+               'bin/fdsnfetch']
       )
