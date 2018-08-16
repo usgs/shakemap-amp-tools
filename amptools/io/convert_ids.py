@@ -12,7 +12,7 @@ def convert_ids(source_id, source_catalog, out_catalog, collect_dloc=1.5,
     Args:
         source_id (str): Event ID from the source catalog.
         source_catalog (str): Source catalog (UNID, EMSC, INGV, USGS or ISC).
-        out_catalog (str): Output cataog (UNID, EMSC, INGV, USGS, ISC, or all)
+        out_catalog (str): Output catalog (UNID, EMSC, INGV, USGS, ISC, or all)
         collect_dloc (float): dloc parameter.
         collect_dtmie (float): dtime parameter.
         misfit_dloc (float): Misfit delta_loc parameter.
