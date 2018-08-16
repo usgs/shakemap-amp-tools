@@ -271,11 +271,11 @@ def test_horizontal_frequencies():
     high1 = corners1['default_high_frequency']
     low1 = corners1['default_low_frequency']
     assert high1 == 50.0
-    assert low1 == 0.03662109375
+    assert low1 == 0.0244140625
     corners2 = processed[1].stats.processing_parameters.corners
     high2 = corners2['default_high_frequency']
     low2 = corners2['default_low_frequency']
-    assert high2 == 48.199462890625
+    assert high2 == 48.4619140625
     assert low2 == 0.018310546875
 
 

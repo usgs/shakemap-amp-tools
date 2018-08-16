@@ -53,23 +53,6 @@ def filter_detrend(trace, taper_type='cosine', taper_percentage=0.05,
     return trace
 
 
-def correct_baseline_mean(stream):
-    """
-    Performs a zero-order baseline correction by subtracting the mean from
-    the entire waveform. This is step 1 as found in the Rennolet et. al
-    paper (https://doi.org/10.1193/101916EQS175DP)
-
-    Args:
-        stream (obpsy.core.stream.Stream): Stream of raw waveform data.
-
-    Returns:
-        stream (obspy.core.stream.Stream): Stream of corrected waveform data.
-    """
-    for tr in stream:
-        tr.detrend(type='demean')
-    return stream
-
-
 def remove_clipped(stream, max_count=2000000):
     """
     Identify clipped waveforms having a count greater than the specified
@@ -83,16 +66,61 @@ def remove_clipped(stream, max_count=2000000):
             Default is 2 million.
 
     Returns:
-        stream (obspy.core.stream.Stream): Stream of raw data with clipped
-        waveforms removed
+        tuple of streams (obspy.core.stream.Stream): The first stream in the
+            tuple has the clipped waveforms removed, while the second tuple in
+            in the stream contains only the clipped waveforms.
     """
+    clipped_st = Stream()
     for tr in stream:
-
-        if abs(tr.max()) >= max_count:
+         if abs(tr.max()) >= max_count:
             stream.traces.remove(tr)
+            clipped_st.append(tr)
             warnings.warn('Clipped trace was removed from the stream')
             warnings.warn(tr.get_id())
-    return stream
+    return stream, clipped_st
+
+
+def instrument_response(st, f1, f2, f3=None, f4=None, water_level=None,
+                                output='ACC', inv=None):
+    """
+    Performs instrument response correction. If the response information is
+    not already attached to the stream, then an inventory object must be
+    provided. If the instrument is a strong-motion accelerometer, then
+    tr.remove_sensitivity() will be used. High-gain seismometers will use
+    tr.remove_response() with the defined pre-filter and water level.
+    Args:
+        st (obspy.core.stream.Stream): Stream of data.
+        f1 (float): Frequency 1 for pre-filter.
+        f2 (float): Frequency 2 for pre-filter.
+        f3 (float): Frequency 3 for pre-filter.
+        f4 (float): Frequency 4 for pre-filter.
+        water_level (float): Water level for deconvolution.
+        output (str): Outuput units.
+            Must be 'ACC', 'VEL', or 'DISP'
+        inv (obspy.core.inventory.inventory): Obspy inventory object containing
+            response information.
+    Returns:
+        st (obspy.core.stream.Stream): Instrument-response-corrected stream.
+    """
+
+     # Check if the response information is already attached in the trace stats
+    for tr in st:
+        if f3 is None:
+            f3 = 0.25 / tr.stats.delta
+        if f4 is None:
+            f4 = 0.50 / tr.stats.delta
+         # Check if we have an instrument measuring velocity or accleration
+        if tr.stats.channel[1] == 'H':
+            tr.remove_response(inventory=inv, output=output, water_level=water_level,
+                               pre_filt=(f1, f2, f3, f4))
+        elif tr.stats.channel[1] == 'N':
+            tr.remove_sensitivity(inventory=inv)
+        else:
+            msg = 'This instrument type is not supported. '
+            msg += 'The instrument code must be either H '
+            msg += '(high gain seismometer) or N (accelerometer).'
+            raise ValueError(msg)
+    return st
 
 
 def check_max_amplitude(trace, min_amp=10e-7, max_amp=5e3):
@@ -551,13 +579,16 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                           'used for filtering.')
             windowed = False
 
+        # Taper
+        trace_tap = taper(trace_trim)
+
         # Find corner frequencies
         if get_corners and windowed:
-            corners = get_corner_frequencies(trace_trim, event_time,
+            corners = get_corner_frequencies(trace_tap, event_time,
                     epi_dist, sn_ratio, max_low_freq, min_high_freq,
                     taper_type, taper_percentage, taper_side)
             if (corners[0] < 0 or corners[1] < 0):
-                trace_trim.stats['passed_tests'] = False
+                trace_tap.stats['passed_tests'] = False
                 dynamic = False
                 high_freq = default_high_frequency
                 low_freq = default_low_frequency
@@ -574,7 +605,7 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
                     err_msg = ('Did not find any corner frequencies within '
                                'the valid bandwidth. Skipping processing for '
                                'trace: %r' % (trace))
-                trace_trim = _update_comments(trace_trim, err_msg)
+                trace_tap = _update_comments(trace_tap, err_msg)
 
             else:
                 low_freq = corners[0]
@@ -598,17 +629,17 @@ def process(stream, amp_min, amp_max, window_vmin, taper_type,
             high_freqs += [high_freq]
             horizontal_corners[channel] = {}
             horizontal_corners[channel]['corner_params'] = corner_params
-            horizontal_corners[channel]['trace'] = trace_trim.copy()
+            horizontal_corners[channel]['trace'] = trace_tap.copy()
         else:
-            if trace_trim.stats['passed_tests'] is False:
-                trace_trim = _update_params(trace_trim, 'corners', corner_params)
-                processed_streams.append(trace_trim)
+            if trace_tap.stats['passed_tests'] is False:
+                trace_tap = _update_params(trace_tap, 'corners', corner_params)
+                processed_streams.append(trace_tap)
                 continue
 
-            trace_trim = _update_params(trace_trim, 'corners', corner_params)
+            trace_tap = _update_params(trace_tap, 'corners', corner_params)
 
             # Filter
-            trace_filt = trace_trim
+            trace_filt = trace_tap
             for filter_dict in filters:
                 filter_type = filter_dict['type']
                 corners = filter_dict['corners']
