@@ -21,6 +21,7 @@ def test_fetch():
     for tr in nisqually_st:
         tr.detrend('demean')
     nisqually_clip_rm, nisqually_clip = process.remove_clipped(nisqually_st)
+    assert len(nisqually_clip) != 0
     nisqually_resp_rm = process.instrument_response(nisqually_clip_rm, f1=0.02, f2=0.05)
 
     # Test that this stream we requested gives us the same PGA as
