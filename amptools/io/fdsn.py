@@ -169,24 +169,3 @@ def clean_stats(my_stats):
         elif isinstance(value, float) and np.isnan(value) or value == '':
             stats[key] = 'null'
     return stats
-
-
-def remove_response(stream, output='ACC'):
-    """
-    Remove the instrument response from a stream and converts the waveforms
-    to either acceleration, velocity, or displacement. This requires that
-    the response data has been attached to the trace through the
-    bulk waveform request. This is step 3 as found in the Rennolet
-    et. al paper (https://doi.org/10.1193/101916EQS175DP)
-
-    Args:
-        stream (obspy.core.stream.Stream): Stream of raw data.
-        output (str): Output units. Must be 'DISP, 'VEL', or 'ACC'.
-            Default is 'ACC'.
-
-    Returns:
-        stream (obspy.core.stream.Stream): Stream of data with instrument
-            responses removed.
-    """
-    stream.remove_response(output=output)
-    return stream
