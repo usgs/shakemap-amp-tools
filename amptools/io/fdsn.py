@@ -56,7 +56,7 @@ def request_raw_waveforms(fdsn_client, org_time, lat, lon,
     channels = ','.join(channels)
 
     # Get an inventory of all stations for the event
-    inventory = client.get_stations(startbefore=t1, endafter=t2,
+    inventory = client.get_stations(starttime=t1, endtime=t2,
                                     latitude=lat, longitude=lon,
                                     minradius=dist_min, maxradius=dist_max,
                                     network=networks,
@@ -156,6 +156,9 @@ def clean_stats(my_stats):
     """
     stats = dict()
     for key, value in my_stats.items():
+        stats[key] = value
+
+    if 'response' in stats:
         stats[key] = value
 
     for key, value in stats.items():

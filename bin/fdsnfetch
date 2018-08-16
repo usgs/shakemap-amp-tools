@@ -3,8 +3,9 @@
 import argparse
 import os
 import json
+import glob
 from amptools.io import fdsn
-from amptools.process import correct_baseline_mean, remove_clipped
+from amptools.process import remove_clipped, instrument_response
 from obspy import read
 
 
@@ -20,47 +21,48 @@ def main(args):
                                          args.dmin, args.dmax, networks,
                                          stations, channels)
 
-    os.chdir(args.out)
-    if not os.path.exists('raw'):
-        os.mkdir('raw')
-    if not os.path.exists('metadata'):
-        os.mkdir('metadata')
+    if not os.path.exists(args.out + '/raw'):
+        os.mkdir(args.out + '/raw')
 
     # Write the raw files to the raw directory
-    print('Writing raw files to {0}/Raw'.format(args.out))
     for tr in st:
         tr = fdsn.add_channel_metadata(tr, inv, args.client)
-        trid = tr.get_id()
-        tr.write('raw/{0}-{1}.'.format(trid, tr.stats.starttime) + args.f,
+        tr.write(args.out + '/raw/' + tr.get_id() + '.' + args.f,
                  format=args.f)
 
-    # Do some preliminary processing if desired by the user
+    # Get a list of the stations that we have waveform data for
+    stations = []
+    raw_st = read(args.out + '/raw/*.' + args.f)
+    for tr in raw_st:
+        if tr.stats.station not in stations:
+            stations.append(tr.stats.station)
+
+    # Save the JSON metadata for each station
+    for stn in stations:
+        meta_dict = {}
+        meta_dict['properties'] = {}
+        stn_st = st.select(station=stn)
+        for tr in stn_st:
+            stats = fdsn.clean_stats(tr.stats)
+            meta_dict['properties'][tr.stats.channel] = fdsn.clean_stats(stats)
+        for tr in stn_st:
+            with open(args.out + '/raw/' + tr.get_id() + '.json', 'w') as fp:
+                json.dump(meta_dict, fp)
+
+    # Do instrument response correction if desired
     if args.r:
-        if not os.path.exists('resp_cor'):
-            os.mkdir('resp_cor')
-        st_bas = correct_baseline_mean(st)
-        st_unc = remove_clipped(st_bas)
-        st_res = fdsn.remove_response(st_unc)
+        if not os.path.exists(args.out + '/resp_cor'):
+            os.mkdir(args.out + '/resp_cor')
+        for tr in st:
+            tr.detrend('demean')
+        st_unclipped, st_clipped = remove_clipped(st)
+        st_res = instrument_response(st_unclipped, f1=args.f1, f2=args.f2, f3=args.f3, f4=args.f4,
+                                     water_level=args.w, output=args.o)
 
         for tr in st_res:
             trid = tr.get_id()
-            tr.write('resp_cor/{0}-{1}.'.format(trid, tr.stats.starttime) + args.f,
+            tr.write(args.out + '/resp_cor/' + tr.get_id() + '.' + args.f,
                      format=args.f)
-
-    # Save metadata to JSON files
-    stations = inv.get_contents()['stations']
-    stations = [stn.split(' ')[0].split('.')[1] for stn in stations]
-    for stn in stations:
-        meta_dict = {}
-        st = read('raw/*' + stn + '*')
-        for tr in st:
-            # Clean up the stats dictionary and make it serializable
-            stats = fdsn.clean_stats(tr.stats)
-            meta_dict[tr.stats.channel] = fdsn.clean_stats(stats)
-
-        # Save the dictionary to a JSON file
-        with open('metadata/' + stn + '.json', 'w') as fp:
-            json.dump(meta_dict, fp)
 
 
 if __name__ == '__main__':
@@ -94,6 +96,18 @@ if __name__ == '__main__':
                         default='MSEED', type=str)
     parser.add_argument('-r', action='store_true',
                         help='Whether to denconvolve instrument response')
+    parser.add_argument('-o', help='Output unit of instrument response correction',
+                         type=str)
+    parser.add_argument('-f1', help='Freq 1 for instrument response pre-filter',
+                        default=120, type=float)
+    parser.add_argument('-f2', help='Freq 2 for instrument response pre-filter',
+                        default=120, type=float)
+    parser.add_argument('-f3', help='Freq 3 for instrument response pre-filter',
+                        default=120, type=float)
+    parser.add_argument('-f4', help='Freq 4 for instrument response pre-filter',
+                        default=120, type=float)
+    parser.add_argument('-w', help='Water level for instrument response correction',
+                        default=120, type=float)
 
     pargs = parser.parse_args()
     main(pargs)
