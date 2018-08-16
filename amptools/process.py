@@ -66,8 +66,9 @@ def remove_clipped(stream, max_count=2000000):
             Default is 2 million.
 
     Returns:
-        stream (obspy.core.stream.Stream): Stream of raw data with clipped
-        waveforms removed
+        tuple of streams (obspy.core.stream.Stream): The first stream in the
+            tuple has the clipped waveforms removed, while the second tuple in
+            in the stream contains only the clipped waveforms.
     """
     clipped_st = Stream()
     for tr in stream:
@@ -82,7 +83,11 @@ def remove_clipped(stream, max_count=2000000):
 def instrument_response(st, f1, f2, f3=None, f4=None, water_level=None,
                                 output='ACC', inv=None):
     """
-    Corrects a stream for instrument response.
+    Performs instrument response correction. If the response information is
+    not already attached to the stream, then an inventory object must be
+    provided. If the instrument is a strong-motion accelerometer, then
+    tr.remove_sensitivity() will be used. High-gain seismometers will use
+    tr.remove_response() with the defined pre-filter and water level.
     Args:
         st (obspy.core.stream.Stream): Stream of data.
         f1 (float): Frequency 1 for pre-filter.
@@ -97,6 +102,7 @@ def instrument_response(st, f1, f2, f3=None, f4=None, water_level=None,
     Returns:
         st (obspy.core.stream.Stream): Instrument-response-corrected stream.
     """
+
      # Check if the response information is already attached in the trace stats
     for tr in st:
         if f3 is None:
