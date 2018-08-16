@@ -20,6 +20,7 @@ def convert_ids(source_id, source_catalog, out_catalog, collect_dloc=1.5,
         misfit_dmag (float): Misfit delta_mag parameter.
         preferred_only (str): Select only the first event by catalog if 'true'.
         include_info (str): Return info about the event if 'true'.
+        return_json (bool): Whether or not to return the entire JSON.
 
     Returns:
         dict: Returns a dictionary mapping catalogs to event IDS if return_json
