@@ -159,7 +159,7 @@ def clean_stats(my_stats):
         stats[key] = value
 
     if 'response' in stats:
-        stats[key] = value
+        stats['response'] = ''
 
     for key, value in stats.items():
         if isinstance(value, (dict, AttribDict)):
