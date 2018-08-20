@@ -1,3 +1,4 @@
+
 Status
 =======
 [![Build Status](https://travis-ci.org/usgs/shakemap-amp-tools.svg?branch=master)](https://travis-ci.org/usgs/shakemap-amp-tools)
@@ -21,6 +22,7 @@ it into the XML data format used by ShakeMap.  This repository includes the foll
  * `amps2xml` Convert peak ground motions in Excel format to ShakeMap XML data structure.
  * `fdsnfetch` Retrieve data from an fdsn client (i.e. IRIS and ORFEUS).
  * `ftpfetch` Retrieve directories or files containing data from FTP url.
+ * `ingvfetch` Retrieve ShakeMap xml data from the [INGV Strong Motions Web Service](http://webservices.ingv.it/swagger-ui/dist/?url=http%3A%2F%2Fwebservices.ingv.it%2Fingvws%2Fstrongmotion%2F1%2Fswagger.yml)
  * `sm2xml` Convert a directory of strong motion data files into ShakeMap xml.
 
 # Installing
@@ -104,6 +106,18 @@ Clipped waveforms are automatically removed. Each waveform is also demeaned and 
 This tool allows a user to fetch a file or directory of files from an FTP server.
 If a username and password are required (KNET, for example) they can be provided
 as command line options.
+
+## ingvfetch
+
+This tool allows a user to fetch a ShakeMap xml file from the [INGV Strong Motions Web Service](http://webservices.ingv.it/swagger-ui/dist/?url=http%3A%2F%2Fwebservices.ingv.it%2Fingvws%2Fstrongmotion%2F1%2Fswagger.yml).
+EventIDs from any of the following catalogs will be converted to an INGV eventID and will be used to retrieve a ShakeMap xml file if one is available:
+- UNID
+- EMSC
+- USGS
+- ISC
+
+The INGV catalog is a combination of the CNT and ESM catalogs. With an INGV eventID, priority is given to ESM. In order to specify CNT or ESM, the catalog specific eventID and specifying the source catalog is required.
+
 
 ## amps2xml
 
