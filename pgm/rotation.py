@@ -137,34 +137,24 @@ def rotate(tr1, tr2, combine=False, delta=1.0):
     """
 
     if combine:
-        num_rows = int(180 * (1.0 / delta) + 1)
-        degrees = np.deg2rad(np.linspace(0, 180, num_rows))
-        shape = (len(tr1), 1)
-        degree_matrix = np.multiply(np.ones(shape), degrees).T
-        cos_matrix = np.cos(degree_matrix)
-        sin_matrix = np.sin(degree_matrix)
-
-        # Create timeseries matrix
-        osc1_matrix = np.multiply(np.ones((num_rows, 1)), tr1)
-        osc2_matrix = np.multiply(np.ones((num_rows, 1)), tr2)
-
-        # Calculate GMs
-        rot = osc1_matrix * cos_matrix + osc2_matrix * sin_matrix
-        return rot
-
+        max_deg = 180
     else:
-        num_rows = int(90 * (1.0 / delta) + 1)
-        degrees = np.deg2rad(np.linspace(0, 90, num_rows))
-        shape = (len(tr1), 1)
-        degree_matrix = np.multiply(np.ones(shape), degrees).T
-        cos_matrix = np.cos(degree_matrix)
-        sin_matrix = np.sin(degree_matrix)
+        max_deg = 90
 
-        # Create timeseries matrix
-        osc1_matrix = np.multiply(np.ones((num_rows, 1)), tr1)
-        osc2_matrix = np.multiply(np.ones((num_rows, 1)), tr2)
+    num_rows = int(max_deg * (1.0 / delta) + 1)
+    degrees = np.deg2rad(np.linspace(0, max_deg, num_rows)).reshape((-1, 1))
+    cos_deg = np.cos(degrees)
+    sin_deg = np.sin(degrees)
 
+    td1 = np.reshape(tr1, (1, -1))
+    td2 = np.reshape(tr2, (1, -1))
+
+    if combine:
+        # Calculate GMs
+        rot = td1 * cos_deg + td2 * sin_deg
+        return rot
+    else:
         # Calculate GMs with rotation
-        osc1_rot = osc1_matrix * cos_matrix + osc2_matrix * sin_matrix
-        osc2_rot = osc1_matrix * sin_matrix + osc2_matrix * cos_matrix
+        osc1_rot = td1 * cos_deg + td2 * sin_deg
+        osc2_rot = -td1 * sin_deg + td2 * cos_deg
         return osc1_rot, osc2_rot
