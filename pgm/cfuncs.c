@@ -13,8 +13,8 @@
  * and sdis, and returning the new sample rate.
  */
 void calculate_spectrals_c(double *times, double *acc, int np, double period,
-	                       double damping, double *sacc, double *svel,
-						   double *sdis) {
+                           double damping, double *sacc, double *svel,
+                           double *sdis) {
     double w = 2 * M_PI / period;
     double d = damping;
     double wd = sqrt(1. - d * d) * w;
@@ -25,8 +25,8 @@ void calculate_spectrals_c(double *times, double *acc, int np, double period,
     double sine = e * sin(wd * dt);
     double cosine = e * cos(wd * dt);
 
-	double w2 = w * w;
-	double w3 = w2 * w;
+    double w2 = w * w;
+    double w3 = w2 * w;
     double w2i = 1.0 / w2;
     double wdi = 1.0 / wd;
     double dw = d * w;
@@ -42,18 +42,18 @@ void calculate_spectrals_c(double *times, double *acc, int np, double period,
     double dugw2idt;
     int k;
 
-	g = acc[0];
-	dug = (acc[1] - g) / ns;
-	gw2i = g * w2i;
-	dugw2i = dug * w2i;
-	dugw2idt = dugw2i / dt;
-	b = 0 + gw2i - ddtw3 * dug;
-	a = wdi * 0 + dw * wdi * b + wdi * dugw2idt;
-	sdis[0] = a * sine + b * cosine + ddtw3 * dug - gw2i - dugw2i;
-	svel[0] = a * (wd * cosine - dw * sine) -
-			  b * (wd * sine + dw * cosine) -
-			  dugw2idt;
-	sacc[0] = -2. * dw * svel[0] - w2 * sdis[0];
+    g = acc[0];
+    dug = (acc[1] - g) / ns;
+    gw2i = g * w2i;
+    dugw2i = dug * w2i;
+    dugw2idt = dugw2i / dt;
+    b = 0 + gw2i - ddtw3 * dug;
+    a = wdi * 0 + dw * wdi * b + wdi * dugw2idt;
+    sdis[0] = a * sine + b * cosine + ddtw3 * dug - gw2i - dugw2i;
+    svel[0] = a * (wd * cosine - dw * sine) -
+              b * (wd * sine + dw * cosine) -
+              dugw2idt;
+    sacc[0] = -2. * dw * svel[0] - w2 * sdis[0];
     for (k = 1; k < np-1; k++) {
         g = acc[k];
         dug = (acc[k+1] - g) / ns;
@@ -68,6 +68,6 @@ void calculate_spectrals_c(double *times, double *acc, int np, double period,
                   b * (wd * sine + dw * cosine) -
                   dugw2idt;
         sacc[k] = -2. * dw * svel[k] - w2 * sdis[k];
-	}
+    }
     return;
 }
