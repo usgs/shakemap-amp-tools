@@ -24,13 +24,14 @@ def test_stationsummary():
     stream = read_geonet(datafile)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        stream_summary = StationSummary.from_stream(stream,
-                                                    ['greater_of_two_horizontals',
-                                                     'channels',
-                                                     'rotd50',
-                                                     'rotd100',
-                                                     'invalid'],
-                                                    ['sa1.0', 'PGA', 'pgv', 'invalid'])
+        stream_summary = StationSummary.from_stream(
+            stream,
+            ['greater_of_two_horizontals',
+             'channels',
+             'rotd50',
+             'rotd100',
+             'invalid'],
+            ['sa1.0', 'PGA', 'pgv', 'invalid'])
         original_stream = stream_summary.stream
         stream_summary.stream = []
         final_stream = stream_summary.stream
@@ -75,12 +76,12 @@ def test_stationsummary():
                     'HN2': 81.23467239067368,
                     'GREATER_OF_TWO_HORIZONTALS': 99.24999872535474},
             'SA1.0': {
-                    'ROTD100.0': 146.49522597669394,
-                    'ROTD50.0': 105.39210993086763,
-                    'HNZ': 27.418361580241818,
-                    'HN1': 135.83462000177008,
-                    'HN2': 84.17504097202712,
-                    'GREATER_OF_TWO_HORIZONTALS': 135.83462000177008}
+                    'ROTD100.0': 146.9023350124098,
+                    'ROTD50.0': 106.03202302692158,
+                    'HNZ': 27.74118995438756,
+                    'HN1': 136.25041187387063,
+                    'HN2': 84.69296738413021,
+                    'GREATER_OF_TWO_HORIZONTALS': 136.25041187387063}
             }
     datafile = os.path.join(homedir, '..', 'data', 'geonet',
                             '20161113_110313_THZ_20.V2A')
@@ -95,7 +96,7 @@ def test_stationsummary():
         success = True
     except Exception:
         success = False
-    assert success == False
+    assert success is False
     # Invalid stream inputs should be rejected
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")

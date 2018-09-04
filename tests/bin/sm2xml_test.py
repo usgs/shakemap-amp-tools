@@ -47,7 +47,7 @@ def test_sm2xml():
     target_file = os.path.join(tmpdir, 'knet_' + eventid + '_dat.xml')
     try:
         cmd = '%s %s %s %s -c %s %s -d' % (sm2xml, eventid, indir,
-                tmpdir, coords[0], coords[1])
+                                           tmpdir, coords[0], coords[1])
         res, stdout, stderr = get_command_output(cmd)
         if not res:
             raise AssertionError(
@@ -174,12 +174,10 @@ def test_sm2xml():
                                  0.278567842])
     HHZ_pgv_target = np.asarray([37.47946982, 9.732713409, 4.279438659,
                                  0.08771063])
-    HHZ_sa03_target = np.asarray([88.13527156, 47.19331741, 6.115072067,
-                                  0.380902713])
-    HHZ_sa10_target = np.asarray([27.47415841, 12.63667365, 4.820458073,
-                                  0.033118346])
-    HHZ_sa30_target = np.asarray([18.47655605, 3.369270248, 2.202909935,
-                                  0.002717927])
+    HHZ_sa03_target = np.asarray([87.695653, 46.465655,  6.091351,  0.378707])
+    HHZ_sa10_target = np.asarray([27.741181, 12.61,  4.862408,  0.033624])
+    HHZ_sa30_target = np.asarray([1.867237e+01, 3.362188e+00, 2.145537e+00,
+                                  3.127400e-03])
     HHZ_pga = []
     HHZ_pgv = []
     HHZ_sa03 = []
