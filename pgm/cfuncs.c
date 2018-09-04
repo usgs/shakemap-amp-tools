@@ -1,6 +1,17 @@
 #include <math.h>
 #include "cfuncs.h"
 
+/*
+ * This code is based on Dave Boore's fortran function icmpmx, which in turn
+ * was based on ucmpmx, written by Bob Youngs and I. Idriss). It was re-
+ * written in python/cython by Heather Schovanec (8/2018) and rewritten in
+ * C by Bruce Worden (8/2018). This version does not do the full upsampling
+ * that Boore's code implements, but only produces the first sub-sample. If
+ * data with coarse sampling is used, or very high frequencies are required,
+ * this function should be rewritten to do the full sub-sampling. Note that
+ * this will require increasing the size of the output arrays sacc, svel,
+ * and sdis, and returning the new sample rate.
+ */
 void calculate_spectrals_c(double *times, double *acc, int np, double period,
 	                       double damping, double *sacc, double *svel,
 						   double *sdis) {
