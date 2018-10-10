@@ -62,11 +62,11 @@ def test_sm2xml():
 
     # test xlsx
     columns = excel.to_dict()
-    target_stations = np.asarray(['AOM001', 'AOM002', 'AOM003', 'AOM004',
-                                  'AOM005', 'AOM006', 'AOM007', 'AOM008',
-                                  'AOM009'])
-    for idx in range(3, len(columns['Reference'])):
-        assert columns['Reference'][idx] == target_stations[idx-3]
+    target_stations = ['AOM001', 'AOM002', 'AOM003', 'AOM004',
+                       'AOM005', 'AOM006', 'AOM007', 'AOM008',
+                       'AOM009']
+    tcolumn = excel['Reference'].iloc[3:12].tolist()
+    assert target_stations == tcolumn
     target_source = ('Japan National Research Institute '
                      'for Earth Science and Disaster Resilience')
     for idx in range(3, len(columns['Unnamed: 2'])):
@@ -118,12 +118,18 @@ def test_sm2xml():
         HHE_pgv += [columns['Unnamed: 13'][idx]]
         HHN_pga += [columns['Unnamed: 17'][idx]]
         HHN_pgv += [columns['Unnamed: 18'][idx]]
-    np.testing.assert_allclose(np.asarray(HHZ_pga), target_HHZ_pga, rtol=1e-2)
-    np.testing.assert_allclose(np.asarray(HHZ_pgv), target_HHZ_pgv, rtol=1e-2)
-    np.testing.assert_allclose(np.asarray(HHE_pga), target_HHE_pga, rtol=1e-2)
-    np.testing.assert_allclose(np.asarray(HHE_pgv), target_HHE_pgv, rtol=1e-2)
-    np.testing.assert_allclose(np.asarray(HHN_pga), target_HHN_pga, rtol=1e-2)
-    np.testing.assert_allclose(np.asarray(HHN_pgv), target_HHN_pgv, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(
+        HHZ_pga), target_HHZ_pga, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(
+        HHZ_pgv), target_HHZ_pgv, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(
+        HHE_pga), target_HHE_pga, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(
+        HHE_pgv), target_HHE_pgv, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(
+        HHN_pga), target_HHN_pga, rtol=1e-2)
+    np.testing.assert_allclose(np.asarray(
+        HHN_pgv), target_HHN_pgv, rtol=1e-2)
 
     # TEST for GEONET
     homedir = os.path.dirname(os.path.abspath(
@@ -149,19 +155,19 @@ def test_sm2xml():
 
     # test xlsx
     columns = excel.to_dict()
-    target_stations = np.asarray(['WTMC', 'HSES', 'THZ', 'WPWS'])
-    for idx in range(3, len(columns['Reference'])):
-        assert columns['Reference'][idx] == target_stations[idx-3]
+    target_stations = ['HSES', 'THZ', 'WPWS', 'WTMC']
+    tcolumn = excel['Reference'].iloc[3:7].tolist()
+    assert tcolumn == target_stations
     target_source = 'New Zealand Institute of Geological and Nuclear Science'
     for idx in range(3, len(columns['Unnamed: 2'])):
         assert columns['Unnamed: 2'][idx] == target_source
     target_network = 'NZ'
     for idx in range(3, len(columns['Unnamed: 3'])):
         assert columns['Unnamed: 3'][idx] == target_network
-    target_latitudes = np.asarray([-41.38055556, -41.47666667,
-                                   -40.2375, -38.05611111])
-    target_longitudes = np.asarray([173.0536111, 172.8305556,
-                                    172.9052778, 176.5844444])
+    target_latitudes = np.asarray([-41.47666666666667, -40.2375,
+                                   -38.05611111111111, -41.38055555555555])
+    target_longitudes = np.asarray([172.8305555555555, 172.9052777777778,
+                                    176.5844444444444, 173.0536111111111])
     assert len(columns['Unnamed: 4']) == len(columns['Unnamed: 5'])
     lat = []
     lon = []
@@ -170,14 +176,16 @@ def test_sm2xml():
         lon += [columns['Unnamed: 5'][idx]]
     np.testing.assert_allclose(np.asarray(lat), target_latitudes, rtol=1e-5)
     np.testing.assert_allclose(np.asarray(lon), target_longitudes, rtol=1e-5)
-    HHZ_pga_target = np.asarray([183.8969291, 16.03265622, 2.289789049,
-                                 0.278567842])
-    HHZ_pgv_target = np.asarray([37.47946982, 9.732713409, 4.279438659,
-                                 0.08771063])
-    HHZ_sa03_target = np.asarray([87.695653, 46.465655,  6.091351,  0.378707])
-    HHZ_sa10_target = np.asarray([27.741181, 12.61,  4.862408,  0.033624])
-    HHZ_sa30_target = np.asarray([1.867237e+01, 3.362188e+00, 2.145537e+00,
-                                  3.127400e-03])
+    HHZ_pga_target = np.asarray([16.02178429925751, 2.288236316905321,
+                                 0.2783789422620928, 183.7722265185424])
+    HHZ_pgv_target = np.asarray([9.732713409066722, 4.279438658663453,
+                                 0.08771063001342264, 37.47946982395711])
+    HHZ_sa03_target = np.asarray([46.46565458234634, 6.091350960794354,
+                                  0.3787065133744312, 87.69565329633232])
+    HHZ_sa10_target = np.asarray([12.61000039650761, 4.862407737331735,
+                                  0.03362386754957324, 27.74118062312012])
+    HHZ_sa30_target = np.asarray([3.36218779311461, 2.14553701430188,
+                                  0.003127400241119385, 18.67236895383897])
     HHZ_pga = []
     HHZ_pgv = []
     HHZ_sa03 = []
