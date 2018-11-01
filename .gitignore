@@ -9,3 +9,6 @@ build
 htmlcov
 amptools.egg-info/
 .pytest_cache
+*.o
+*.so
+*.a
