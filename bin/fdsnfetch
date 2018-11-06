@@ -26,7 +26,7 @@ def main(args):
 
     # Write the raw files to the raw directory
     for tr in st:
-        tr = fdsn.add_channel_metadata(tr, inv, args.client)
+        tr = fdsn.add_channel_metadata(tr, inv, args.client, args.m)
         tr.write(args.out + '/raw/' + tr.get_id() + '.' + args.f,
                  format=args.f)
 
@@ -94,20 +94,22 @@ if __name__ == '__main__':
                         default='*', type=str)
     parser.add_argument('-f', '-format,', help='Format type to save data',
                         default='MSEED', type=str)
+    parser.add_argument('-m', action='store_true',
+                        help='Whether or not to modify channel names')
     parser.add_argument('-r', action='store_true',
                         help='Whether to denconvolve instrument response')
     parser.add_argument('-o', help='Output unit of instrument response correction',
                          type=str)
     parser.add_argument('-f1', help='Freq 1 for instrument response pre-filter',
-                        default=120, type=float)
+                        type=float)
     parser.add_argument('-f2', help='Freq 2 for instrument response pre-filter',
-                        default=120, type=float)
+                        type=float)
     parser.add_argument('-f3', help='Freq 3 for instrument response pre-filter',
-                        default=120, type=float)
+                        type=float)
     parser.add_argument('-f4', help='Freq 4 for instrument response pre-filter',
-                        default=120, type=float)
+                        type=float)
     parser.add_argument('-w', help='Water level for instrument response correction',
-                        default=120, type=float)
+                        type=float)
 
     pargs = parser.parse_args()
     main(pargs)
