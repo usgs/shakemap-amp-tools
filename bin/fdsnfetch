@@ -25,23 +25,21 @@ def main(args):
         os.mkdir(args.out + '/raw')
 
     # Write the raw files to the raw directory
+    base_ids = []
     for tr in st:
         tr = fdsn.add_channel_metadata(tr, inv, args.client, args.m)
         tr.write(args.out + '/raw/' + tr.get_id() + '.' + args.f,
                  format=args.f)
-
-    # Get a list of the stations that we have waveform data for
-    stations = []
-    raw_st = read(args.out + '/raw/*.' + args.f)
-    for tr in raw_st:
-        if tr.stats.station not in stations:
-            stations.append(tr.stats.station)
+        if tr.get_id()[:-1] not in base_ids:
+            base_ids.append(tr.get_id()[:-1])
 
     # Save the JSON metadata for each station
-    for stn in stations:
+    for base_id in base_ids:
+        print(base_id)
+        net, sta, loc, cha = base_id.split('.')
         meta_dict = {}
         meta_dict['properties'] = {}
-        stn_st = st.select(station=stn)
+        stn_st = st.select(network=net, station=sta, location=loc, channel=cha+'*')
         for tr in stn_st:
             stats = fdsn.clean_stats(tr.stats)
             meta_dict['properties'][tr.stats.channel] = fdsn.clean_stats(stats)
