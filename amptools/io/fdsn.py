@@ -80,7 +80,7 @@ def request_raw_waveforms(fdsn_client, org_time, lat, lon,
     return st, inventory
 
 
-def add_channel_metadata(tr, inv, client):
+def add_channel_metadata(tr, inv, client, modify_channel_names=True):
     """
     Adds the channel metadata for each channel in the stream.
 
@@ -121,26 +121,32 @@ def add_channel_metadata(tr, inv, client):
     tr.stats['coordinates'] = coordinates
     tr.stats['standard'] = standard
 
-    if metadata['dip'] in [90, -90, 180, -180]:
-        tr.stats['channel'] = get_channel_name(tr.stats['sampling_rate'],
-                                               is_acceleration=True,
-                                               is_vertical=True,
-                                               is_north=False)
-    else:
-        ho = metadata['azimuth']
-        quad1 = ho > 315 and ho <= 360
-        quad2 = ho >= 0 and ho <= 45
-        quad3 = ho > 135 and ho <= 225
-        if quad1 or quad2 or quad3:
-            tr.stats['channel'] = get_channel_name(tr.stats['sampling_rate'],
-                                                   is_acceleration=True,
-                                                   is_vertical=False,
-                                                   is_north=True)
+    if modify_channel_names:
+
+        # Check if this trace measures accleration
+        # Acclerometers have an N as the second character in channel code
+        if tr.stats.channel[1] == 'N':
+            is_acceleration = True
         else:
-            tr.stats['channel'] = get_channel_name(tr.stats['sampling_rate'],
-                                                   is_acceleration=True,
-                                                   is_vertical=False,
-                                                   is_north=False)
+            is_acceleration = False
+
+        # Check for vertical and horizontal orientation
+        if metadata['dip'] in [90, -90]:
+            is_vertical = True
+        else:
+            is_vertical = False
+            ho = metadata['azimuth']
+            quad1 = ho > 315 and ho <= 360
+            quad2 = ho >= 0 and ho <= 45
+            quad3 = ho > 135 and ho <= 225
+            if quad1 or quad2 or quad3:
+                is_north = True
+            else:
+                is_north = False
+
+        tr.stats['channel'] = get_channel_name(tr.stats['sampling_rate'],
+                                               is_acceleration, is_vertical,
+                                               is_north)
     return tr
 
 

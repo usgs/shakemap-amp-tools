@@ -66,10 +66,7 @@ def group_channels(streams):
             if idx1 != idx2 and idx1 not in duplicate_list:
                 event_match = False
                 duplicate = False
-                try:
-                    same_data = ((data == np.asarray(trace2.data)).all())
-                except AttributeError:
-                    same_data = (data == np.asarray(trace2.data))
+                same_data = np.array_equal(data, trace2.data)
                 if 'units' in trace2.stats.standard:
                     units2 = trace2.stats.standard['units']
                 else:
