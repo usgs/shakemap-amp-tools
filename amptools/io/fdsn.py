@@ -131,7 +131,7 @@ def add_channel_metadata(tr, inv, client, modify_channel_names=True):
             is_acceleration = False
 
         # Check for vertical and horizontal orientation
-        if metadata['dip'] in [90, -90, 180, -180]:
+        if metadata['dip'] in [90, -90]:
             is_vertical = True
         else:
             is_vertical = False
