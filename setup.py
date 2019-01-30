@@ -7,13 +7,13 @@ import numpy
 import glob
 import sys
 
-if sys.platform == 'darwin':
-    os.environ['CC'] = 'clangxx_osx-64'
-elif sys.platform == 'linux':
-    os.environ['CC'] = 'gcc_linux-64'
-else:
-    print('Unsupported platform %s' % sys.platform)
-    sys.exit(1)
+# if sys.platform == 'darwin':
+#     os.environ['CC'] = 'clangxx_osx-64'
+# elif sys.platform == 'linux':
+#     os.environ['CC'] = 'gcc_linux-64'
+# else:
+#     print('Unsupported platform %s' % sys.platform)
+#     sys.exit(1)
 
 sourcefiles = ["pgm/oscillators.pyx", "pgm/cfuncs.c"]
 
