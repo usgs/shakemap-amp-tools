@@ -5,8 +5,15 @@ from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 import numpy
 import glob
+import sys
 
-os.environ['CC'] = 'gcc'
+if sys.platform == 'darwin':
+    os.environ['CC'] = 'clangxx_osx-64'
+elif sys.platform == 'linux':
+    os.environ['CC'] = 'gcc_linux-64'
+else:
+    print('Unsupported platform %s' % sys.platform)
+    sys.exit(1)
 
 sourcefiles = ["pgm/oscillators.pyx", "pgm/cfuncs.c"]
 
