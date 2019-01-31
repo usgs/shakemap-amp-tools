@@ -7,13 +7,9 @@ import numpy
 import glob
 import sys
 
-# if sys.platform == 'darwin':
-#     os.environ['CC'] = 'clangxx_osx-64'
-# elif sys.platform == 'linux':
-#     os.environ['CC'] = 'gcc_linux-64'
-# else:
-#     print('Unsupported platform %s' % sys.platform)
-#     sys.exit(1)
+# it is no longer necessary to point to a specific C compiler,
+# since the installation of the platform specific ones set the CC
+# environment variable to the appropriate executable.
 
 sourcefiles = ["pgm/oscillators.pyx", "pgm/cfuncs.c"]
 
