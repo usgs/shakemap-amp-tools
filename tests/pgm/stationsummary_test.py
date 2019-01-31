@@ -3,6 +3,7 @@
 # stdlib imports
 import os.path
 import warnings
+import unittest
 
 # third party imports
 import numpy as np
@@ -10,6 +11,14 @@ import numpy as np
 # local imports
 from amptools.io.geonet.core import read_geonet
 from pgm.station_summary import StationSummary
+
+
+def cmp_dicts(adict, bdict):
+    for pgm, channels in adict.items():
+        for channel, avalue in channels.items():
+            bvalue = bdict[pgm][channel]
+            print('Comparing %s->%s...' % (pgm, channel))
+            np.testing.assert_almost_equal(avalue, bvalue)
 
 
 def test_stationsummary():
@@ -61,34 +70,37 @@ def test_stationsummary():
         imts = stream_summary.available_imts
         np.testing.assert_array_equal(np.sort(imts), target_available)
     test_pgms = {
-            'PGV': {
-                    'ROTD100.0': 114.24894584734818,
-                    'ROTD50.0': 81.55436750525355,
-                    'HNZ': 37.47740000000001,
-                    'HN1': 100.81460000000004,
-                    'HN2': 68.4354,
-                    'GREATER_OF_TWO_HORIZONTALS': 100.81460000000004},
-            'PGA': {
-                    'ROTD100.0': 100.73875535385548,
-                    'ROTD50.0': 91.40178541935455,
-                    'HNZ': 183.7722361866693,
-                    'HN1': 99.24999872535474,
-                    'HN2': 81.23467239067368,
-                    'GREATER_OF_TWO_HORIZONTALS': 99.24999872535474},
-            'SA1.0': {
-                    'ROTD100.0': 146.9023350124098,
-                    'ROTD50.0': 106.03202302692158,
-                    'HNZ': 27.74118995438756,
-                    'HN1': 136.25041187387063,
-                    'HN2': 84.69296738413021,
-                    'GREATER_OF_TWO_HORIZONTALS': 136.25041187387063}
-            }
+        'PGV': {
+            'ROTD100.0': 114.24894584734818,
+            'ROTD50.0': 81.55436750525355,
+            'HNZ': 37.47740000000001,
+            'HN1': 100.81460000000004,
+            'HN2': 68.4354,
+            'GREATER_OF_TWO_HORIZONTALS': 100.81460000000004},
+        'PGA': {
+            'ROTD100.0': 100.73875535385548,
+            'ROTD50.0': 91.40178541935455,
+            'HNZ': 183.7722361866693,
+            'HN1': 99.24999872535474,
+            'HN2': 81.23467239067368,
+            'GREATER_OF_TWO_HORIZONTALS': 99.24999872535474},
+        'SA1.0': {
+            'ROTD100.0': 146.9023350124098,
+            'ROTD50.0': 106.03202302692158,
+            'HNZ': 27.74118995438756,
+            'HN1': 136.25041187387063,
+            'HN2': 84.69296738413021,
+            'GREATER_OF_TWO_HORIZONTALS': 136.25041187387063}
+    }
     datafile = os.path.join(homedir, '..', 'data', 'geonet',
                             '20161113_110313_THZ_20.V2A')
     invalid_stream = read_geonet(datafile)
     station_code = 'WTMC'
     pgm_summary = StationSummary.from_pgms(station_code, test_pgms)
-    assert pgm_summary.pgms == stream_summary.pgms
+    # assert pgm_summary.pgms == stream_summary.pgms
+    adict = pgm_summary.pgms
+    bdict = stream_summary.pgms
+    cmp_dicts(adict, bdict)
 
     # oscillators cannot be calculated without a stream
     try:

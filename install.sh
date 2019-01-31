@@ -6,10 +6,12 @@ if [ "$unamestr" == 'Linux' ]; then
     prof=~/.bashrc
     mini_conda_url=https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
     matplotlibdir=~/.config/matplotlib
+    CC=gcc_linux-64
 elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
     prof=~/.bash_profile
     mini_conda_url=https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
     matplotlibdir=~/.matplotlib
+    CC=clangxx_osx-64
 else
     echo "Unsupported environment. Exiting."
     exit
@@ -23,7 +25,7 @@ echo $PATH
 VENV=amptools
 
 # Is the reset flag set?
-reset=0
+reset=1
 while getopts r FLAG; do
   case $FLAG in
     r)
@@ -98,9 +100,30 @@ fi
 echo "Activate base virtual environment"
 conda activate base
 
+package_list=(
+    "ipython"
+    "jupyter"
+    "lxml"
+    "matplotlib"
+    "numpy>=1.14"
+    "obspy"
+    "pandas"
+    "pytest"
+    "pytest-cov"
+    "python=3.6"
+    "pyyaml"
+    "xlrd"
+    "xlwt"
+    "openpyxl"
+    "obspy"
+    "xlsxwriter"
+    "cython"
+    "$CC"
+)
+
 # Create a conda virtual environment
 echo "Creating the $VENV virtual environment:"
-conda env create -f $env_file --force
+conda create -y -n $VENV -c conda-forge --channel-priority ${package_list[*]}
 
 # Bail out at this point if the conda create command fails.
 # Clean up zip files we've downloaded

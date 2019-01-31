@@ -5,8 +5,11 @@ from Cython.Distutils import build_ext
 from Cython.Build import cythonize
 import numpy
 import glob
+import sys
 
-os.environ['CC'] = 'gcc'
+# it is no longer necessary to point to a specific C compiler,
+# since the installation of the platform specific ones set the CC
+# environment variable to the appropriate executable.
 
 sourcefiles = ["pgm/oscillators.pyx", "pgm/cfuncs.c"]
 
