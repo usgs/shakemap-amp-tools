@@ -1,6 +1,13 @@
 
 Status
 =======
+
+Note: any general purpose ground motion processing functionality that was
+in this repository is being moved to the
+[groundmotion-processing](https://github.com/usgs/groundmotion-processing)
+repository so that this repository will only conctain shakemap-specific
+methods.
+
 [![Build Status](https://travis-ci.org/usgs/shakemap-amp-tools.svg?branch=master)](https://travis-ci.org/usgs/shakemap-amp-tools)
 
 [![codecov](https://codecov.io/gh/usgs/shakemap-amp-tools/branch/master/graph/badge.svg)](https://codecov.io/gh/usgs/shakemap-amp-tools)
@@ -9,7 +16,7 @@ Status
 
 
 shakemap-amp-tools
-=====
+==================
 
 Fetch, read, and process ground motion amplitude data.
 
