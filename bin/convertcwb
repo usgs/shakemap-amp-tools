@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+
+# stdlib imports
+import argparse
+import os.path
+import openpyxl
+
+import pandas as pd
+
+GALS_TO_PERCENTG = 1 / 9.8
+
+
+def main(args):
+    textfile = args.textfile
+    df = pd.read_csv(textfile, delimiter='\s+')
+    df['Lat.'] = df['Lat.'].str.replace('N', '').apply(float)
+    df['Lon.'] = df['Lon.'].str.replace('E', '').apply(float)
+    df['PGA(gal)'] = df['PGA(gal)'] * GALS_TO_PERCENTG
+    df = df.rename({'Sta.': 'station',
+                    'Lat.': 'lat',
+                    'Lon.': 'lon',
+                    'PGA(gal)': 'pga',
+                    'EpDis': 'distance'}, axis=1)
+    df = df.drop(columns=['Inten', 'RFPGA', 'P_Arr(sec)', 'S_Arr(sec)'])
+    df['netid'] = 'TW'
+    headers = ['netid', 'station', 'lat', 'lon', 'distance', 'pga']
+    df = df[headers]
+    headers.remove('pga')
+    headers.append('H1')
+    subheaders = ['', '', '', '', '', 'pga']
+    df.columns = pd.MultiIndex.from_arrays([headers, subheaders])
+    fbase, _ = os.path.splitext(textfile)
+    excelfile = fbase + '.xlsx'
+    print('Writing Excel file %s...' % excelfile)
+    df.to_excel(excelfile)
+
+    # remove index column
+    wb = openpyxl.load_workbook(excelfile)
+    ws = wb.active
+    ws.delete_cols(1, amount=1)
+
+    ws.insert_rows(1)
+    ws['A1'] = 'Reference'
+    ws['B1'] = 'Taiwan Central Weather Bureau'
+
+    wb.save(excelfile)
+    wb.close()
+
+    print('Done. You may now use amps2xml to read in %s.' % excelfile)
+
+
+if __name__ == '__main__':
+    desc = ('Convert a text file created by cutting/pasting Taiwan CWB PGA '
+            'values from email into a text file.')
+    formatter = argparse.RawDescriptionHelpFormatter
+    parser = argparse.ArgumentParser(description=desc,
+                                     formatter_class=formatter)
+    parser.add_argument('textfile',
+                        help='Text file containing pasted CWB PGA values.')
+
+    pargs = parser.parse_args()
+    main(pargs)

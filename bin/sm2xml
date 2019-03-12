@@ -9,195 +9,69 @@ import warnings
 
 # third party imports
 import openpyxl
-from openpyxl.styles import Alignment
-from openpyxl.styles.borders import Border, Side
-from obspy.geodetics import gps2dist_azimuth
-import yaml
+from obspy.core.utcdatetime import UTCDateTime
 
 # local imports
-from amptools.table import dataframe_to_xml
-from amptools.stream import streams_to_dataframe, group_channels
-from amptools.io.read import read_data, _get_format
-from amptools.config import get_config
-
-FORMATS = ['cwb', 'geonet', 'knet', 'cosmos', 'smc', 'dmg', 'obspy']
-DEFAULT_DISTANCE = 1500
-
-
-def _clean_sheet(outfile_excel, dataframe):
-    """Put reference at top of spreadsheet, remove index column.
-
-    Args:
-        outfile_excel (str): Path to Excel spreadsheet.
-        dataframe (DataFrame): Pandas DataFrame containing the data in the Excel file.
-
-    """
-    # We want put a default reference at the top of the sheet because
-    # 1) it helps users know where to put it
-    # 2) it ensures consistency of sheet layout
-    # The problem - you can't insert or delete rows/columns in openpyxl.
-    # So we'll copy the data from the sheet, paste it into a new sheet, and
-    # delete the old sheet.
-    # Maintain the merged cells for the channels
-    # Set the borders on the header cells (incl sub-headers and merged cells) TODO
-    # center merged cells
-
-    wb = openpyxl.load_workbook(outfile_excel)
-    sheet1 = wb.active
-
-    # copy the data values from the sheet
-    rows = []
-    topleft = 'B1'
-    bottomright = 'V%i' % (len(dataframe) + 3)
-    cellrange = '%s:%s' % (topleft, bottomright)
-    channel_columns = []
-    for row in sheet1[cellrange]:
-        row_data = []
-        for cell in row:
-            cvalue = cell.value
-            if cvalue in ['HHZ', 'HHE', 'HHN', 'H1', 'H2', 'HZ',
-                          'HNZ', 'HN2', 'HN1', 'BNZ', 'BN2', 'BN1']:
-                # 0-based column index in new sheet
-                channel_columns.append(cell.col_idx - 2)
-            row_data.append(cell.value)
-        rows.append(row_data)
-
-    # create a new sheet and paste data into it
-    sheet2 = wb.create_sheet(title='PeakGroundMotions')
-    # put reference in
-    refcol = 'NETWORK'
-    if 'SOURCE' in dataframe.columns:
-        refcol = 'SOURCE'
-    sheet2.append(['Reference', dataframe[refcol].iloc[0]])
-    for row in rows:
-        sheet2.append(row)
-
-    # merge the channel header cells and center them
-    for channel_column in channel_columns:
-        letters = string.ascii_uppercase
-        colidx = letters[channel_column]
-        right_colidx = letters[channel_column + 4]
-        left_cell_idx = '%s2' % (colidx)
-        right_cell_idx = '%s2' % (right_colidx)
-        sheet2.merge_cells('%s:%s' % (left_cell_idx, right_cell_idx))
-        left_cell = sheet2[left_cell_idx]
-        right_cell = sheet2[right_cell_idx]
-        left_cell.alignment = Alignment(horizontal='center')
-        left_border = Border(left=Side(style='thin'),
-                             right=Side(style=None),
-                             top=Side(style=None),
-                             bottom=Side(style=None))
-        left_cell.border = left_border
-        right_border = Border(left=Side(style=None),
-                              right=Side(style='thin'),
-                              top=Side(style=None),
-                              bottom=Side(style=None))
-        right_cell.border = right_border
-
-    wb.remove(sheet1)
-    wb.save(outfile_excel)
+from impactutils.io.table import dataframe_to_xml
+from libcomcat.search import get_event_by_id
+from gmprocess.stream import directory_to_dataframe
+from amptools.utils import get_output_dir
 
 
 def main(args):
     # gather arguments
     indir = args.indir
     eventid = args.eventid
-    outdir = args.outdir
-    config = get_config()
 
-    # make the output directory if it does not exist
-    if not os.path.isdir(outdir):
-        os.makedirs(outdir)
+    outdir = get_output_dir(eventid, debugdir=args.debug_dir)
+    if outdir is None:
+        print('No ShakeMap data folder for event %s could be found. Exiting.' % eventid)
+        sys.exit(1)
 
-    # grab all the files in the input directory
-    allfiles = glob.glob(os.path.join(indir, '*'))
+    imts = ['PGA', 'PGV', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']
+    imcs = ['CHANNELS']
 
-    # read all the data files, gather up a list of obspy Stream objects
-    streams = []
-    first_file = ''
-    for dfile in allfiles:
-        if args.verbose:
-            print('Parsing %s...' % dfile)
-        try:
-            stream = read_data(dfile)
-            streams.append(stream)
-            if not len(first_file):
-                first_file = dfile
-        except Exception as e:
-            if args.verbose:
-                print('Error reading file %s: "%s". Skipping.' %
-                      (dfile, str(e)))
-            continue
-
-    if args.coordinates:
-        lon = args.coordinates[0]
-        lat = args.coordinates[1]
-    else:
-        lon = None
-        lat = None
-
-    streams = group_channels(streams)
-
-    # filter out distant stations
-    if args.filter_distance and args.coordinates:
-        newstreams = []
-        for stream in streams:
-            slat = stream[0].stats.coordinates.latitude
-            slon = stream[0].stats.coordinates.longitude
-            distance, _, _ = gps2dist_azimuth(slat, slon, lat, lon)
-            if distance/1000 <= args.filter_distance:
-                newstreams.append(stream)
-        streams = newstreams
-
-    for stream in streams:
-        if args.debug:
-            station = stream[0].stats['station']
-            if lat:
-                slat = stream[0].stats.coordinates.latitude
-                slon = stream[0].stats.coordinates.longitude
-                distance, _, _ = gps2dist_azimuth(slat, slon, lat, lon)
-                fname = '%05ikm_%s_data.png' % (distance/1000, station)
-            else:
-                fname = '%s_data.png' % station
-            stream_file = os.path.join(outdir, fname)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                stream.plot(outfile=stream_file)
+    event = get_event_by_id(eventid)
+    lat = event.latitude
+    lon = event.longitude
+    etime = UTCDateTime(event.time)
 
     # Extract station/peak information from each stream, save to a dataframe
-    imtlist = config['sm2xml']['imtlist']
-    dataframe, spectral_streams = streams_to_dataframe(
-        streams, lon=lon, lat=lat, imtlist=imtlist)
-    dataframe = dataframe.sort_values('STATION')
-    if args.double_debug:
-        for stream in spectral_streams:
-            station = stream[0].stats['station']
-            if lat:
-                slat = stream[0].stats.coordinates.latitude
-                slon = stream[0].stats.coordinates.longitude
-                distance, _, _ = gps2dist_azimuth(slat, slon, lat, lon)
-                fname = '%05ikm_%s_spectral.png' % (distance/1000, station)
-            else:
-                fname = '%s_spectral.png' % station
-            stream_file = os.path.join(outdir, fname)
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                stream.plot(outfile=stream_file)
+    dataframe = directory_to_dataframe(indir, imcs=imcs, imts=imts,
+                                       lat=lat, lon=lon, event_time=etime)
+
+    # Bail if we didn't find any appropriate files
+    if not len(dataframe):
+        print('No data files matching any known format found in %s.  Exiting.' %
+              (indir))
+        sys.exit(1)
 
     # Save peak info in spreadsheet form
     # we're forced here to have the index column, as much as we might not want it
-    fformat = _get_format(first_file)
-    outfile_excel = os.path.join(outdir, '%s_%s_dat.xlsx' % (fformat, eventid))
+    netid = dataframe['NETID'].iloc[0]
+    outfile_excel = os.path.join(outdir, '%s_dat.xlsx' % netid)
     dataframe.to_excel(outfile_excel)
 
     # modify the spreadsheet to add a reference at the top and remove index column
-    _clean_sheet(outfile_excel, dataframe)
+    # _clean_sheet(outfile_excel, dataframe)
+    if 'SOURCE' in dataframe.columns:
+        source = dataframe['SOURCE'].iloc[0]
+    else:
+        source = 'Unknown'
+    wb = openpyxl.load_workbook(outfile_excel)
+    ws = wb.active
+    ws.delete_cols(1)
+    ws.insert_rows(1)
+    ws['A1'] = 'Reference'
+    ws['B1'] = source
+    wb.save(outfile_excel)
+    wb.close()
 
     print('Wrote Excel file %s' % outfile_excel)
 
     # Write out the ShakeMap XML data format
-    xmlfile = os.path.join(outdir, '%s_%s_dat.xml' % (fformat, eventid))
-    dataframe_to_xml(dataframe, xmlfile)
+    xmlfile = os.path.join(outdir, '%s_dat.xml' % netid)
+    dataframe_to_xml(dataframe, xmlfile, reference=source)
     print('Peak ground motions written to file %s.' % xmlfile)
 
 
@@ -223,19 +97,7 @@ IMTs are currently:
                                      formatter_class=formatter)
     parser.add_argument('eventid', help='Earthquake event ID.')
     parser.add_argument('indir', help='Directory containing input data.')
-    parser.add_argument('outdir', help='Output data directory.')
-    parser.add_argument('-c', '--coordinates',
-                        help='Epicentral coordinates (LON LAT).',
-                        nargs=2, type=float)
-    parser.add_argument('-f', '--filter-distance',
-                        help='Do not process stations greater than [DISTANCE].',
-                        type=float, default=DEFAULT_DISTANCE)
-    parser.add_argument('-v', '--verbose', help='Print progress information.',
-                        action='store_true', default=False)
-    parser.add_argument('-d', '--debug', help='Plot acceleration waveforms.',
-                        action='store_true', default=False)
-    parser.add_argument('-dd', '--double-debug',
-                        help='Plot *spectral* acceleration waveforms.',
-                        action='store_true', default=False)
+    parser.add_argument(
+        '--debug-dir', help='Data directory - to be used for testing only!')
     pargs = parser.parse_args()
     main(pargs)

@@ -24,16 +24,19 @@ echo $PATH
 
 VENV=amptools
 
-# Is the reset flag set?
-reset=1
-while getopts r FLAG; do
-  case $FLAG in
-    r)
-        reset=1
+unamestr=`uname`
+if [ "$unamestr" == 'Linux' ]; then
+    prof=~/.bashrc
+    mini_conda_url=https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh
+elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
+    prof=~/.bash_profile
+    mini_conda_url=https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
+else
+    echo "Unsupported environment. Exiting."
+    exit
+fi
 
-      ;;
-  esac
-done
+source $prof
 
 
 # create a matplotlibrc file with the non-interactive backend "Agg" in it.
@@ -62,16 +65,27 @@ conda --version
 if [ $? -ne 0 ]; then
     echo "No conda detected, installing miniconda..."
 
+    command -v curl >/dev/null 2>&1 || { echo >&2 "Script requires curl but it's not installed. Aborting."; exit 1; }
+
     curl $mini_conda_url -o miniconda.sh;
+
+    # if curl fails, bow out gracefully
+    if [ $? -ne 0 ];then
+        echo "Failed to download miniconda installer shell script. Exiting."
+        exit 1
+    fi
+    
     echo "Install directory: $HOME/miniconda"
 
     bash miniconda.sh -f -b -p $HOME/miniconda
 
-    # Need this to get conda into path
+    # if miniconda.sh fails, bow out gracefully
+    if [ $? -ne 0 ];then
+        echo "Failed to run miniconda installer shell script. Exiting."
+        exit 1
+    fi
+    
     . $HOME/miniconda/etc/profile.d/conda.sh
-
-    # remove the shell script
-    rm miniconda.sh
 else
     echo "conda detected, installing $VENV environment..."
 fi
@@ -88,42 +102,28 @@ if [ $? -ne 0 ]; then
     echo ". $_CONDA_ROOT/etc/profile.d/conda.sh" >> $prof
 fi
 
-# If the user has specified the -r (reset) flag, then create an
-# environment based on only the named dependencies, without
-# any versions of packages specified.
-if [ $reset == 1 ]; then
-    echo "Ignoring platform, letting conda sort out dependencies..."
-    env_file=environment.yml
-fi
-
+# Turn off whatever other virtual environment user might be in
 # Start in conda base environment
 echo "Activate base virtual environment"
 conda activate base
 
 package_list=(
+    "configobj"
+    "gmprocess"
+    "libcomcat"
     "ipython"
-    "jupyter"
-    "lxml"
-    "matplotlib"
-    "numpy>=1.14"
-    "obspy"
-    "pandas"
-    "pytest"
-    "pytest-cov"
-    "python=3.6"
-    "pyyaml"
-    "xlrd"
-    "xlwt"
-    "openpyxl"
-    "obspy"
-    "xlsxwriter"
-    "cython"
-    "$CC"
 )
+
+# Remove existing environment if it exists
+conda info --envs | grep $VENV
+if [ $? -eq 0 ]; then
+    conda remove -y -n $VENV --all
+fi
 
 # Create a conda virtual environment
 echo "Creating the $VENV virtual environment:"
-conda create -y -n $VENV -c conda-forge --channel-priority ${package_list[*]}
+conda create -y -n $VENV -c conda-forge \
+      --channel-priority ${package_list[*]}
 
 # Bail out at this point if the conda create command fails.
 # Clean up zip files we've downloaded
@@ -141,8 +141,5 @@ conda activate $VENV
 echo "Installing amptools..."
 pip install -e .
 
-# Install default profile
-#python bin/sm_profile -c default -a
-
-# Tell the user they have to activate this environment
-echo "Type 'conda activate $VENV' to use this new virtual environment."
+#tell the user they have to activate this environment
+echo "Type 'conda activate ${VENV}' to use this new virtual environment."
