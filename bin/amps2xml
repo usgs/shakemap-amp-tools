@@ -3,21 +3,27 @@
 # stdlib imports
 import argparse
 import os.path
+from configobj import ConfigObj
+import sys
+
+# neic imports
+from impactutils.io.table import read_excel, dataframe_to_xml
 
 # local imports
-from amptools.table import read_excel, dataframe_to_xml
+from amptools.utils import get_output_dir
 
 
 def main(args):
     # gather arguments
     excelfile = args.excelfile
-    dir = args.directory
+    eventid = args.eventid
+    outdir = get_output_dir(eventid, debugdir=args.debug_dir)
+    if outdir is None:
+        print('No ShakeMap data folder for event %s could be found. Exiting.' % eventid)
+        sys.exit(1)
 
     df, reference = read_excel(excelfile)
-    ppath, fname = os.path.split(excelfile)
-    fbase, ext = os.path.splitext(fname)
-
-    xmlfile = os.path.join(dir, '%s_dat.xml' % fbase)
+    xmlfile = os.path.join(outdir, 'CWB_dat.xml')
     dataframe_to_xml(df, xmlfile, reference=reference)
     print('Peak ground motions written to file %s.' % xmlfile)
 
@@ -61,8 +67,12 @@ if __name__ == '__main__':
     '''
     parser = argparse.ArgumentParser(description=desc,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
+    eventhelp = ('ShakeMap event ID - must correspond to a ShakeMap data '
+                 'directory on your system.')
+    parser.add_argument('eventid', help=eventhelp)
     parser.add_argument(
         'excelfile', help='Excel file containing peak ground motions.')
-    parser.add_argument('directory', help='Output data directory.')
+    parser.add_argument(
+        '--debug-dir', help='Data directory - to be used for testing only!')
     pargs = parser.parse_args()
     main(pargs)
