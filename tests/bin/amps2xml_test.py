@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import subprocess
 import os.path
 import shutil
 import tempfile
