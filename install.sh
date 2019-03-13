@@ -11,16 +11,13 @@ elif [ "$unamestr" == 'FreeBSD' ] || [ "$unamestr" == 'Darwin' ]; then
     prof=~/.bash_profile
     mini_conda_url=https://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-x86_64.sh
     matplotlibdir=~/.matplotlib
-    CC=clangxx_osx-64
+    CC=gcc
 else
     echo "Unsupported environment. Exiting."
     exit
 fi
 
 source $prof
-
-echo "Path:"
-echo $PATH
 
 VENV=amptools
 
@@ -43,7 +40,11 @@ source $prof
 if [ ! -d "$matplotlibdir" ]; then
     mkdir -p $matplotlibdir
 fi
+
+
 matplotlibrc=$matplotlibdir/matplotlibrc
+
+
 if [ ! -e "$matplotlibrc" ]; then
     echo "backend : Agg" > "$matplotlibrc"
     echo "NOTE: A non-interactive matplotlib backend (Agg) has been set for this user."
@@ -59,6 +60,15 @@ else
     echo "###############"
 fi
 
+developer=0
+while getopts p:d FLAG; do
+  case $FLAG in
+    d)
+        echo "Installing developer packages."
+        developer=1
+      ;;
+  esac
+done
 
 # Is conda installed?
 conda --version
@@ -86,13 +96,12 @@ if [ $? -ne 0 ]; then
     fi
     
     . $HOME/miniconda/etc/profile.d/conda.sh
+
+    # remove the shell script
+    rm miniconda.sh
 else
     echo "conda detected, installing $VENV environment..."
 fi
-
-echo "PATH:"
-echo $PATH
-echo ""
 
 
 # Choose an environment file based on platform
@@ -107,18 +116,46 @@ fi
 echo "Activate base virtual environment"
 conda activate base
 
-package_list=(
-    "configobj"
-    "gmprocess"
-    "libcomcat"
-    "ipython"
+# Remove existing environment if it exists
+conda remove -y -n $VENV --all
+
+dev_list=(
+    "autopep8"
+    "flake8"
+    "pyflakes"
+    "rope"
+    "yapf"
 )
 
-# Remove existing environment if it exists
-conda info --envs | grep $VENV
-if [ $? -eq 0 ]; then
-    conda remove -y -n $VENV --all
+package_list=(
+    "$CC"
+    "configobj"
+    "cython"
+    "impactutils"
+    "ipython"
+    "jupyter"
+    "libcomcat"
+    "lxml"
+    "matplotlib"
+    "numpy>=1.14"
+    "obspy"
+    "openpyxl"
+    "openquake.engine"
+    "pandas"
+    "pyasdf"
+    "pytest"
+    "pytest-cov"
+    "python>=3.6"
+    "pyyaml"
+    "requests"
+    "vcrpy"
+)
+
+if [ $developer == 1 ]; then
+    package_list=( "${package_list[@]}" "${dev_list[@]}" )
+    echo ${package_list[*]}
 fi
+
 
 # Create a conda virtual environment
 echo "Creating the $VENV virtual environment:"
@@ -137,9 +174,22 @@ fi
 echo "Activating the $VENV virtual environment"
 conda activate $VENV
 
+# Install groundmotion-processing
+echo "Installing groundmotion-processing..."
+pip install git+https://github.com/usgs/groundmotion-processing.git
+if [ $? -ne 0 ]; then
+    echo "Failed to install groundmotion-processing. Exiting."
+    exit
+fi
+
 # This package
 echo "Installing amptools..."
 pip install -e .
+
+if [ $? -ne 0 ]; then
+    echo "Failed to install amptools. Exiting."
+    exit
+fi
 
 #tell the user they have to activate this environment
 echo "Type 'conda activate ${VENV}' to use this new virtual environment."

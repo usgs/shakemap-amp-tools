@@ -3,7 +3,6 @@
 # stdlib imports
 import argparse
 import os.path
-from configobj import ConfigObj
 import sys
 
 # neic imports
@@ -19,7 +18,8 @@ def main(args):
     eventid = args.eventid
     outdir = get_output_dir(eventid, debugdir=args.debug_dir)
     if outdir is None:
-        print('No ShakeMap data folder for event %s could be found. Exiting.' % eventid)
+        print('No ShakeMap data folder for event %s could be found. Exiting.'
+              % eventid)
         sys.exit(1)
 
     df, reference = read_excel(excelfile)
@@ -30,7 +30,7 @@ def main(args):
 
 if __name__ == '__main__':
     desc = '''Convert a peak ground motion Excel file into ShakeMap input.
-    
+
     Input Excel file must have at least the following columns in the first row:
      - "station" String containing UNIQUE identifying station information.
      - "lat" Latitude where peak ground motion observations were made.
@@ -38,7 +38,8 @@ if __name__ == '__main__':
      - "network" (usually) two letter code indicating the source network.
 
     Optional columns include:
-     - "location" String describing area where peak ground motions were observed.
+     - "location" String describing area where peak ground motions were
+       observed.
      - "source" String describing source of peak ground motion data.
      - "network" String describing network (us,ci,nc, etc.).
      - "distance" Distance from epicenter to station location, in units of km.
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     And then at least one of the following columns:
      - "intensity" MMI value (1-10).
 
-        AND/OR 
+        AND/OR
       a grouped set of per-channel peak ground motion columns, like this:
 
       -------------------------------------------------------------------------------
@@ -63,10 +64,12 @@ if __name__ == '__main__':
       - "psa30" Peak spectral acceleration at 3.0 seconds, in units of %g.
 
       Notes:
-       - Missing data in Excel file must be either the string "NaN" or an empty cell.
+       - Missing data in Excel file must be either the string "NaN" or an
+         empty cell.
     '''
-    parser = argparse.ArgumentParser(description=desc,
-                                     formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=desc,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
     eventhelp = ('ShakeMap event ID - must correspond to a ShakeMap data '
                  'directory on your system.')
     parser.add_argument('eventid', help=eventhelp)

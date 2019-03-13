@@ -1,21 +1,22 @@
 #!/usr/bin/env python
 
 # stdlib imports
+import sys
 import os.path
 import argparse
-import glob
-import string
-import warnings
+import logging
 
 # third party imports
 import openpyxl
-from obspy.core.utcdatetime import UTCDateTime
 
-# local imports
 from impactutils.io.table import dataframe_to_xml
 from libcomcat.search import get_event_by_id
-from gmprocess.stream import directory_to_dataframe
 from amptools.utils import get_output_dir
+
+from gmprocess.streamcollection import StreamCollection
+from gmprocess.logging import setup_logger
+
+setup_logger()
 
 
 def main(args):
@@ -25,34 +26,42 @@ def main(args):
 
     outdir = get_output_dir(eventid, debugdir=args.debug_dir)
     if outdir is None:
-        print('No ShakeMap data folder for event %s could be found. Exiting.' % eventid)
+        logging.info(
+            'No ShakeMap data folder for event %s could be found. Exiting.'
+            % eventid)
         sys.exit(1)
 
     imts = ['PGA', 'PGV', 'SA(0.3)', 'SA(1.0)', 'SA(3.0)']
     imcs = ['CHANNELS']
 
     event = get_event_by_id(eventid)
-    lat = event.latitude
-    lon = event.longitude
-    etime = UTCDateTime(event.time)
+    origin = {
+        'eventid': '',
+        'magnitude': event.magnitude,
+        'time': event.time,
+        'lat': event.latitude,
+        'lon': event.longitude,
+        'depth': event.depth
+    }
 
     # Extract station/peak information from each stream, save to a dataframe
-    dataframe = directory_to_dataframe(indir, imcs=imcs, imts=imts,
-                                       lat=lat, lon=lon, event_time=etime)
+    sc = StreamCollection.from_directory(indir)
+    dataframe = sc.to_dataframe(
+        origin, imcs=imcs, imts=imts)
 
     # Bail if we didn't find any appropriate files
     if not len(dataframe):
-        print('No data files matching any known format found in %s.  Exiting.' %
-              (indir))
+        print('No data files matching any known format found in %s.  Exiting.'
+              % indir)
         sys.exit(1)
 
     # Save peak info in spreadsheet form
-    # we're forced here to have the index column, as much as we might not want it
     netid = dataframe['NETID'].iloc[0]
     outfile_excel = os.path.join(outdir, '%s_dat.xlsx' % netid)
     dataframe.to_excel(outfile_excel)
 
-    # modify the spreadsheet to add a reference at the top and remove index column
+    # modify the spreadsheet to add a reference at the top and remove index
+    # column
     # _clean_sheet(outfile_excel, dataframe)
     if 'SOURCE' in dataframe.columns:
         source = dataframe['SOURCE'].iloc[0]
@@ -67,12 +76,12 @@ def main(args):
     wb.save(outfile_excel)
     wb.close()
 
-    print('Wrote Excel file %s' % outfile_excel)
+    logging.info('Wrote Excel file %s' % outfile_excel)
 
     # Write out the ShakeMap XML data format
     xmlfile = os.path.join(outdir, '%s_dat.xml' % netid)
     dataframe_to_xml(dataframe, xmlfile, reference=source)
-    print('Peak ground motions written to file %s.' % xmlfile)
+    logging.info('Peak ground motions written to file %s.' % xmlfile)
 
 
 if __name__ == '__main__':
