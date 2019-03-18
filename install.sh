@@ -180,6 +180,8 @@ pip install git+https://github.com/usgs/groundmotion-processing.git
 if [ $? -ne 0 ]; then
     echo "Failed to install groundmotion-processing. Exiting."
     exit
+else
+    gmsetup
 fi
 
 # This package
