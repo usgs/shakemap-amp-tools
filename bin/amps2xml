@@ -5,6 +5,9 @@ import argparse
 import os.path
 import sys
 
+# third party imports
+import pandas as pd
+
 # neic imports
 from impactutils.io.table import read_excel, dataframe_to_xml
 
@@ -23,7 +26,10 @@ def main(args):
         sys.exit(1)
 
     df, reference = read_excel(excelfile)
-    xmlfile = os.path.join(outdir, 'CWB_dat.xml')
+    netid = df['NETID'].iloc[0]
+    if isinstance(netid, pd.Series):
+        netid = netid[netid.index[0]]
+    xmlfile = os.path.join(outdir, '%s_dat.xml' % netid)
     dataframe_to_xml(df, xmlfile, reference=reference)
     print('Peak ground motions written to file %s.' % xmlfile)
 
