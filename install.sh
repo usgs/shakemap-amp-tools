@@ -114,6 +114,7 @@ fi
 # Turn off whatever other virtual environment user might be in
 # Start in conda base environment
 echo "Activate base virtual environment"
+conda init bash
 conda activate base
 
 # Remove existing environment if it exists
@@ -128,27 +129,14 @@ dev_list=(
 )
 
 package_list=(
-    "$CC"
-    "configobj"
-    "cython"
-    "impactutils"
+    "python=3.6"
+    "h5py>=2.8.0"
+    "gmprocess"
     "ipython"
     "jupyter"
-    "libcomcat"
-    "lxml"
-    "matplotlib"
-    "numpy>=1.14"
-    "obspy"
-    "openpyxl"
-    "openquake.engine"
-    "pandas"
-    "pyasdf"
-    "pytest"
     "pytest-cov"
-    "python>=3.6"
-    "pyyaml"
-    "requests"
-    "vcrpy"
+    "configobj"
+    "pip"
 )
 
 if [ $developer == 1 ]; then
@@ -159,8 +147,7 @@ fi
 
 # Create a conda virtual environment
 echo "Creating the $VENV virtual environment:"
-conda create -y -n $VENV -c conda-forge \
-      --channel-priority ${package_list[*]}
+conda create -y -n $VENV -c conda-forge --channel-priority ${package_list[*]}
 
 # Bail out at this point if the conda create command fails.
 # Clean up zip files we've downloaded
@@ -169,20 +156,9 @@ if [ $? -ne 0 ]; then
     exit
 fi
 
-
 # Activate the new environment
 echo "Activating the $VENV virtual environment"
 conda activate $VENV
-
-# Install groundmotion-processing
-echo "Installing groundmotion-processing..."
-pip install git+https://github.com/usgs/groundmotion-processing.git
-if [ $? -ne 0 ]; then
-    echo "Failed to install groundmotion-processing. Exiting."
-    exit
-else
-    gmsetup
-fi
 
 # This package
 echo "Installing amptools..."
