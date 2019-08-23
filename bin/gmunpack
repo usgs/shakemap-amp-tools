@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+
+# stdlib imports
+import argparse
+import sys
+import json
+import zipfile
+import os.path
+from textwrap import dedent
+from shutil import copyfile
+
+# third party imports
+from libcomcat.search import get_event_by_id
+
+TIMEFMT = '%Y-%d-%mT%H:%M:%S.%f'
+
+
+def unpack_zip(inputfile, eventdir):
+    nfiles = 0
+    with zipfile.ZipFile(inputfile, 'r') as myzip:
+        members = myzip.namelist()
+        for member in members:
+            finfo = myzip.getinfo(member)
+            if finfo.is_dir():
+                continue
+            if not member.lower().endswith('.zip'):
+                fin = myzip.open(member)
+                flatfile = member.replace('/', '_')
+                outfile = os.path.join(eventdir, flatfile)
+                with open(outfile, 'wb') as fout:
+                    fout.write(fin.read())
+                nfiles += 1
+                fin.close()
+            else:
+                tmpfile = myzip.open(member)
+                tmpzip = zipfile.ZipFile(tmpfile, mode='r')
+                tmp_members = tmpzip.namelist()
+                for tmp_member in tmp_members:
+                    tfinfo = tmpzip.getinfo(tmp_member)
+                    if not tfinfo.is_dir():
+                        print(tmp_member)
+                        fin = tmpzip.open(tmp_member)
+                        flatfile = tmp_member.replace('/', '_')
+                        parent, _ = os.path.splitext(member)
+                        parent = parent.replace('/', '_')
+                        # sometimes the member ends with .zip.zip (??)
+                        parent = parent.replace('.zip', '')
+                        datadir = os.path.join(eventdir, parent)
+                        if not os.path.exists(datadir):
+                            os.makedirs(datadir)
+                        outfile = os.path.join(datadir, flatfile)
+                        with open(outfile, 'wb') as fout:
+                            fout.write(fin.read())
+                        nfiles += 1
+                        fin.close()
+    return nfiles
+
+
+def main(args):
+    # goal here is to write a directory called args.eventid under args.outdir
+    # containing:
+    # event.json
+    # raw directory with data files in it.
+
+    # first make sure we can find the event information
+    try:
+        detail = get_event_by_id(args.eventid)
+    except Exception as e:
+        fmt = 'Could not find event matching "%s" due to error "%s". Exiting.'
+        print(fmt % (args.eventid, str(e)))
+        sys.exit(1)
+
+    # second make sure that the input thing is real
+    if not zipfile.is_zipfile(args.input) and not os.path.isdir(args.input):
+        print('Input "%s" is neither a zip file nor a directory. Exiting.')
+        sys.exit(1)
+
+    if not os.path.isdir(args.outdir):
+        os.makedirs(args.outdir)
+
+    eventdir = os.path.join(args.outdir, args.eventid)
+    if not os.path.isdir(eventdir):
+        os.mkdir(eventdir)
+
+    jsonfile = os.path.join(eventdir, 'event.json')
+    edict = {"id": detail.id,
+             "time": detail.time.strftime(TIMEFMT),
+             "lat": detail.latitude,
+             "lon": detail.longitude,
+             "depth": detail.depth,
+             "magnitude": detail.magnitude}
+
+    with open(jsonfile, 'wt') as f:
+        json.dump(edict, f)
+
+    rawdir = os.path.join(eventdir, 'raw')
+    if not os.path.isdir(rawdir):
+        os.makedirs(rawdir)
+
+    if zipfile.is_zipfile(args.input):
+        nfiles = unpack_zip(args.input, rawdir)
+    else:
+        nfiles = 0
+        for root, dirs, files in os.walk(args.input):
+            for tfile in files:
+                flatdir = root.replace(os.path.sep, '_').lstrip('_')
+                flatfile = flatdir + '_' + tfile
+                outfile = os.path.join(
+                    args.outdir, args.eventid, 'raw', flatfile)
+                infile = os.path.join(root, tfile)
+                copyfile(infile, outfile)
+                nfiles += 1
+
+    fmt = '''
+    Extracted %i files from:
+    %s 
+    to 
+    %s. 
+    
+    Run:
+
+    getstations %s --directory %s
+
+    to process this data.
+    '''
+    fmt = dedent(fmt)
+    tpl = (nfiles, args.input, args.outdir, args.eventid, args.outdir)
+    print(fmt % tpl)
+
+
+if __name__ == '__main__':
+    desc = '''Unpack directory or zip file containing ground motion data
+    into a gmprocess/getstations friendly directory structure.
+    '''
+    parser = argparse.ArgumentParser(description=desc)
+    parser.add_argument('input',
+                        help='Input zip file or directory')
+    parser.add_argument('eventid',
+                        help='ComCat event ID')
+    ohelp = '''Output directory under which event directory will be written.'''
+    parser.add_argument('outdir',
+                        help=ohelp)
+
+    pargs = parser.parse_args()
+    main(pargs)
