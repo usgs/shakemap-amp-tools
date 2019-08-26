@@ -136,7 +136,6 @@ package_list=(
     "jupyter"
     "pytest-cov"
     "configobj"
-    "pip"
 )
 
 if [ $developer == 1 ]; then
