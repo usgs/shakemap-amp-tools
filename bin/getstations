@@ -10,6 +10,7 @@ import warnings
 from collections import namedtuple
 from xml.dom import minidom
 import shutil
+from datetime import datetime
 
 # third party imports
 from h5py.h5py_warnings import H5pyDeprecationWarning
@@ -86,76 +87,81 @@ def process_event(outdir, event,
 
     logging.info('Processing raw streams for event %s...' % event.id)
     pstreams = process_streams(rstreams, event, config=config)
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore",
-                              category=H5pyDeprecationWarning)
-        logging.info('Adding processed streams to workspace...')
-        workspace.addStreams(event, pstreams, label=process_tag)
-        logging.info('Calculating metrics...')
-        workspace.calcMetrics(event.id,
-                              labels=[process_tag],
-                              config=config)
 
-    logging.info(
-        'Creating diagnostic plots for event %s...' % event.id)
-    plot_dir = os.path.join(outdir, 'plots')
-    if not os.path.isdir(plot_dir):
-        os.makedirs(plot_dir)
-    for stream in pstreams:
-        summary_plots(stream, plot_dir, event)
+    if len(pstreams):
 
-    mapfile = draw_stations_map(pstreams, event, outdir)
-    append_file(files_created, 'Station map', mapfile)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore",
+                                category=H5pyDeprecationWarning)
+            logging.info('Adding processed streams to workspace...')
+            workspace.addStreams(event, pstreams, label=process_tag)
+            logging.info('Calculating metrics...')
+            workspace.calcMetrics(event.id,
+                                labels=[process_tag],
+                                config=config)
 
-    logging.info(
-        'Creating diagnostic report for event %s...' % event.id)
-    # Build the summary report?
-    build_conf = config['build_report']
-    report_format = build_conf['format']
-    if report_format == 'latex':
-        report_file, success = build_report_latex(
-            pstreams,
-            outdir,
-            event,
-            config=config
-        )
+        logging.info(
+            'Creating diagnostic plots for event %s...' % event.id)
+        plot_dir = os.path.join(outdir, 'plots')
+        if not os.path.isdir(plot_dir):
+            os.makedirs(plot_dir)
+        for stream in pstreams:
+            summary_plots(stream, plot_dir, event)
+
+            mapfile = draw_stations_map(pstreams, event, outdir)
+            append_file(files_created, 'Station map', mapfile)
+
+        logging.info(
+            'Creating diagnostic report for event %s...' % event.id)
+        # Build the summary report?
+        build_conf = config['build_report']
+        report_format = build_conf['format']
+        if report_format == 'latex':
+            report_file, success = build_report_latex(
+                pstreams,
+                outdir,
+                event,
+                config=config
+            )
+        else:
+            report_file = ''
+            success = False
+        if os.path.isfile(report_file) and success:
+            append_file(files_created, 'Summary report', report_file)
+
+        # remove processed plots
+        plotdir = os.path.join(outdir, 'plots')
+        shutil.rmtree(plotdir)
+
+        if not pstreams.n_passed:
+            print('No stations passed QA checks. XML output will not be created.')
+            sys.exit(0)
+            del workspace
+
+        logging.info(
+            'Creating shakemap table for event %s...' % event.id)
+        shakemap_file = save_shakemap_amps(pstreams, event, outdir)
+        append_file(files_created, 'shakemap', shakemap_file)
+
+        del workspace
+        # since we don't know how many events users will be processing,
+        # let's guard against memory issues by clearing out the big data
+        # structures
+        # del rstreams
+        # del pstreams
+
+        # convert the spreadsheet into the station xml data format.
+        df, reference = read_excel(shakemap_file)
+        netid = df['NETID'].iloc[0]
+        if isinstance(netid, pd.Series):
+            netid = netid[netid.index[0]]
+        xmlfile = os.path.abspath(os.path.join(outdir, '..', '%s_dat.xml' % netid))
+        dataframe_to_xml(df, xmlfile, reference=reference)
+        logging.info('Peak ground motions written to file %s.' % xmlfile)
+        append_file(files_created, 'ShakeMap XML', xmlfile)
+        logging.info('Finishing event %s' % event.id)
     else:
-        report_file = ''
-        success = False
-    if os.path.isfile(report_file) and success:
-        append_file(files_created, 'Summary report', report_file)
-
-    # remove processed plots
-    plotdir = os.path.join(outdir, 'plots')
-    shutil.rmtree(plotdir)
-
-    if not pstreams.n_passed:
-        print('No stations passed QA checks. XML output will not be created.')
-        sys.exit(0)
-        workspace.close()
-
-    logging.info(
-        'Creating shakemap table for event %s...' % event.id)
-    shakemap_file = save_shakemap_amps(pstreams, event, outdir)
-    append_file(files_created, 'shakemap', shakemap_file)
-
-    workspace.close()
-    # since we don't know how many events users will be processing,
-    # let's guard against memory issues by clearing out the big data
-    # structures
-    # del rstreams
-    # del pstreams
-
-    # convert the spreadsheet into the station xml data format.
-    df, reference = read_excel(shakemap_file)
-    netid = df['NETID'].iloc[0]
-    if isinstance(netid, pd.Series):
-        netid = netid[netid.index[0]]
-    xmlfile = os.path.abspath(os.path.join(outdir, '..', '%s_dat.xml' % netid))
-    dataframe_to_xml(df, xmlfile, reference=reference)
-    logging.info('Peak ground motions written to file %s.' % xmlfile)
-    append_file(files_created, 'ShakeMap XML', xmlfile)
-    logging.info('Finishing event %s' % event.id)
+        workname = None
 
     return workname
 
@@ -171,7 +177,7 @@ def find_workspace_files(outdir):
 
 
 def main(args):
-
+    tstart = datetime.utcnow()
     # config handling
     configfile = args.config
     if configfile is not None:
@@ -242,17 +248,28 @@ def main(args):
         outdir, event,
         config, input_directory,
         logfile, files_created)
-    workspace_files.append(workname)
+    if workname is not None:
+        workspace_files.append(workname)
 
-    logging.info('%i workspace files created' % len(workspace_files))
+        logging.info('%i workspace files created' % len(workspace_files))
 
-    print('\nThe following files have been created:')
-    for file_type, file_list in files_created.items():
-        print('File type: %s' % file_type)
-        for fname in file_list:
-            print('\t%s' % fname)
+        print('\nThe following files have been created:')
+        for file_type, file_list in files_created.items():
+            print('File type: %s' % file_type)
+            for fname in file_list:
+                print('\t%s' % fname)
+    else:
+        print('No ground motion data were found. Exiting.')
+
+
+    tend = datetime.utcnow()
+    dt = (tend - tstart).total_seconds()
+    minutes = dt // 60
+    seconds = dt % 60
+    fmt = '\nElapsed processing time: %i minutes, %i seconds.'
+    print(fmt % (minutes, seconds))
+    
     print('\nProcessing is complete.\n')
-
 
 if __name__ == '__main__':
     description = '''Download, process, and create ground motion inputs for ShakeMap.
