@@ -58,7 +58,8 @@ def append_file(files_created, tag, filename):
 def process_event(outdir, event,
                   config, input_directory,
                   logfile,
-                  files_created):
+                  files_created,
+                  no_plots=False):
 
     # create the amptools directory where supporting amptools
     # files will be found
@@ -92,20 +93,47 @@ def process_event(outdir, event,
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore",
-                                category=H5pyDeprecationWarning)
+                                  category=H5pyDeprecationWarning)
             logging.info('Adding processed streams to workspace...')
             workspace.addStreams(event, pstreams, label=process_tag)
             logging.info('Calculating metrics...')
             workspace.calcMetrics(event.id,
-                                labels=[process_tag],
-                                config=config)
+                                  labels=[process_tag],
+                                  config=config)
 
+        if not pstreams.n_passed:
+            print('No stations passed QA checks. XML output will not be created.')
+            sys.exit(0)
+            del workspace
+
+        logging.info(
+            'Creating shakemap table for event %s...' % event.id)
+        shakemap_file = save_shakemap_amps(pstreams, event, outdir)
+        append_file(files_created, 'shakemap', shakemap_file)
+
+        del workspace
+
+        # convert the spreadsheet into the station xml data format.
+        df, reference = read_excel(shakemap_file)
+        netid = df['NETID'].iloc[0]
+        if isinstance(netid, pd.Series):
+            netid = netid[netid.index[0]]
+        xmlfile = os.path.abspath(os.path.join(
+            outdir, '..', '%s_dat.xml' % netid))
+        dataframe_to_xml(df, xmlfile, reference=reference)
+        logging.info('Peak ground motions written to file %s.' % xmlfile)
+        append_file(files_created, 'ShakeMap XML', xmlfile)
+        logging.info('Finishing event %s' % event.id)
+
+        if no_plots:
+            return workname
         logging.info(
             'Creating diagnostic plots for event %s...' % event.id)
         plot_dir = os.path.join(outdir, 'plots')
         if not os.path.isdir(plot_dir):
             os.makedirs(plot_dir)
         for stream in pstreams:
+            logging.info('Creating summary plot for %s...' % stream.get_id())
             summary_plots(stream, plot_dir, event)
 
             mapfile = draw_stations_map(pstreams, event, outdir)
@@ -133,33 +161,6 @@ def process_event(outdir, event,
         plotdir = os.path.join(outdir, 'plots')
         shutil.rmtree(plotdir)
 
-        if not pstreams.n_passed:
-            print('No stations passed QA checks. XML output will not be created.')
-            sys.exit(0)
-            del workspace
-
-        logging.info(
-            'Creating shakemap table for event %s...' % event.id)
-        shakemap_file = save_shakemap_amps(pstreams, event, outdir)
-        append_file(files_created, 'shakemap', shakemap_file)
-
-        del workspace
-        # since we don't know how many events users will be processing,
-        # let's guard against memory issues by clearing out the big data
-        # structures
-        # del rstreams
-        # del pstreams
-
-        # convert the spreadsheet into the station xml data format.
-        df, reference = read_excel(shakemap_file)
-        netid = df['NETID'].iloc[0]
-        if isinstance(netid, pd.Series):
-            netid = netid[netid.index[0]]
-        xmlfile = os.path.abspath(os.path.join(outdir, '..', '%s_dat.xml' % netid))
-        dataframe_to_xml(df, xmlfile, reference=reference)
-        logging.info('Peak ground motions written to file %s.' % xmlfile)
-        append_file(files_created, 'ShakeMap XML', xmlfile)
-        logging.info('Finishing event %s' % event.id)
     else:
         workname = None
 
@@ -247,7 +248,7 @@ def main(args):
     workname = process_event(
         outdir, event,
         config, input_directory,
-        logfile, files_created)
+        logfile, files_created, no_plots=args.no_plots)
     if workname is not None:
         workspace_files.append(workname)
 
@@ -261,15 +262,15 @@ def main(args):
     else:
         print('No ground motion data were found. Exiting.')
 
-
     tend = datetime.utcnow()
     dt = (tend - tstart).total_seconds()
     minutes = dt // 60
     seconds = dt % 60
     fmt = '\nElapsed processing time: %i minutes, %i seconds.'
     print(fmt % (minutes, seconds))
-    
+
     print('\nProcessing is complete.\n')
+
 
 if __name__ == '__main__':
     description = '''Download, process, and create ground motion inputs for ShakeMap.
@@ -319,6 +320,10 @@ installed on their machine.
     parser.add_argument(
         '--directory', help='directory containing raw data',
     )
+
+    parser.add_argument('-n', '--no_plots',
+                        help='Disable diagnostic plots.',
+                        action='store_true', default=False)
     # ***** Shared arguments
     parser = add_shared_args(parser)
     pargs = parser.parse_args()
